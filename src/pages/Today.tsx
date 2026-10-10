@@ -156,7 +156,7 @@ function Hero({ info }: { info: TodayInfo }) {
 function PersonalLine({ info }: { info: TodayInfo }) {
   const { byDate, lhTests, dayLogs } = useStore();
   const [line, setLine] = useState<string | null>(null);
-  const [err, setErr] = useState(false);
+  const [err, setErr] = useState("");
   const yesterday = addDays(info.date, -1);
 
   const context = useMemo(() => {
@@ -188,17 +188,20 @@ function PersonalLine({ info }: { info: TodayInfo }) {
     api
       .dailyNote(info.date, info.phase, context)
       .then((r) => live && setLine(r.line))
-      .catch(() => live && setErr(true));
+      .catch((e) => live && setErr((e as Error).message));
     return () => {
       live = false;
     };
   }, [info.date, info.phase, context]);
 
-  if (err) return null;
   return (
     <div className={`card ph-${info.phase}`} style={{ borderLeft: "4px solid var(--phase)" }}>
       <div className="section-title"><span className="ico" aria-hidden>💌</span>For you today</div>
-      <p style={{ marginTop: 8 }}>{line ?? <span className="muted row"><span className="spin" /> Writing your note…</span>}</p>
+      {err ? (
+        <p className="small muted" style={{ marginTop: 8 }}>Couldn't write today's note: {err}</p>
+      ) : (
+        <p style={{ marginTop: 8 }}>{line ?? <span className="muted row"><span className="spin" /> Writing your note…</span>}</p>
+      )}
     </div>
   );
 }

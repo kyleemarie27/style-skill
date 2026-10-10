@@ -46,9 +46,11 @@ export async function askJson<T>(opts: {
     return JSON.parse(text) as T;
   } catch (err) {
     if (err instanceof HttpError) throw err;
+    // Logged so the reason shows up in Vercel's runtime logs (the API key itself is never included).
+    if (err instanceof Anthropic.APIError) console.error(`Anthropic API error ${err.status ?? "network"}: ${err.message}`);
     if (err instanceof Anthropic.AuthenticationError) throw new HttpError(503, "The Anthropic API key was rejected. Check ANTHROPIC_API_KEY.");
     if (err instanceof Anthropic.RateLimitError) throw new HttpError(429, "The AI is busy right now. Try again in a minute.");
-    if (err instanceof Anthropic.APIError) throw new HttpError(502, `AI request failed (${err.status ?? "network"}). Try again.`);
+    if (err instanceof Anthropic.APIError) throw new HttpError(502, `AI request failed (${err.status ?? "network"}): ${err.message}`);
     throw err;
   }
 }
