@@ -33,6 +33,13 @@ describe("Clue importer", () => {
     expect(b.lhTests).toEqual([{ date: "2026-09-15", ratio: null, level: "peak", source: "clue" }]);
   });
 
+  it("reads only measurements.json from a newer export, ignoring reminders and account files", async () => {
+    const b = await readClueFile(asFile("clue-new-export.zip"), "bloom123");
+    expect(b.dayLogs.some((d) => d.date === "2026-03-03")).toBe(false); // the "period" reminder
+    expect(b.dayLogs.find((d) => d.date === "2026-09-02")!.flow).toBe("heavy");
+    expect(b.warnings).toEqual([]);
+  });
+
   it("opens the password-protected zip", async () => {
     await expect(readClueFile(asFile("clue-export.zip"))).rejects.toBeInstanceOf(PasswordNeeded);
     await expect(readClueFile(asFile("clue-export.zip"), "wrong")).rejects.toBeInstanceOf(PasswordNeeded);

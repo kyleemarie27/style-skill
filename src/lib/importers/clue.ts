@@ -144,9 +144,13 @@ export async function readClueFile(file: File, password?: string): Promise<Impor
     const reader = new ZipReader(new BlobReader(file), password ? { password } : undefined);
     try {
       const entries = await reader.getEntries();
-      const jsons = entries.filter(
+      const allJsons = entries.filter(
         (e) => !e.directory && /\.(json|cluedata)$/i.test(e.filename) && !e.filename.startsWith("__MACOSX"),
       );
+      // Newer exports hold tracking data in measurements.json, next to account files (reminders,
+      // notifications, subscriptions…) that can mention "period" and must not become cycle days.
+      const tracking = allJsons.filter((e) => /(measurements[^/]*\.json|\.cluedata)$/i.test(e.filename));
+      const jsons = tracking.length ? tracking : allJsons;
       if (!jsons.length) throw new Error("No JSON files found inside the Clue zip.");
       if (jsons.some((e) => e.encrypted) && !password) throw new PasswordNeeded();
       const merged: ImportBundle = { dayLogs: [], lhTests: [], warnings: [] };
