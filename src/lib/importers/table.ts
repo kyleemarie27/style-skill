@@ -60,6 +60,16 @@ export function parseTableRows(rows: Row[], source: string): ImportBundle {
     if (h) taken.add(h);
     return h;
   };
+  // Premom pairs every reading column with a "Time(<column>)" column; never mistake those for values.
+  const timeOf = new Map<string, string>();
+  for (const h of headers) {
+    const m = h.match(/^\s*time\s*\((.+)\)\s*$/i);
+    if (m) {
+      taken.add(h);
+      const target = headers.find((x) => x.trim().toLowerCase() === m[1].trim().toLowerCase());
+      if (target) timeOf.set(target, h);
+    }
+  }
   const date = take(COL.date);
   if (!date) {
     c.warnings.push("Couldn't find a date column.");
@@ -77,9 +87,17 @@ export function parseTableRows(rows: Row[], source: string): ImportBundle {
     return c.result();
   }
 
-  // Wide layout. Level must be found before ratio because "lh level" also contains "lh".
-  const level = take(COL.level);
-  const ratio = take(COL.ratio);
+  const plainTime = headers.find((h) => h.trim().toLowerCase() === "time" && !taken.has(h)) ?? null;
+  if (plainTime) taken.add(plainTime);
+
+  // Premom's chart export has one reading column per test brand ("easy@Home T/C ratio",
+  // "Premom LH Level", "Others T/C ratio"). Read every one of them.
+  const brandCols = headers.filter((h) => !taken.has(h) && /t\/c ratio|lh level/i.test(h));
+  brandCols.forEach((h) => taken.add(h));
+
+  // Generic wide layout. Level must be found before ratio because "lh level" also contains "lh".
+  const level = brandCols.length ? null : take(COL.level);
+  const ratio = brandCols.length ? null : take(COL.ratio);
   const flow = take(COL.flow);
   const sex = take(COL.sex);
   const bbt = take(COL.bbt);
@@ -91,7 +109,19 @@ export function parseTableRows(rows: Row[], source: string): ImportBundle {
   for (const r of rows) {
     const d = normalizeDate(r[date]);
     if (!d) continue;
-    const ts = typeof r[date] === "string" && /\d{1,2}:\d{2}/.test(r[date] as string) ? String(r[date]) : null;
+    const ts = plainTime && r[plainTime]
+      ? `${d} ${String(r[plainTime]).trim()}`
+      : typeof r[date] === "string" && /\d{1,2}:\d{2}/.test(r[date] as string) ? String(r[date]) : null;
+    for (const col of brandCols) {
+      const raw = r[col];
+      if (raw === "" || raw == null) continue;
+      const rr = normalizeRatio(raw);
+      const lv = rr !== null ? levelForRatio(rr) : levelFromText(raw);
+      if (!lv) continue;
+      const t = timeOf.get(col);
+      const taken_at = t && r[t] ? `${d} ${String(r[t]).trim()}` : ts;
+      c.lh.push({ date: d, taken_at, ratio: rr, level: lv, source });
+    }
     if (ratio || level) {
       const rawRatio = ratio ? r[ratio] : null;
       const rr = normalizeRatio(rawRatio);

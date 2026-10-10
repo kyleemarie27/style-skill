@@ -79,6 +79,18 @@ describe("Premom / table importer", () => {
     expect(b.dayLogs.find((d) => d.date === "2026-05-02")).toMatchObject({ flow: "medium", bbt: 97.2, notes: "first day" });
   });
 
+  it("reads Premom's chart export with a Time(...) column before each test brand", async () => {
+    const b = await parseTableFile(asFile("premom-chart.csv"), "premom");
+    expect(b.lhTests.map((t) => [t.date, t.ratio, t.level, t.taken_at])).toEqual([
+      ["2026-03-10", 0.12, "low", "2026-03-10 2:05 PM"],
+      ["2026-03-11", 0.58, "high", "2026-03-11 3:15 PM"],
+      ["2026-03-12", 1.08, "peak", "2026-03-12 1:40 PM"],
+      ["2026-03-12", 0.9, "high", "2026-03-12 9:00 PM"],
+      ["2026-03-13", 0.31, "low", "2026-03-13 12:30 PM"],
+    ]);
+    expect(b.dayLogs).toEqual([{ date: "2026-03-11", bbt: 97.4, source: "premom" }]);
+  });
+
   it("supports long Date | Type | Value tables", () => {
     const b = parseTableRows(
       [
