@@ -28,12 +28,31 @@ export function getPool(): pg.Pool {
 /** Run a query, creating the tables on first use so there's no manual DB setup step. */
 export async function q<T extends pg.QueryResultRow = pg.QueryResultRow>(text: string, params: unknown[] = []) {
   const p = getPool();
-  ready ??= p.query(SCHEMA).then(() => undefined).catch((e) => {
+  ready ??= ensureSchema(p).catch((e) => {
     ready = null;
     throw e;
   });
   await ready;
   return p.query<T>(text, params);
+}
+
+/**
+ * Serverless instances start in parallel, and concurrent CREATE TABLE IF NOT EXISTS can collide in
+ * Postgres's catalog. An advisory lock makes the first instance create the tables while the rest wait.
+ */
+async function ensureSchema(p: pg.Pool) {
+  const client = await p.connect();
+  try {
+    await client.query("BEGIN");
+    await client.query("SELECT pg_advisory_xact_lock(727274)");
+    await client.query(SCHEMA);
+    await client.query("COMMIT");
+  } catch (e) {
+    await client.query("ROLLBACK").catch(() => {});
+    throw e;
+  } finally {
+    client.release();
+  }
 }
 
 export class HttpError extends Error {
