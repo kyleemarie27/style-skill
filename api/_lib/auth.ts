@@ -59,6 +59,7 @@ export function route(handler: Handler, opts: { public?: boolean } = {}): Handle
     } catch (err) {
       const status = err instanceof HttpError ? err.status : 500;
       if (status === 500) console.error(err);
+      else if (status >= 502) console.error(`${req.method} ${req.url} → ${status}: ${(err as Error).message}`);
       if (!res.headersSent) res.status(status).json({ error: err instanceof Error ? err.message : "Something went wrong." });
     }
   };
