@@ -14,7 +14,7 @@ describe("Clue importer", () => {
     const b = parseClueJson(JSON.parse(readFileSync(fixture("clue-legacy.cluedata"), "utf8")));
     const first = b.dayLogs.find((d) => d.date === "2026-05-02")!;
     expect(first.flow).toBe("heavy");
-    expect(first.symptoms).toContain("Period cramps");
+    expect(first.symptoms).toContain("Cramps");
     expect(first.mood).toBe("Sensitive");
     expect(b.dayLogs.find((d) => d.date === "2026-05-06")!.flow).toBe("spotting");
     const sexDay = b.dayLogs.find((d) => d.date === "2026-05-15")!;
@@ -24,13 +24,39 @@ describe("Clue importer", () => {
     expect(b.lhTests.filter((t) => t.level === "peak")).toHaveLength(4);
   });
 
-  it("reads the newer measurement-row shape and doesn't count sex drive as intercourse", () => {
+  it("reads the newer measurement-row shape and doesn't count sex drive or protected sex as ♥", () => {
     const b = parseClueJson(JSON.parse(readFileSync(fixture("clue-measurements.json"), "utf8")));
     expect(b.dayLogs.find((d) => d.date === "2026-09-02")!.flow).toBe("heavy");
     expect(b.dayLogs.find((d) => d.date === "2026-09-02")!.symptoms).toEqual(["Headache", "Cramps"]);
-    expect(b.dayLogs.find((d) => d.date === "2026-09-14")!.intercourse).toBe(true);
+    expect(b.dayLogs.find((d) => d.date === "2026-09-14")!.intercourse).toBeUndefined();
+    expect(b.dayLogs.find((d) => d.date === "2026-09-14")!.symptoms).toEqual(["Protected sex", "High libido"]);
     expect(b.dayLogs.find((d) => d.date === "2026-09-16")!.bbt).toBe(36.7);
     expect(b.lhTests).toEqual([{ date: "2026-09-15", ratio: null, level: "peak", source: "clue" }]);
+  });
+
+  it("reads only measurements.json from a newer export, ignoring reminders and account files", async () => {
+    const b = await readClueFile(asFile("clue-new-export.zip"), "bloom123");
+    expect(b.dayLogs.some((d) => d.date === "2026-03-03")).toBe(false); // the "period" reminder
+    expect(b.dayLogs.find((d) => d.date === "2026-09-02")!.flow).toBe("heavy");
+    expect(b.warnings).toEqual([]);
+  });
+
+  it("skips neutral answers, keeps protected sex out of ♥ counts, and reads the mind category as mood", () => {
+    const b = parseClueJson([
+      { id: "1", date: "2026-02-01", type: "sex_life", value: [{ option: "protected" }] },
+      { id: "2", date: "2026-02-02", type: "sex_life", value: [{ option: "unprotected" }] },
+      { id: "3", date: "2026-02-03", type: "pain", value: [{ option: "pain_free" }, { option: "lower_back" }] },
+      { id: "4", date: "2026-02-03", type: "energy", value: [{ option: "ok" }] },
+      { id: "5", date: "2026-02-03", type: "sleep_duration", value: { minutes: 480 } },
+      { id: "6", date: "2026-02-03", type: "mind", value: [{ option: "calm" }] },
+      { id: "7", date: "2026-02-03", type: "craving", value: [{ option: "sweet" }] },
+    ]);
+    const day = (d: string) => b.dayLogs.find((x) => x.date === d)!;
+    expect(day("2026-02-01").intercourse).toBeUndefined();
+    expect(day("2026-02-01").symptoms).toEqual(["Protected sex"]);
+    expect(day("2026-02-02").intercourse).toBe(true);
+    expect(day("2026-02-03").symptoms).toEqual(["Back pain", "Craving sweet"]);
+    expect(day("2026-02-03").mood).toBe("Calm");
   });
 
   it("opens the password-protected zip", async () => {

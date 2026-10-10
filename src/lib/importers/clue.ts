@@ -72,7 +72,27 @@ const SYMPTOM_CATEGORIES = [
   "pain", "energy", "digestion", "poop", "skin", "hair", "craving", "sleep", "ailment",
   "headache", "cramps", "breast", "bloat", "symptom", "collection_method", "pms", "social", "motivation",
 ];
-const SEX_ACTS = ["protected", "unprotected", "withdrawal", "intercourse", "had_sex", "sex"];
+const SEX_ACTS = ["unprotected", "withdrawal", "intercourse", "had_sex", "sex"];
+
+/** Clue's "everything's normal" answers. Not worth showing as symptoms. */
+const NEUTRAL = new Set([
+  "ok", "good", "fine", "great", "normal", "none", "pain_free", "no_pain", "ok_hair", "good_hair",
+  "good_skin", "woke_up_refreshed", "great_digestion", "normal_stool",
+]);
+/** Clue option → the wording Bloom uses for the same thing. */
+const LABELS: Record<string, string> = {
+  period_cramps: "Cramps",
+  cramps: "Cramps",
+  lower_back: "Back pain",
+  ovulation: "Ovulation pain",
+  tender_breasts: "Tender breasts",
+  nauseous: "Nausea",
+  bloated: "Bloating",
+  tired: "Tired",
+  exhausted: "Tired",
+  dry: "Dry skin",
+  oily: "Oily skin",
+};
 
 function handle(c: DayCollector, date: string, rawKey: string, value: unknown) {
   const key = rawKey.toLowerCase();
@@ -92,6 +112,9 @@ function handle(c: DayCollector, date: string, rawKey: string, value: unknown) {
       if (o.includes("drive") || o.includes("libido") || key.includes("drive")) {
         if (o.includes("high")) c.symptom(date, "High libido");
         else if (o.includes("low")) c.symptom(date, "Low libido");
+      } else if (o === "protected") {
+        // Logged, but kept out of the trying-to-conceive ♥ counts.
+        c.symptom(date, "Protected sex");
       } else if (SEX_ACTS.some((a) => o.includes(a)) || o === "yes" || o === "true") {
         c.day(date).intercourse = true;
       }
@@ -123,15 +146,17 @@ function handle(c: DayCollector, date: string, rawKey: string, value: unknown) {
   } else if (key.includes("temp") || key === "bbt") {
     const t = parseTemp(opts[0]);
     if (t) c.day(date).bbt = t;
-  } else if (key.includes("mood") || key.includes("emotion") || key.includes("feeling") || key.includes("mental")) {
+  } else if (key.includes("mood") || key.includes("emotion") || key.includes("feeling") || key.includes("mental") || key === "mind") {
     for (const o of opts) c.mood(date, o);
   } else if (key.includes("note")) {
     const text = optionsOf(value).join(" ").trim();
     if (text) c.day(date).notes = text;
   } else if (SYMPTOM_CATEGORIES.some((s) => key.includes(s))) {
     for (const o of opts) {
+      if (NEUTRAL.has(o) || /^\d+(\.\d+)?$/.test(o)) continue; // "ok" answers and raw numbers (e.g. sleep minutes)
       if (o === "yes" || o === "true") c.symptom(date, humanize(key));
-      else c.symptom(date, o);
+      else if (key.includes("craving")) c.symptom(date, `Craving ${o.replace(/_/g, " ")}`);
+      else c.symptom(date, LABELS[o] ?? o);
     }
   }
 }
@@ -144,9 +169,13 @@ export async function readClueFile(file: File, password?: string): Promise<Impor
     const reader = new ZipReader(new BlobReader(file), password ? { password } : undefined);
     try {
       const entries = await reader.getEntries();
-      const jsons = entries.filter(
+      const allJsons = entries.filter(
         (e) => !e.directory && /\.(json|cluedata)$/i.test(e.filename) && !e.filename.startsWith("__MACOSX"),
       );
+      // Newer exports hold tracking data in measurements.json, next to account files (reminders,
+      // notifications, subscriptions…) that can mention "period" and must not become cycle days.
+      const tracking = allJsons.filter((e) => /(measurements[^/]*\.json|\.cluedata)$/i.test(e.filename));
+      const jsons = tracking.length ? tracking : allJsons;
       if (!jsons.length) throw new Error("No JSON files found inside the Clue zip.");
       if (jsons.some((e) => e.encrypted) && !password) throw new PasswordNeeded();
       const merged: ImportBundle = { dayLogs: [], lhTests: [], warnings: [] };
