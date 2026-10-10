@@ -1,0 +1,60 @@
+[
+ {
+  "date": "2026-09-01",
+  "type": "period",
+  "value": {
+   "option": "medium"
+  }
+ },
+ {
+  "date": "2026-09-02",
+  "type": "period",
+  "value": [
+   {
+    "option": "heavy"
+   }
+  ]
+ },
+ {
+  "date": "2026-09-02",
+  "type": "pain",
+  "value": [
+   {
+    "option": "headache"
+   },
+   {
+    "option": "cramps"
+   }
+  ]
+ },
+ {
+  "date": "2026-09-14",
+  "type": "sex",
+  "value": [
+   {
+    "option": "protected"
+   }
+  ]
+ },
+ {
+  "date": "2026-09-14",
+  "type": "sex",
+  "value": [
+   {
+    "option": "high_sex_drive"
+   }
+  ]
+ },
+ {
+  "date": "2026-09-15",
+  "type": "ovulation_test",
+  "value": {
+   "option": "positive"
+  }
+ },
+ {
+  "date": "2026-09-16",
+  "type": "bbt",
+  "value": 36.7
+ }
+]
