@@ -7,9 +7,16 @@ export const MODEL = "claude-opus-5-5";
 /** Set BLOOM_FAKE_AI=1 in local dev to get canned answers without an API key. */
 export const fakeAi = () => process.env.BLOOM_FAKE_AI === "1";
 
-/** The key as pasted into Vercel, minus the stray spaces, line breaks and quotes that copy-paste adds. */
+/**
+ * The key as pasted into Vercel, minus what copy-paste tends to add: spaces, line breaks, quotes,
+ * and a leading "ANTHROPIC_API_KEY=" when the whole line was pasted into the value box.
+ */
 export function apiKey(): string {
-  return (process.env.ANTHROPIC_API_KEY ?? "").trim().replace(/^["']+|["']+$/g, "").trim();
+  return (process.env.ANTHROPIC_API_KEY ?? "")
+    .trim()
+    .replace(/^(export\s+)?ANTHROPIC_API_KEY\s*[=:]\s*/i, "")
+    .replace(/^["']+|["']+$/g, "")
+    .trim();
 }
 
 /** A safe description of the key for logs: its standard prefix and length, never the secret part. */
