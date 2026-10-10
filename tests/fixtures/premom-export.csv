@@ -1,6 +1,6 @@
 # Cycles
 Cycle Number,Predicted Period Start,Predicted Period End,Actual Period Start,Actual Period End,BBT Spike Date,LH Peak Date,Predicted Ovulation,Confirmed Ovulation,Manually Marked Ovulation,Cycle End,Cycle Type
-1,,,2026-01-05 12:00:00,2026-01-07 12:00:00,,,2026-01-19 12:00:00,,,2026-02-01 12:00:00,Period
+1,,,2026-01-05 12:00:00,2026-01-07 12:00:00,,,2026-01-19 12:00:00,2026-01-20 12:00:00,,2026-02-01 12:00:00,Period
 
 # Ovulation Tests (LH / Test Strip)
 Test Date,Test Type,Result,Auto Result,Peak,T Value,C Value

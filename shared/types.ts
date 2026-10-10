@@ -12,6 +12,8 @@ export interface DayLog {
   cervical_mucus?: Mucus | null;
   bbt?: number | null;
   pregnancy_test?: PregnancyTest | null;
+  /** Marked as the day of ovulation (e.g. Premom's "Confirmed Ovulation"). */
+  ovulation?: boolean | null;
   notes?: string | null;
   source?: string | null;
 }
@@ -33,6 +35,10 @@ export interface Settings {
   lutealLength: number;
   periodLength: number;
   ttc: boolean;
+  /** YYYY-MM-DD you started trying to conceive, if set. */
+  ttcSince?: string | null;
+  /** 35 or older: doctors suggest a check-up after 6 months of trying instead of 12. */
+  over35?: boolean;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -40,6 +46,8 @@ export const DEFAULT_SETTINGS: Settings = {
   lutealLength: 14,
   periodLength: 5,
   ttc: true,
+  ttcSince: null,
+  over35: false,
 };
 
 /** What an importer (or the AI extractor) produces before anything is saved. */

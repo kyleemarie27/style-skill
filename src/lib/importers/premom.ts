@@ -25,7 +25,8 @@ export async function parsePremomExport(text: string): Promise<ImportBundle> {
     if (t.includes("ovulation test")) rows.forEach((r) => lhRow(c, r));
     else if (t.includes("daily log")) rows.forEach((r) => dayRow(c, r));
     else if (t.includes("temperature")) rows.forEach((r) => bbtRow(c, r));
-    // "Cycles" repeats what the daily logs already say, plus predictions; "Pregnancy History" isn't day data.
+    else if (t.startsWith("cycle")) rows.forEach((r) => cycleRow(c, r));
+    // "Pregnancy History" isn't day data.
   }
   return c.result();
 }
@@ -104,6 +105,12 @@ function dayRow(c: DayCollector, r: Row) {
   for (const s of get(r, "Symptoms").split(/[,;|]/)) if (s.trim()) c.symptom(date, s.trim());
   const notes = get(r, "Notes");
   if (notes) c.day(date).notes = notes;
+}
+
+/** From the Cycles table, keep only Premom's confirmed / manually marked ovulation days (not its predictions). */
+function cycleRow(c: DayCollector, r: Row) {
+  const date = normalizeDate(get(r, "Manually Marked Ovulation") || get(r, "Confirmed Ovulation"));
+  if (date) c.day(date).ovulation = true;
 }
 
 function bbtRow(c: DayCollector, r: Row) {

@@ -26,6 +26,7 @@ export function cleanDayLog(raw: any): DayLog {
     cervical_mucus: oneOf(raw.cervical_mucus, MUCUS) as DayLog["cervical_mucus"],
     bbt: num(raw.bbt, 30, 110),
     pregnancy_test: oneOf(raw.pregnancy_test, PREG) as DayLog["pregnancy_test"],
+    ovulation: typeof raw.ovulation === "boolean" ? raw.ovulation : null,
     notes: str(raw.notes),
   };
 }
@@ -45,5 +46,5 @@ export function cleanLhTest(raw: any): LhTest {
 }
 
 export const DAY_COLS =
-  "date, flow, intercourse, symptoms, mood, cervical_mucus, bbt, pregnancy_test, notes, source";
+  "date, flow, intercourse, symptoms, mood, cervical_mucus, bbt, pregnancy_test, notes, ovulation, source";
 export const LH_COLS = "id, date, taken_at, ratio, level, ai_ratio, ai_level, (photo IS NOT NULL) AS has_photo, source";

@@ -45,6 +45,20 @@ export function SettingsPage() {
       </div>
 
       <div className="card stack">
+        <h2>Trying to conceive</h2>
+        <p className="muted small">Used for the "Am I on track?" timeline. Doctors suggest a check-up after 12 months of trying under 35, or 6 months at 35+.</p>
+        <label>
+          <div className="field-label">Started trying on</div>
+          <input type="date" value={form.ttcSince ?? ""} max={new Date().toISOString().slice(0, 10)} onChange={(e) => setForm({ ...form, ttcSince: e.target.value || null })} />
+        </label>
+        <label className="row" style={{ gap: 10 }}>
+          <input type="checkbox" checked={!!form.over35} onChange={(e) => setForm({ ...form, over35: e.target.checked })} style={{ width: 20, height: 20 }} />
+          <span>I'm 35 or older</span>
+        </label>
+        <button className="btn primary" onClick={save}>{saved ? "Saved ✓" : "Save"}</button>
+      </div>
+
+      <div className="card stack">
         <h2>Your data</h2>
         <div className="row wrap">
           <a className="btn primary" href="#/import">Import more history</a>

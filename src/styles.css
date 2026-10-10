@@ -281,3 +281,32 @@ ol.how li::before {
 .fade-in { animation: fade 0.25s ease; }
 @keyframes fade { from { opacity: 0; transform: translateY(4px); } }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+
+/* ---------- health checks ---------- */
+.check { border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+.check-head {
+  width: 100%; display: flex; align-items: center; gap: 12px; text-align: left; padding: 12px;
+  background: transparent; border: 0; cursor: pointer;
+}
+.check-title { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.check-icon {
+  flex: none; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center;
+  font-weight: 700; font-size: 14px; background: var(--st-soft); color: var(--st);
+}
+.check-badge { flex: none; font-size: 12px; font-weight: 600; color: var(--st); background: var(--st-soft); padding: 3px 9px; border-radius: 99px; }
+.check-body { padding: 0 12px 12px 50px; }
+.st-ok { --st: var(--follicular); --st-soft: var(--follicular-soft); }
+.st-watch { --st: var(--fertile); --st-soft: var(--fertile-soft); }
+.st-doctor { --st: var(--period); --st-soft: var(--period-soft); }
+.st-info { --st: var(--muted); --st-soft: var(--surface-2); }
+@media (max-width: 420px) { .check-badge { display: none; } .check-body { padding-left: 12px; } }
+.health-link { text-decoration: none; color: inherit; }
+
+/* ---------- daily note ---------- */
+.tips .why, p .why { color: var(--muted); font-size: 13px; }
+.tip-group + .tip-group { margin-top: 6px; }
+.tip-label { font-size: 12px; font-weight: 600; color: var(--phase, var(--brand)); margin-top: 8px; text-transform: uppercase; letter-spacing: 0.04em; }
+.btn.more { min-height: 32px; padding: 4px 0; margin-top: 4px; }
+.today-special { background: var(--phase-soft); border-radius: 12px; padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; font-weight: 500; }
+.pattern { background: var(--surface-2); border-radius: 12px; padding: 12px 14px; }
+.chip.static { cursor: default; font-size: 13px; min-height: 30px; padding: 4px 11px; }

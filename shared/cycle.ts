@@ -45,9 +45,10 @@ export interface Cycle {
   periodEnd: string;
   /** First LH Peak date in this cycle, if any. */
   lhPeak: string | null;
-  /** Ovulation date: LH-confirmed if lhPeak, else estimated. */
+  /** Ovulation date: from an LH peak, else a day marked as ovulation (e.g. by Premom), else estimated. */
   ovulation: string;
   ovulationConfirmed: boolean;
+  ovulationSource: "lh" | "marked" | "estimate";
 }
 
 export interface CycleModel {
@@ -127,6 +128,10 @@ export function buildModel(logs: DayLog[], lhTests: LhTest[], settings: Settings
     .filter((t) => t.level === "peak")
     .map((t) => t.date)
     .sort();
+  const marked = logs
+    .filter((l) => l.ovulation)
+    .map((l) => l.date)
+    .sort();
 
   // First pass: raw cycles with lengths and LH peaks.
   const raw = starts.map((start, i) => {
@@ -134,9 +139,10 @@ export function buildModel(logs: DayLog[], lhTests: LhTest[], settings: Settings
     const end = nextStart ? addDays(nextStart, -1) : null;
     const length = nextStart ? diffDays(nextStart, start) : null;
     const periodEnd = periodEndFrom(start, bleedSet, end);
-    const lhPeak =
-      peaks.find((p) => p > periodEnd && (end === null || p <= end)) ?? null;
-    return { start, end, length, periodEnd, lhPeak };
+    const inCycle = (d: string) => d > periodEnd && (end === null || d <= end);
+    const lhPeak = peaks.find(inCycle) ?? null;
+    const knownOv = lhPeak ? addDays(lhPeak, 1) : (marked.find(inCycle) ?? null);
+    return { start, end, length, periodEnd, lhPeak, knownOv };
   });
 
   const plausible = raw
@@ -146,8 +152,8 @@ export function buildModel(logs: DayLog[], lhTests: LhTest[], settings: Settings
   const avgCycleLength = recent.length ? Math.round(mean(recent)) : settings.cycleLength;
 
   const lutealSamples = raw
-    .filter((c) => c.lhPeak && c.length)
-    .map((c) => diffDays(addDays(c.start, c.length!), addDays(c.lhPeak!, 1)))
+    .filter((c) => c.knownOv && c.length)
+    .map((c) => diffDays(addDays(c.start, c.length!), c.knownOv!))
     .filter((l) => l >= 7 && l <= 18)
     .slice(-6);
   const avgLutealLength =
@@ -161,8 +167,8 @@ export function buildModel(logs: DayLog[], lhTests: LhTest[], settings: Settings
   const avgPeriodLength = periodLens.length ? Math.round(mean(periodLens)) : settings.periodLength;
 
   const ovDays = raw
-    .filter((c) => c.lhPeak)
-    .map((c) => diffDays(addDays(c.lhPeak!, 1), c.start) + 1)
+    .filter((c) => c.knownOv)
+    .map((c) => diffDays(c.knownOv!, c.start) + 1)
     .slice(-6);
   const typicalOvulationDay = ovDays.length ? Math.round(mean(ovDays)) : null;
 
@@ -171,10 +177,14 @@ export function buildModel(logs: DayLog[], lhTests: LhTest[], settings: Settings
     // Without an LH peak: completed cycles count back from the next period; the open cycle
     // uses the ovulation day learned from past LH peaks when there is one.
     const estDay = c.length === null && typicalOvulationDay ? typicalOvulationDay - 1 : len - avgLutealLength;
-    const ovulation = c.lhPeak
-      ? addDays(c.lhPeak, 1)
-      : addDays(c.start, Math.max(estDay, diffDays(c.periodEnd, c.start) + 2));
-    return { ...c, ovulation, ovulationConfirmed: !!c.lhPeak };
+    const ovulation = c.knownOv ?? addDays(c.start, Math.max(estDay, diffDays(c.periodEnd, c.start) + 2));
+    const { knownOv, ...rest } = c;
+    return {
+      ...rest,
+      ovulation,
+      ovulationConfirmed: !!knownOv,
+      ovulationSource: c.lhPeak ? ("lh" as const) : knownOv ? ("marked" as const) : ("estimate" as const),
+    };
   });
 
   return {

@@ -39,11 +39,11 @@ export default route(async (req: VercelRequest) => {
   const batchId = batch.rows[0].id;
 
   const days = await q<{ inserted: boolean }>(
-    `INSERT INTO day_logs AS d (date, flow, intercourse, symptoms, mood, cervical_mucus, bbt, pregnancy_test, notes, source, batch_id)
-     SELECT r.date, r.flow, r.intercourse, r.symptoms, r.mood, r.cervical_mucus, r.bbt, r.pregnancy_test, r.notes, $2, $3
+    `INSERT INTO day_logs AS d (date, flow, intercourse, symptoms, mood, cervical_mucus, bbt, pregnancy_test, notes, ovulation, source, batch_id)
+     SELECT r.date, r.flow, r.intercourse, r.symptoms, r.mood, r.cervical_mucus, r.bbt, r.pregnancy_test, r.notes, r.ovulation, $2, $3
      FROM jsonb_to_recordset($1::jsonb) AS r(
        date date, flow text, intercourse boolean, symptoms text[], mood text,
-       cervical_mucus text, bbt numeric, pregnancy_test text, notes text)
+       cervical_mucus text, bbt numeric, pregnancy_test text, notes text, ovulation boolean)
      ON CONFLICT (date) DO UPDATE SET
        flow = COALESCE(d.flow, EXCLUDED.flow),
        intercourse = CASE WHEN d.intercourse OR EXCLUDED.intercourse THEN true ELSE COALESCE(d.intercourse, EXCLUDED.intercourse) END,
@@ -55,6 +55,7 @@ export default route(async (req: VercelRequest) => {
        bbt = COALESCE(d.bbt, EXCLUDED.bbt),
        pregnancy_test = COALESCE(d.pregnancy_test, EXCLUDED.pregnancy_test),
        notes = COALESCE(d.notes, EXCLUDED.notes),
+       ovulation = COALESCE(d.ovulation, EXCLUDED.ovulation),
        updated_at = now()
      RETURNING (xmax = 0) AS inserted`,
     [JSON.stringify(dayLogs.map(toSqlJson)), source, batchId],

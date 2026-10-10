@@ -2,8 +2,9 @@ import { useEffect, useMemo, useState } from "react";
 import { PHASE_NAME, phaseFor, type Today as TodayInfo } from "../../shared/cycle";
 import { addDays, diffDays, localToday, prettyDate } from "../../shared/dates";
 import { LH_LABEL } from "../../shared/lh";
-import { PHASES, fill, pick } from "../content/phases";
+import { DailyNote } from "../components/DailyNote";
 import { DayEditor } from "../components/DayEditor";
+import { HealthSummaryLink } from "../components/HealthChecks";
 import { LhUploadButton } from "../components/LhUpload";
 import { api } from "../lib/api";
 import { useStore } from "../lib/store";
@@ -22,7 +23,6 @@ export function TodayPage() {
   const today = localToday();
   const yesterday = addDays(today, -1);
   const info = useMemo(() => phaseFor(today, model), [today, model]);
-  const content = PHASES[info.phase];
   const [checkDay, setCheckDay] = useState<"yesterday" | "today">(byDate.has(yesterday) ? "today" : "yesterday");
 
   const vars = {
@@ -33,7 +33,6 @@ export function TodayPage() {
     daysToFertile: info.fertileStart ? Math.max(0, diffDays(info.fertileStart, today)) : null,
     lhStart: info.cycle ? Math.max(6, diffDays(info.fertileStart!, info.cycle.start) - 1) : 10,
   };
-  const seed = info.cycleDay ?? 0;
   const todaysLh = lhTests.filter((t) => t.date === today);
 
   return (
@@ -68,23 +67,9 @@ export function TodayPage() {
         )}
       </div>
 
-      <div className={`card stack ph-${info.phase}`}>
-        <div>
-          <span className="phase-pill"><span className="dot" />{content.title}</span>
-          <h2 style={{ marginTop: 10 }}>{content.tagline}</h2>
-          {content.hormones && <p className="muted small" style={{ marginTop: 6 }}>{content.hormones}</p>}
-        </div>
-        {SECTIONS.map((s) => {
-          const lines = pick(content[s.key], seed + s.key.length, s.key === "ttc" ? 3 : 2).map((l) => fill(l, vars));
-          if (!lines.length) return null;
-          return (
-            <section key={s.key}>
-              <div className="section-title"><span className="ico" aria-hidden>{s.icon}</span>{s.title}</div>
-              <ul className="tips">{lines.map((l) => <li key={l}>{l}</li>)}</ul>
-            </section>
-          );
-        })}
-      </div>
+      {info.phase !== "unknown" && <DailyNote info={info} vars={vars} />}
+
+      <HealthSummaryLink />
 
       {dayLogs.length === 0 && (
         <div className="card stack">
@@ -137,7 +122,7 @@ function Hero({ info }: { info: TodayInfo }) {
       <div className="facts">
         {info.ovulation && (
           <div className="fact">
-            {info.ovulationConfirmed ? "Ovulated (LH)" : info.daysUntilOvulation ? "Ovulation (est.)" : "Ovulated (est.)"}
+            {info.ovulationConfirmed ? (info.daysUntilOvulation ? "Ovulation" : "Ovulated (confirmed)") : info.daysUntilOvulation ? "Ovulation (est.)" : "Ovulated (est.)"}
             <b>{prettyDate(info.ovulation)}</b>
           </div>
         )}

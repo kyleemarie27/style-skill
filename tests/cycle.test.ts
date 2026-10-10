@@ -103,6 +103,15 @@ describe("phaseFor", () => {
     expect(phaseFor("2026-03-01", m4).ovulation).toBe("2026-03-10"); // CD13 of the Feb 26 cycle
   });
 
+  it("uses a marked ovulation day (e.g. Premom-confirmed) when there's no LH peak", () => {
+    const withMark: DayLog[] = [...logs, { date: "2026-02-12", ovulation: true }];
+    const m5 = buildModel(withMark, [], DEFAULT_SETTINGS);
+    expect(m5.cycles[1]).toMatchObject({ ovulation: "2026-02-12", ovulationConfirmed: true, ovulationSource: "marked" });
+    // an LH peak still wins over a mark in the same cycle
+    const m6 = buildModel(withMark, [{ date: "2026-02-08", ratio: 1.1, level: "peak" }], DEFAULT_SETTINGS);
+    expect(m6.cycles[1]).toMatchObject({ ovulation: "2026-02-09", ovulationSource: "lh" });
+  });
+
   it("returns unknown with no data", () => {
     expect(phaseFor("2026-03-01", buildModel([], [], DEFAULT_SETTINGS)).phase).toBe("unknown");
   });

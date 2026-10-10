@@ -1,4 +1,5 @@
 import type { VercelRequest } from "@vercel/node";
+import { isISODate } from "../shared/dates.js";
 import { DEFAULT_SETTINGS, type Settings } from "../shared/types.js";
 import { method, route } from "./_lib/auth.js";
 import { q } from "./_lib/db.js";
@@ -17,6 +18,8 @@ export default route(async (req: VercelRequest) => {
       lutealLength: clamp(b.lutealLength, 9, 17, DEFAULT_SETTINGS.lutealLength),
       periodLength: clamp(b.periodLength, 2, 10, DEFAULT_SETTINGS.periodLength),
       ttc: b.ttc !== false,
+      ttcSince: isISODate(b.ttcSince) ? b.ttcSince : null,
+      over35: b.over35 === true,
     };
     await q(
       "INSERT INTO settings (key, value) VALUES ('main', $1) ON CONFLICT (key) DO UPDATE SET value=$1",
