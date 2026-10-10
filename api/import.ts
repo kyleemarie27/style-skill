@@ -66,8 +66,10 @@ export default route(async (req: VercelRequest) => {
      FROM jsonb_to_recordset($1::jsonb) AS r(date date, taken_at text, ratio numeric, level text)
      WHERE NOT EXISTS (
        SELECT 1 FROM lh_tests t
-       WHERE t.date = r.date AND t.level = r.level AND t.ratio IS NOT DISTINCT FROM r.ratio
-         AND t.taken_at IS NOT DISTINCT FROM r.taken_at)`,
+       WHERE t.date = r.date AND t.ratio IS NOT DISTINCT FROM r.ratio
+         -- The same reading exported twice (e.g. Premom's chart CSV and its full export) writes the time
+         -- differently, so a numeric reading on the same day counts as a duplicate whatever its time.
+         AND (r.ratio IS NOT NULL OR (t.level = r.level AND t.taken_at IS NOT DISTINCT FROM r.taken_at)))`,
     [JSON.stringify(lhTests), source, batchId],
   );
 

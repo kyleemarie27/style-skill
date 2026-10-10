@@ -2,6 +2,7 @@ import { normalizeDate } from "../../../shared/dates";
 import { levelForRatio, levelFromText, normalizeRatio } from "../../../shared/lh";
 import type { ImportBundle } from "../../../shared/types";
 import { mergeBundles } from "./merge";
+import { isPremomExport, parsePremomExport } from "./premom";
 import {
   DayCollector,
   flowFromText,
@@ -199,7 +200,11 @@ export async function readTableFile(file: { arrayBuffer(): Promise<ArrayBuffer> 
 }
 
 export async function parseTableFile(file: { arrayBuffer(): Promise<ArrayBuffer> }, source: string): Promise<ImportBundle> {
-  const sheets = await readTableFile(file);
+  // Premom's full data export packs several tables into one CSV; it has its own reader.
+  const buf = await file.arrayBuffer();
+  const head = new TextDecoder().decode(buf.slice(0, 200_000));
+  if (isPremomExport(head)) return parsePremomExport(new TextDecoder().decode(buf));
+  const sheets = await readTableFile({ arrayBuffer: async () => buf });
   if (!sheets.length) return { dayLogs: [], lhTests: [], warnings: ["Couldn't find a table with a date column in this file."] };
   return mergeBundles(sheets.map((rows) => parseTableRows(rows, source)));
 }

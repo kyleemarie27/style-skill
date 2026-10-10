@@ -1,0 +1,25 @@
+# Cycles
+Cycle Number,Predicted Period Start,Predicted Period End,Actual Period Start,Actual Period End,BBT Spike Date,LH Peak Date,Predicted Ovulation,Confirmed Ovulation,Manually Marked Ovulation,Cycle End,Cycle Type
+1,,,2026-01-05 12:00:00,2026-01-07 12:00:00,,,2026-01-19 12:00:00,,,2026-02-01 12:00:00,Period
+
+# Ovulation Tests (LH / Test Strip)
+Test Date,Test Type,Result,Auto Result,Peak,T Value,C Value
+2026-01-17 15:10:00,LH,,Low,No,12.0,60.0
+2026-01-18 15:00:00,LH,,High,No,45.0,50.0
+2026-01-19 14:00:00,LH,,Peak,Yes,66.0,55.0
+2026-01-20 14:00:00,LH,Low,High,No,20.0,50.0
+
+# Basal Body Temperature
+Measure Date,Temperature (F),Is BBT,Source,Interference
+2026-01-21 06:30:00,97.9,true,,
+
+# Daily Logs
+Record Date,Period Flow,Cervical Mucus,Intercourse,Moods,Symptoms,Exercise,Sleep (min),Weight,Notes
+2026-01-05 12:00:00,256,,,,,,0,,
+2026-01-06 12:00:00,Period,,,,Cramps,,0,,
+2026-01-07 12:00:00,,,NoIntercourse,Happy,,,0,,
+2026-01-18 12:00:00,,Egg White,Unprotected,,,,0,,
+2026-01-19 12:00:00,,,Protected,,,,0,,
+
+# Pregnancy History
+Last Menstrual Period,State,State Time,Postpartum Recovery Begin

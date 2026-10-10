@@ -7,8 +7,22 @@ export const MODEL = "claude-opus-5-5";
 /** Set BLOOM_FAKE_AI=1 in local dev to get canned answers without an API key. */
 export const fakeAi = () => process.env.BLOOM_FAKE_AI === "1";
 
+/** The key as pasted into Vercel, minus the stray spaces, line breaks and quotes that copy-paste adds. */
+export function apiKey(): string {
+  return (process.env.ANTHROPIC_API_KEY ?? "").trim().replace(/^["']+|["']+$/g, "").trim();
+}
+
+/** A safe description of the key for logs: its standard prefix and length, never the secret part. */
+function keyShape(): string {
+  const raw = process.env.ANTHROPIC_API_KEY ?? "";
+  const k = apiKey();
+  return `starts with "${k.slice(0, 10)}…", ${k.length} chars` +
+    (raw !== k ? " (had spaces/quotes around it, now removed)" : "") +
+    (/\s/.test(k) ? ", contains a space or line break inside" : "");
+}
+
 export function requireClaude() {
-  if (!process.env.ANTHROPIC_API_KEY && !fakeAi()) {
+  if (!apiKey() && !fakeAi()) {
     throw new HttpError(503, "AI isn't set up yet. Add ANTHROPIC_API_KEY in Vercel to turn it on.");
   }
 }
@@ -25,7 +39,7 @@ export async function askJson<T>(opts: {
   maxTokens?: number;
 }): Promise<T> {
   requireClaude();
-  const client = new Anthropic();
+  const client = new Anthropic({ apiKey: apiKey() });
   try {
     const stream = client.beta.messages.stream({
       model: MODEL,
@@ -48,7 +62,10 @@ export async function askJson<T>(opts: {
     if (err instanceof HttpError) throw err;
     // Logged so the reason shows up in Vercel's runtime logs (the API key itself is never included).
     if (err instanceof Anthropic.APIError) console.error(`Anthropic API error ${err.status ?? "network"}: ${err.message}`);
-    if (err instanceof Anthropic.AuthenticationError) throw new HttpError(503, "The Anthropic API key was rejected. Check ANTHROPIC_API_KEY.");
+    if (err instanceof Anthropic.AuthenticationError) {
+      console.error(`Rejected key ${keyShape()}`);
+      throw new HttpError(503, "The Anthropic API key was rejected. Check ANTHROPIC_API_KEY.");
+    }
     if (err instanceof Anthropic.RateLimitError) throw new HttpError(429, "The AI is busy right now. Try again in a minute.");
     if (err instanceof Anthropic.APIError) throw new HttpError(502, `AI request failed (${err.status ?? "network"}): ${err.message}`);
     throw err;

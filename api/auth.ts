@@ -1,10 +1,11 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
+import { apiKey } from "./_lib/claude.js";
 import { checkPassword, clearSession, isAuthed, method, route, setSession } from "./_lib/auth.js";
 
 export default route(
   async (req: VercelRequest, res: VercelResponse) => {
     const m = method(req, "GET", "POST", "DELETE");
-    if (m === "GET") return { authed: isAuthed(req), ai: !!process.env.ANTHROPIC_API_KEY || process.env.BLOOM_FAKE_AI === "1" };
+    if (m === "GET") return { authed: isAuthed(req), ai: !!apiKey() || process.env.BLOOM_FAKE_AI === "1" };
     if (m === "DELETE") {
       clearSession(res);
       return { ok: true };
