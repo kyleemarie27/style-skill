@@ -107,6 +107,8 @@ describe("Premom / table importer", () => {
     expect(day("2026-01-18")).toMatchObject({ intercourse: true, cervical_mucus: "egg_white" });
     expect(day("2026-01-19")).toMatchObject({ symptoms: ["Protected sex"] });
     expect(day("2026-01-21")!.bbt).toBe(97.9);
+    expect(day("2026-01-20")!.ovulation).toBe(true); // Premom's "Confirmed Ovulation", not its prediction
+    expect(b.dayLogs.filter((d) => d.ovulation).map((d) => d.date)).toEqual(["2026-01-20"]);
   });
 
   it("supports long Date | Type | Value tables", () => {

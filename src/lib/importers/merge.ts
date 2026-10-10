@@ -43,6 +43,7 @@ export function mergeWithReport(bundles: ImportBundle[]): MergeReport {
       cur.cervical_mucus = clueWins ? (d.cervical_mucus ?? cur.cervical_mucus) : (cur.cervical_mucus ?? d.cervical_mucus);
       cur.bbt = d.source === "premom" ? (d.bbt ?? cur.bbt) : (cur.bbt ?? d.bbt);
       cur.pregnancy_test ??= d.pregnancy_test;
+      cur.ovulation = cur.ovulation || d.ovulation || null;
       cur.notes = [cur.notes, d.notes].filter(Boolean).join(" · ") || null;
       if (cur.source !== d.source) cur.source = "import";
     }

@@ -64,7 +64,7 @@ export function CalendarPage() {
         <span><i style={{ background: "var(--period)" }} />Period</span>
         <span><i style={{ border: "1.5px dashed var(--period)" }} />Predicted period</span>
         <span><i style={{ background: "var(--fertile-soft)" }} />Fertile window</span>
-        <span><i style={{ background: "var(--ovulation)" }} />Ovulation (LH)</span>
+        <span><i style={{ background: "var(--ovulation)" }} />Ovulation (confirmed)</span>
         <span><i style={{ border: "1.5px dashed var(--ovulation)", background: "var(--ovulation-soft)" }} />Ovulation (est.)</span>
         <span><span style={{ color: "var(--brand)" }}>♥</span>Intercourse</span>
         <span><i style={{ background: "var(--peak)", borderRadius: 99, width: 8, height: 8 }} />LH peak</span>
