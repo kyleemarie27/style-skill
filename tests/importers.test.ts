@@ -8,6 +8,7 @@ import { parseTableFile, parseTableRows } from "../src/lib/importers/table";
 
 const fixture = (name: string) => new URL(`./fixtures/${name}`, import.meta.url);
 const asFile = (name: string) => new File([readFileSync(fixture(name))], name);
+const parsePremomFile = (name: string) => parseTableFile(asFile(name), "premom");
 
 describe("Clue importer", () => {
   it("reads the legacy day-record shape", () => {
@@ -89,6 +90,23 @@ describe("Premom / table importer", () => {
       ["2026-03-13", 0.31, "low", "2026-03-13 12:30 PM"],
     ]);
     expect(b.dayLogs).toEqual([{ date: "2026-03-11", bbt: 97.4, source: "premom" }]);
+  });
+
+  it("reads Premom's full multi-section data export", async () => {
+    const b = await parsePremomFile("premom-export.csv");
+    expect(b.lhTests.map((t) => [t.date, t.ratio, t.level])).toEqual([
+      ["2026-01-17", 0.2, "low"],
+      ["2026-01-18", 0.9, "high"],
+      ["2026-01-19", 1.2, "peak"],
+      ["2026-01-20", 0.4, "low"], // a manual result beats Premom's automatic one
+    ]);
+    const day = (d: string) => b.dayLogs.find((x) => x.date === d);
+    expect(day("2026-01-05")!.flow).toBe("medium"); // old numeric flow code
+    expect(day("2026-01-06")).toMatchObject({ flow: "medium", symptoms: ["Cramps"] });
+    expect(day("2026-01-07")!.intercourse).toBeUndefined(); // "NoIntercourse"
+    expect(day("2026-01-18")).toMatchObject({ intercourse: true, cervical_mucus: "egg_white" });
+    expect(day("2026-01-19")).toMatchObject({ symptoms: ["Protected sex"] });
+    expect(day("2026-01-21")!.bbt).toBe(97.9);
   });
 
   it("supports long Date | Type | Value tables", () => {
