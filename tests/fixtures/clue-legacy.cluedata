@@ -1,0 +1,279 @@
+{
+ "data": [
+  {
+   "day": "2026-05-02T00:00:00Z",
+   "period": "heavy",
+   "pain": [
+    "period_cramps"
+   ],
+   "mood": [
+    "sensitive"
+   ]
+  },
+  {
+   "day": "2026-05-03T00:00:00Z",
+   "period": "heavy"
+  },
+  {
+   "day": "2026-05-04T00:00:00Z",
+   "period": "medium"
+  },
+  {
+   "day": "2026-05-05T00:00:00Z",
+   "period": "light"
+  },
+  {
+   "day": "2026-05-06T00:00:00Z",
+   "spotting": "spotting"
+  },
+  {
+   "day": "2026-05-13T00:00:00Z",
+   "sex": [
+    "unprotected"
+   ],
+   "sex_drive": [
+    "high_sex_drive"
+   ],
+   "fluid": [
+    "creamy"
+   ]
+  },
+  {
+   "day": "2026-05-15T00:00:00Z",
+   "sex": [
+    "unprotected"
+   ],
+   "sex_drive": [
+    "high_sex_drive"
+   ],
+   "fluid": [
+    "egg_white"
+   ]
+  },
+  {
+   "day": "2026-05-17T00:00:00Z",
+   "sex": [
+    "unprotected"
+   ],
+   "sex_drive": [
+    "high_sex_drive"
+   ],
+   "fluid": [
+    "creamy"
+   ]
+  },
+  {
+   "day": "2026-05-16T00:00:00Z",
+   "tests": [
+    "ovulation_test_pos"
+   ]
+  },
+  {
+   "day": "2026-05-31T00:00:00Z",
+   "period": "heavy",
+   "pain": [
+    "period_cramps"
+   ],
+   "mood": [
+    "sensitive"
+   ]
+  },
+  {
+   "day": "2026-06-01T00:00:00Z",
+   "period": "heavy"
+  },
+  {
+   "day": "2026-06-02T00:00:00Z",
+   "period": "medium"
+  },
+  {
+   "day": "2026-06-03T00:00:00Z",
+   "period": "light"
+  },
+  {
+   "day": "2026-06-04T00:00:00Z",
+   "spotting": "spotting"
+  },
+  {
+   "day": "2026-06-11T00:00:00Z",
+   "sex": [
+    "unprotected"
+   ],
+   "sex_drive": [
+    "high_sex_drive"
+   ],
+   "fluid": [
+    "creamy"
+   ]
+  },
+  {
+   "day": "2026-06-13T00:00:00Z",
+   "sex": [
+    "unprotected"
+   ],
+   "sex_drive": [
+    "high_sex_drive"
+   ],
+   "fluid": [
+    "egg_white"
+   ]
+  },
+  {
+   "day": "2026-06-15T00:00:00Z",
+   "sex": [
+    "unprotected"
+   ],
+   "sex_drive": [
+    "high_sex_drive"
+   ],
+   "fluid": [
+    "creamy"
+   ]
+  },
+  {
+   "day": "2026-06-14T00:00:00Z",
+   "tests": [
+    "ovulation_test_pos"
+   ]
+  },
+  {
+   "day": "2026-06-30T00:00:00Z",
+   "period": "heavy",
+   "pain": [
+    "period_cramps"
+   ],
+   "mood": [
+    "sensitive"
+   ]
+  },
+  {
+   "day": "2026-07-01T00:00:00Z",
+   "period": "heavy"
+  },
+  {
+   "day": "2026-07-02T00:00:00Z",
+   "period": "medium"
+  },
+  {
+   "day": "2026-07-03T00:00:00Z",
+   "period": "light"
+  },
+  {
+   "day": "2026-07-04T00:00:00Z",
+   "spotting": "spotting"
+  },
+  {
+   "day": "2026-07-11T00:00:00Z",
+   "sex": [
+    "unprotected"
+   ],
+   "sex_drive": [
+    "high_sex_drive"
+   ],
+   "fluid": [
+    "creamy"
+   ]
+  },
+  {
+   "day": "2026-07-13T00:00:00Z",
+   "sex": [
+    "unprotected"
+   ],
+   "sex_drive": [
+    "high_sex_drive"
+   ],
+   "fluid": [
+    "egg_white"
+   ]
+  },
+  {
+   "day": "2026-07-15T00:00:00Z",
+   "sex": [
+    "unprotected"
+   ],
+   "sex_drive": [
+    "high_sex_drive"
+   ],
+   "fluid": [
+    "creamy"
+   ]
+  },
+  {
+   "day": "2026-07-14T00:00:00Z",
+   "tests": [
+    "ovulation_test_pos"
+   ]
+  },
+  {
+   "day": "2026-07-28T00:00:00Z",
+   "period": "heavy",
+   "pain": [
+    "period_cramps"
+   ],
+   "mood": [
+    "sensitive"
+   ]
+  },
+  {
+   "day": "2026-07-29T00:00:00Z",
+   "period": "heavy"
+  },
+  {
+   "day": "2026-07-30T00:00:00Z",
+   "period": "medium"
+  },
+  {
+   "day": "2026-07-31T00:00:00Z",
+   "period": "light"
+  },
+  {
+   "day": "2026-08-01T00:00:00Z",
+   "spotting": "spotting"
+  },
+  {
+   "day": "2026-08-08T00:00:00Z",
+   "sex": [
+    "unprotected"
+   ],
+   "sex_drive": [
+    "high_sex_drive"
+   ],
+   "fluid": [
+    "creamy"
+   ]
+  },
+  {
+   "day": "2026-08-10T00:00:00Z",
+   "sex": [
+    "unprotected"
+   ],
+   "sex_drive": [
+    "high_sex_drive"
+   ],
+   "fluid": [
+    "egg_white"
+   ]
+  },
+  {
+   "day": "2026-08-12T00:00:00Z",
+   "sex": [
+    "unprotected"
+   ],
+   "sex_drive": [
+    "high_sex_drive"
+   ],
+   "fluid": [
+    "creamy"
+   ]
+  },
+  {
+   "day": "2026-08-11T00:00:00Z",
+   "tests": [
+    "ovulation_test_pos"
+   ]
+  }
+ ],
+ "settings": {
+  "cycle_length": 29
+ }
+}
