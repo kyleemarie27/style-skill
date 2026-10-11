@@ -103,6 +103,7 @@ export function SettingsPage() {
           AI features (strip reading, your daily line, smart import) are {aiEnabled ? "on" : "off. Add ANTHROPIC_API_KEY in Vercel to turn them on"}.
           No ads, no tracking, no notifications. Your data lives in your own database.
         </p>
+        <p className="tiny muted">Version {__BUILD__} · built {__BUILT_AT__} UTC</p>
         <button
           className="btn"
           onClick={async () => {
