@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { PHASE_NAME, phaseFor, type Today as TodayInfo } from "../../shared/cycle";
 import { addDays, diffDays, localToday, prettyDate } from "../../shared/dates";
 import { LH_LABEL } from "../../shared/lh";
+import { AskBloomCard } from "../components/AskBloom";
 import { DailyNote } from "../components/DailyNote";
 import { DayEditor } from "../components/DayEditor";
 import { HealthSummaryLink } from "../components/HealthChecks";
@@ -70,6 +71,8 @@ export function TodayPage() {
       {info.phase !== "unknown" && <DailyNote info={info} vars={vars} />}
 
       <HealthSummaryLink />
+
+      {info.phase !== "unknown" && <AskBloomCard suggestions={todaySuggestions(info)} />}
 
       {dayLogs.length === 0 && (
         <div className="card stack">
@@ -189,4 +192,12 @@ function PersonalLine({ info }: { info: TodayInfo }) {
       )}
     </div>
   );
+}
+
+function todaySuggestions(info: TodayInfo): string[] {
+  if (info.phase === "menstrual") return ["Is my period normal?", "What helps with cramps?", "When should I start LH testing this cycle?"];
+  if (info.phase === "follicular") return ["When will I ovulate this cycle?", "How should I time sex this month?", "What's a good LH testing plan for me?"];
+  if (info.phase === "fertile" || info.phase === "ovulation") return ["What do my LH readings mean?", "Did I time things well this cycle?", "How do I know I've ovulated?"];
+  if (info.phase === "late") return ["When should I test?", "Why might my period be late?", "What does a faint line mean?"];
+  return ["When should I test?", "Are these symptoms pregnancy or PMS?", "What happens around implantation?"];
 }
