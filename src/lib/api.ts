@@ -55,6 +55,37 @@ export const api = {
     call<ImportBundle>("import-extract", { method: "POST", json: body }),
 };
 
+export interface ChatMsg {
+  role: "user" | "assistant";
+  content: string;
+}
+
+/** Ask Bloom: streams the answer, calling onText with the full text so far. */
+export async function askBloom(messages: ChatMsg[], context: unknown, onText: (text: string) => void, signal?: AbortSignal) {
+  const res = await fetch("/api/ask", {
+    method: "POST",
+    credentials: "same-origin",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ messages, context }),
+    signal,
+  });
+  if (res.status === 401) throw new AuthError("Please log in.");
+  if (!res.ok || !res.body) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.error ?? `Request failed (${res.status})`);
+  }
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let text = "";
+  for (;;) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    text += decoder.decode(value, { stream: true });
+    onText(text);
+  }
+  return text;
+}
+
 /** Resize a photo in the browser to a JPEG data URL (keeps uploads small and fast). */
 export async function resizeImage(file: File, maxSide = 1280, quality = 0.82): Promise<string> {
   const bitmap = await createImageBitmap(file);

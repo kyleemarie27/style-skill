@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { addDays, diffDays, localToday, prettyDate } from "../../shared/dates";
+import { AskBloomCard } from "../components/AskBloom";
 import { HealthChecks } from "../components/HealthChecks";
 import { LhChart } from "../components/LhChart";
 import { useStore } from "../lib/store";
@@ -46,6 +47,7 @@ export function InsightsPage() {
     <div className="stack">
       <h1>Insights</h1>
       <HealthChecks />
+      <AskBloomCard suggestions={["Is my cycle normal?", "Why didn't I catch an LH Peak?", "What does my luteal phase tell me?", "Should I talk to a doctor about anything?"]} />
       <div className="grid2">
         <div className="stat"><b>{model.avgCycleLength}</b><span>avg cycle length (days)</span></div>
         <div className="stat"><b>{model.avgPeriodLength}</b><span>avg period length (days)</span></div>

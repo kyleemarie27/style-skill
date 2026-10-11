@@ -310,3 +310,16 @@ ol.how li::before {
 .today-special { background: var(--phase-soft); border-radius: 12px; padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; font-weight: 500; }
 .pattern { background: var(--surface-2); border-radius: 12px; padding: 12px 14px; }
 .chip.static { cursor: default; font-size: 13px; min-height: 30px; padding: 4px 11px; }
+
+/* ---------- ask bloom ---------- */
+.ask-card form input { flex: 1; }
+.ask-sheet { display: flex; flex-direction: column; gap: 10px; height: 88dvh; max-width: 640px; }
+.ask-head { flex: none; }
+.ask-msgs { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding: 4px 2px; }
+.bubble { padding: 10px 14px; border-radius: 16px; max-width: 88%; line-height: 1.5; }
+.bubble.user { align-self: flex-end; background: var(--brand); color: var(--brand-ink); border-bottom-right-radius: 4px; }
+.bubble.assistant { align-self: flex-start; background: var(--surface-2); border-bottom-left-radius: 4px; }
+.md p + p, .md p + ul, .md ul + p { margin-top: 8px; }
+.md ul.tips { margin-top: 4px; }
+.ask-input { flex: none; }
+.ask-input input { flex: 1; }
