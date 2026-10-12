@@ -18,3 +18,9 @@ export const GearIcon = () => (
 export const CameraIcon = () => (
   <svg viewBox="0 0 24 24" {...p} width="18" height="18"><path d="M4 8h3l2-3h6l2 3h3v11H4z" /><circle cx="12" cy="13" r="3.5" /></svg>
 );
+export const SproutIcon = () => (
+  <svg viewBox="0 0 24 24" {...p}><path d="M12 21v-9" /><path d="M12 12c0-4-3-7-8-7 0 5 3 7 8 7zM12 14c0-4 3-7 8-7 0 5-3 7-8 7z" /></svg>
+);
+export const StethIcon = () => (
+  <svg viewBox="0 0 24 24" {...p}><path d="M6 3v6a5 5 0 0 0 10 0V3" /><path d="M11 14v2a4 4 0 0 0 8 0v-3" /><circle cx="19" cy="11" r="2" /></svg>
+);

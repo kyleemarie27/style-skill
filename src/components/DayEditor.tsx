@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import type { DayLog, Flow, Mucus, PregnancyTest } from "../../shared/types";
+import { activePregnancy } from "../../shared/pregnancy";
 import { useStore } from "../lib/store";
+import { PositiveTestSheet } from "./PositiveTestSheet";
 import { ChipGroup, MultiChips } from "./Chips";
 
 export const FLOW_OPTS: { value: Flow; label: string }[] = [
@@ -23,14 +25,15 @@ const PREG_OPTS: { value: PregnancyTest; label: string }[] = [
   { value: "positive", label: "Positive" },
 ];
 const SYMPTOMS = ["Cramps", "Headache", "Bloating", "Tender breasts", "Acne", "Tired", "Back pain", "Nausea", "Cravings", "Ovulation pain", "High libido"];
-const MOODS = ["Happy", "Calm", "Energetic", "Anxious", "Irritable", "Sad", "Sensitive"];
+export const MOODS = ["Happy", "Calm", "Energetic", "Anxious", "Irritable", "Sad", "Sensitive"];
 
 /**
  * Logs a day. Every tap saves on its own (debounced), so there's no Save button to forget.
  * `compact` shows only the quick check-in fields.
  */
 export function DayEditor({ date, compact = false }: { date: string; compact?: boolean }) {
-  const { byDate, saveDay } = useStore();
+  const { byDate, saveDay, settings } = useStore();
+  const [askPositive, setAskPositive] = useState(false);
   const [log, setLog] = useState<DayLog>(() => byDate.get(date) ?? { date });
   const [status, setStatus] = useState<"" | "saving" | "saved" | "error">("");
   const timer = useRef<number>(undefined);
@@ -80,7 +83,11 @@ export function DayEditor({ date, compact = false }: { date: string; compact?: b
       <MultiChips label="Mood" kind="sym" options={MOODS} value={moods} onChange={(m) => update({ mood: m.join(", ") || null })} />
       {!compact && (
         <>
-          <ChipGroup label="Pregnancy test" kind="love" options={PREG_OPTS} value={log.pregnancy_test} onChange={(pregnancy_test) => update({ pregnancy_test })} />
+          <ChipGroup label="Pregnancy test" kind="love" options={PREG_OPTS} value={log.pregnancy_test} onChange={(pregnancy_test) => {
+            update({ pregnancy_test });
+            if (pregnancy_test === "positive" && !activePregnancy(settings)) setAskPositive(true);
+          }} />
+          {askPositive && <PositiveTestSheet date={date} onClose={() => setAskPositive(false)} />}
           <div>
             <div className="field-label">Basal body temperature</div>
             <input

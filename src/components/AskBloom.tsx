@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { localToday } from "../../shared/dates";
+import { activePregnancy } from "../../shared/pregnancy";
 import { askBloom, type ChatMsg } from "../lib/api";
 import { buildAskContext } from "../lib/askContext";
 import { useStore } from "../lib/store";
@@ -22,7 +23,8 @@ const save = (m: ChatMsg[]) => {
 
 /** The "Ask Bloom" card: a question box plus suggestions; opens the chat sheet. */
 export function AskBloomCard({ suggestions }: { suggestions: string[] }) {
-  const { aiEnabled } = useStore();
+  const { aiEnabled, settings } = useStore();
+  const pregnant = !!activePregnancy(settings);
   const [open, setOpen] = useState(false);
   const [first, setFirst] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
@@ -40,7 +42,7 @@ export function AskBloomCard({ suggestions }: { suggestions: string[] }) {
       <div className="row between">
         <div>
           <h2>Ask Bloom</h2>
-          <p className="muted small">Questions about your cycle, your data or trying to conceive. Answers use your history.</p>
+          <p className="muted small">{pregnant ? "Questions about your pregnancy, symptoms, food and medicine safety, or what's coming next. Answers use what you've logged." : "Questions about your cycle, your data or trying to conceive. Answers use your history."}</p>
         </div>
         {load().length > 0 && (
           <button className="btn ghost small" onClick={() => { setFirst(null); setOpen(true); }}>Last chat</button>

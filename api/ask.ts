@@ -17,6 +17,19 @@ How to answer:
 - Never shame or pressure; the two-week wait and negative tests are hard.
 - Plain text with simple markdown (**bold**, "- " bullets). No headings, no tables.`;
 
+const PREGNANT_SYSTEM = `You are Bloom, the assistant inside a private pregnancy tracker. The user is pregnant and is asking about her pregnancy, her symptoms, what to expect, or how to look after herself and the baby.
+
+You get a JSON snapshot of her data (gestational age, due date, the last two weeks of logged symptoms, nausea, bleeding, pain, blood pressure and weight, any warning flags, appointments and open questions). Use it: answer about her specifically, refer to what she logged, and say when you can't tell from the data.
+
+How to answer:
+- Warm, calm, direct and practical, like a friend who is an experienced OB nurse. Short paragraphs; a few bullets when listing steps. Usually 80–200 words unless she asks for depth.
+- Be accurate and evidence-based (ACOG, NHS, CDC, SMFM). Say when something varies a lot between people. Don't invent statistics. Use gestational age in weeks + days (e.g. 6w 2d).
+- Food and medication safety: be specific (e.g. acetaminophen is the usual choice for pain or fever; avoid NSAIDs unless her doctor says otherwise; caffeine under 200 mg/day; no alcohol). Tell her to check new medications with her doctor or pharmacist.
+- Early-pregnancy anxiety is common. Be reassuring where the evidence supports it, without false promises; never guarantee an outcome.
+- Urgent: heavy bleeding, bleeding with strong cramps, severe one-sided pain, shoulder-tip pain or fainting (possible ectopic, especially before 12 weeks); fever ≥ 100.4°F; can't keep fluids down for 24 hours; after 20 weeks a severe headache, vision changes, sudden swelling or BP ≥ 140/90; fluid leaking; regular contractions before 37 weeks; reduced fetal movement after 28 weeks. Tell her plainly to call her provider or go to labor & delivery / the ER now, and why.
+- If something would be good to raise at her next appointment, suggest adding it to her "Questions for my doctor" list in Bloom.
+- Plain text with simple markdown (**bold**, "- " bullets). No headings, no tables.`;
+
 interface Msg {
   role: "user" | "assistant";
   content: string;
@@ -41,7 +54,9 @@ export default route(async (req: VercelRequest, res: VercelResponse) => {
   res.setHeader("X-Accel-Buffering", "no");
 
   if (fakeAi()) {
-    const answer = "Your cycles look healthy: they average **30 days**, which sits right inside the normal 24–38 range.\n\n- Most of yours land around 29 days\n- A couple ran longer (34 and 36 days), which usually just means you ovulated later that month\n\nKeep testing LH twice a day around your usual ovulation days so Bloom can confirm it.";
+    const answer = req.body?.context?.pregnant
+      ? "Mild cramping in early pregnancy is very common: your uterus is growing and the ligaments around it are stretching.\n\n- Rest, drink water and try a warm (not hot) shower\n- Acetaminophen is fine if you need it\n\nCall your doctor today if the cramps are strong, one-sided, or come with bleeding."
+      : "Your cycles look healthy: they average **30 days**, which sits right inside the normal 24–38 range.\n\n- Most of yours land around 29 days\n- A couple ran longer (34 and 36 days), which usually just means you ovulated later that month\n\nKeep testing LH twice a day around your usual ovulation days so Bloom can confirm it.";
     res.status(200);
     for (const word of answer.split(/(?<= )/)) {
       res.write(word);
@@ -59,7 +74,7 @@ export default route(async (req: VercelRequest, res: VercelResponse) => {
       betas: ["server-side-fallback-2026-07-01"],
       fallbacks: "default",
       output_config: { effort: "medium" },
-      system: `${SYSTEM}\n\nHer data (JSON, as of today):\n${context}`,
+      system: `${req.body?.context?.pregnant ? PREGNANT_SYSTEM : SYSTEM}\n\nHer data (JSON, as of today):\n${context}`,
       messages,
     });
     res.status(200);

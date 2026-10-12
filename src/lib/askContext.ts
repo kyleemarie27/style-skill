@@ -2,10 +2,35 @@ import { PHASE_NAME, phaseFor, type CycleModel } from "../../shared/cycle";
 import { addDays, diffDays } from "../../shared/dates";
 import { healthChecks } from "../../shared/health";
 import { patternFor } from "../../shared/patterns";
+import { activePregnancy, gaLong, gestation, pregnancyFlags, standardSchedule } from "../../shared/pregnancy";
 import type { DayLog, LhTest, Settings } from "../../shared/types";
 
 /** A compact snapshot of the user's data for Ask Bloom (sent with each question). */
 export function buildAskContext(model: CycleModel, logs: DayLog[], lhTests: LhTest[], settings: Settings, today: string) {
+  const preg = activePregnancy(settings);
+  if (preg) {
+    const g = gestation(today, preg);
+    const since = addDays(today, -14);
+    return {
+      pregnant: true,
+      today,
+      gestationalAge: gaLong(g),
+      trimester: g.trimester,
+      dueDate: preg.dueDate,
+      dueDateFrom: preg.dueDateSource,
+      lastPeriod: preg.lmp,
+      positiveTest: preg.positiveTestDate,
+      recentDays: logs
+        .filter((l) => l.date >= since)
+        .map(({ date, symptoms, mood, notes, preg: p }) => ({ date, symptoms, mood, notes, ...p })),
+      warningFlags: pregnancyFlags(logs, preg, today).map((f) => ({ level: f.level, title: f.title, date: f.date })),
+      appointments: preg.appointments.map((a) => ({ date: a.date, title: a.title })),
+      openQuestionsForDoctor: preg.questions.filter((q) => !q.done).map((q) => q.text),
+      typicalScheduleNow: standardSchedule(preg).filter((s) => s.to >= today).slice(0, 4).map((s) => `${s.title} (weeks ${s.fromWeek}-${s.toWeek})`),
+      averageCycleLengthBeforePregnancy: model.avgCycleLength,
+      over35: !!settings.over35,
+    };
+  }
   const info = phaseFor(today, model);
   const recentSince = addDays(today, -35);
   return {

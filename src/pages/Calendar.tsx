@@ -1,12 +1,16 @@
 import { useMemo, useState } from "react";
 import { timeline } from "../../shared/cycle";
-import { addDays, localToday, parseISO } from "../../shared/dates";
+import { addDays, diffDays, localToday, parseISO } from "../../shared/dates";
+import { activePregnancy, lmpForDueDate } from "../../shared/pregnancy";
 import { useStore } from "../lib/store";
 
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
 export function CalendarPage() {
-  const { model, dayLogs, lhTests, byDate } = useStore();
+  const { model, dayLogs, lhTests, byDate, settings } = useStore();
+  const preg = activePregnancy(settings);
+  const lmp = preg ? lmpForDueDate(preg.dueDate) : null;
+  const appts = new Set(preg?.appointments.map((a) => a.date));
   const today = localToday();
   const [cursor, setCursor] = useState(() => today.slice(0, 7) + "-01");
   const first = parseISO(cursor);
@@ -43,15 +47,20 @@ export function CalendarPage() {
             const m = marks.get(d) ?? {};
             const log = byDate.get(d);
             const lh = lhByDate.get(d);
+            const sinceLmp = lmp ? diffDays(d, lmp) : -1;
+            const weekStart = lmp && sinceLmp >= 28 && sinceLmp <= 294 && sinceLmp % 7 === 0;
+            const pregBleed = log?.preg?.bleeding && log.preg.bleeding !== "none";
             const cls = [
               d.slice(0, 7) !== cursor.slice(0, 7) && "out",
               d === today && "today",
-              m.period ? "period" : m.ovulation ? `ovulation${m.ovulationConfirmed ? "" : " est"}` : m.predictedPeriod ? "pperiod" : m.fertile ? "fertile" : "",
+              lmp && d > lmp && sinceLmp >= 0 ? (m.period || pregBleed ? "period" : sinceLmp <= 294 ? "preg" : "") : m.period ? "period" : m.ovulation ? `ovulation${m.ovulationConfirmed ? "" : " est"}` : m.predictedPeriod ? "pperiod" : m.fertile ? "fertile" : "",
             ].filter(Boolean).join(" ");
             return (
               <button key={d} className={cls} onClick={() => (window.location.hash = `#/day/${d}`)} aria-label={d}>
                 <span>{parseISO(d).getUTCDate()}</span>
+                {weekStart && <span className="wk-label">{sinceLmp / 7}w</span>}
                 <span className="marks">
+                  {appts.has(d) && <span className="m-appt" />}
                   {log?.intercourse && <span className="m-love">♥</span>}
                   {lh && <span className="m-lh" style={{ background: `var(--${lh})` }} />}
                 </span>
@@ -60,7 +69,14 @@ export function CalendarPage() {
           })}
         </div>
       </div>
-      <div className="legend">
+      {preg ? (
+        <div className="legend">
+          <span><i style={{ background: "var(--preg-soft)" }} />Pregnant</span>
+          <span><span className="tiny">12w</span>Start of a week</span>
+          <span><i style={{ background: "var(--preg)", borderRadius: 99, width: 8, height: 8 }} />Appointment</span>
+          <span><i style={{ background: "var(--period)" }} />Bleeding logged</span>
+        </div>
+      ) : <div className="legend">
         <span><i style={{ background: "var(--period)" }} />Period</span>
         <span><i style={{ border: "1.5px dashed var(--period)" }} />Predicted period</span>
         <span><i style={{ background: "var(--fertile-soft)" }} />Fertile window</span>
@@ -68,7 +84,7 @@ export function CalendarPage() {
         <span><i style={{ border: "1.5px dashed var(--ovulation)", background: "var(--ovulation-soft)" }} />Ovulation (est.)</span>
         <span><span style={{ color: "var(--brand)" }}>♥</span>Intercourse</span>
         <span><i style={{ background: "var(--peak)", borderRadius: 99, width: 8, height: 8 }} />LH peak</span>
-      </div>
+      </div>}
       <button className="btn" onClick={() => setCursor(today.slice(0, 7) + "-01")}>Back to today</button>
     </div>
   );
