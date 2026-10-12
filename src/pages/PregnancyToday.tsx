@@ -6,14 +6,15 @@ import { FIRST_WEEK, LAST_WEEK, TRIMESTERS, weekContent, type WeekContent } from
 import { AskBloomCard } from "../components/AskBloom";
 import { BabySize } from "../components/BabySize";
 import { PregnancyEditor } from "../components/PregnancyEditor";
+import { DeepDive } from "../components/DeepDive";
 import { WeekGuide } from "../components/WeekGuide";
 import { api } from "../lib/api";
-import { newId, usePregnancy, useSavePregnancy } from "../lib/pregnancy";
+import { newId, recentSymptoms, usePregnancy, useSavePregnancy } from "../lib/pregnancy";
 import { useStore } from "../lib/store";
 
 export function PregnancyToday() {
   const p = usePregnancy()!;
-  const { byDate, aiEnabled } = useStore();
+  const { byDate, aiEnabled, dayLogs } = useStore();
   const { preg, g, week, flags, today } = p;
   const yesterday = addDays(today, -1);
   const [checkDay, setCheckDay] = useState<"yesterday" | "today">(byDate.has(yesterday) ? "today" : "yesterday");
@@ -48,7 +49,13 @@ export function PregnancyToday() {
         </div>
       </div>
 
-      <WeekGuide week={week} preg={preg} seed={g.totalDays} />
+      <WeekGuide
+        week={week}
+        preg={preg}
+        seed={g.totalDays}
+        recentSymptoms={recentSymptoms(dayLogs, today)}
+        deepDive={aiEnabled ? <DeepDive g={g} preg={preg} week={week} /> : undefined}
+      />
 
       <WeekRail current={g.weeks} />
 

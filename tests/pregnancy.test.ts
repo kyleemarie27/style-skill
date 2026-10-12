@@ -143,3 +143,30 @@ describe("pregnancy content", () => {
     }
   });
 });
+
+describe("in-depth guide", () => {
+  it("has explainers and FAQs for every week, and a symptom guide for every check-in symptom", async () => {
+    const { DEEP, SYMPTOMS } = await import("../src/content/pregnancy");
+    const { PREG_SYMPTOMS } = await import("../src/components/PregnancyEditor");
+    for (let w = 4; w <= 42; w++) {
+      const d = DEEP[w];
+      expect(d, `week ${w}`).toBeDefined();
+      expect(d.baby.length, `week ${w} baby`).toBeGreaterThan(200);
+      expect(d.body.length, `week ${w} body`).toBeGreaterThan(200);
+      expect(d.faq.length, `week ${w} faq`).toBeGreaterThanOrEqual(w <= 39 ? 3 : 1);
+    }
+    for (const s of [...PREG_SYMPTOMS, "Nausea", "Spotting", "Cramping"]) expect(SYMPTOMS[s], s).toBeDefined();
+  });
+});
+
+describe("recentSymptoms", () => {
+  it("collects check-in symptoms plus nausea, spotting and cramping from the last week", async () => {
+    const { recentSymptoms } = await import("../src/lib/pregnancy");
+    const logs: DayLog[] = [
+      { date: "2026-10-12", symptoms: ["Fatigue"], preg: { nausea: "mild" } },
+      { date: "2026-10-10", preg: { bleeding: "spotting", pain: "mild" } },
+      { date: "2026-10-01", symptoms: ["Headache"] },
+    ];
+    expect(recentSymptoms(logs, "2026-10-12").sort()).toEqual(["Cramping", "Fatigue", "Nausea", "Spotting"]);
+  });
+});

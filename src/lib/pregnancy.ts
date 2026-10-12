@@ -1,7 +1,7 @@
 import { useMemo } from "react";
-import { localToday } from "../../shared/dates";
+import { addDays, localToday } from "../../shared/dates";
 import { activePregnancy, gestation, pregnancyFlags } from "../../shared/pregnancy";
-import type { Pregnancy } from "../../shared/types";
+import type { DayLog, Pregnancy } from "../../shared/types";
 import { weekContent } from "../content/pregnancy";
 import { useStore } from "./store";
 
@@ -45,4 +45,18 @@ export function writeLocal(key: string, value: unknown) {
   } catch {
     /* private mode etc. */
   }
+}
+
+/** Symptom names logged in the last week, including nausea, spotting and cramping from the pregnancy fields. */
+export function recentSymptoms(logs: DayLog[], today: string, days = 7): string[] {
+  const since = addDays(today, -(days - 1));
+  const seen = new Set<string>();
+  for (const l of logs) {
+    if (l.date < since || l.date > today) continue;
+    for (const s of l.symptoms ?? []) seen.add(s);
+    if (l.preg?.nausea && l.preg.nausea !== "none") seen.add("Nausea");
+    if (l.preg?.bleeding && l.preg.bleeding !== "none") seen.add("Spotting");
+    if (l.preg?.pain && l.preg.pain !== "none") seen.add("Cramping");
+  }
+  return [...seen];
 }

@@ -51,6 +51,14 @@ CREATE TABLE IF NOT EXISTS daily_notes (
   created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- Added for pregnancy mode: the daily deep-dive article, written once per day.
+CREATE TABLE IF NOT EXISTS deep_dives (
+  date        DATE PRIMARY KEY,
+  key         TEXT,
+  content     JSONB NOT NULL,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 CREATE TABLE IF NOT EXISTS settings (
   key    TEXT PRIMARY KEY,
   value  JSONB NOT NULL

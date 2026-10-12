@@ -44,6 +44,8 @@ export const api = {
   deleteLh: (id: number) => call("lh?id=" + id, { method: "DELETE" }),
   dailyNote: (date: string, phase: string, context: unknown, refresh = false) =>
     call<{ line: string }>("daily-note", { method: "POST", json: { date, phase, context, refresh } }),
+  deepDive: (date: string, key: string, context: unknown, refresh = false) =>
+    call<DeepDive>("deep-dive", { method: "POST", json: { date, key, context, refresh } }),
   imports: () => call<{ batches: ImportBatch[] }>("import"),
   commitImport: (source: string, bundle: ImportBundle) =>
     call<{ batchId: number; counts: ImportBatch["counts"] }>("import", {
@@ -54,6 +56,13 @@ export const api = {
   extract: (body: { fileName: string; mediaType: string; data?: string; text?: string; source: string }) =>
     call<ImportBundle>("import-extract", { method: "POST", json: body }),
 };
+
+export interface DeepDive {
+  title: string;
+  minutes: number;
+  sections: { heading: string; body: string }[];
+  takeaways: string[];
+}
 
 export interface ChatMsg {
   role: "user" | "assistant";

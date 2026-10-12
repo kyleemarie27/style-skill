@@ -13,8 +13,9 @@ No ads, no pop-ups, no notifications. You log in on your phone or computer and s
 Tap **I got a positive test** (on Today during the two-week wait, in Settings, or by choosing *Positive* in a day's pregnancy test). Bloom works out your due date from your own data (LH-confirmed ovulation + 38 weeks when it has one, otherwise last period + 40 weeks adjusted for your cycle length) and you can change it any time. Then everything switches over:
 
 - **Today** shows how far along you are (weeks + days, trimester, a progress ring and days to go), any warning signs, and a line written for that exact day.
-- **How big is baby?** A drawing of the baby that changes with each gestational day, next to a comparison item from your choice of **fruit & veg, everyday objects or animals**, with today's length and weight. Step through days and weeks, and before 14 weeks see baby at roughly actual size on screen.
-- **This week** guide in tabs: Baby · Your body · Take care · Watch for · To-do · Partner. Tips have a tap-to-read "why", and the to-do list can be checked off.
+- **How big is baby?** A drawing of the baby that changes with each gestational day, next to the fruit or vegetable it matches (with an everyday object and an animal as extra comparisons), plus today's length and weight. Before 14 weeks you can see baby at roughly actual size on screen.
+- **This week** guide in tabs: Deep dive · Baby · Your body · Take care · Watch for · Decisions · FAQ · To-do · Partner. Every week has long-form explainers of the baby's development and your body and hormones, "is this normal?" FAQs, and decisions coming up. Symptoms you've logged get their own "why it happens / what helps / when to call" cards. There's also a reference library: nutrient targets, food and medicine safety, hCG ranges and weight-gain guidance.
+- **Daily deep dive**: a 4-minute article written fresh each day by AI for your exact gestational day, covering a different angle each day of the week (development, body, nutrition, tests and decisions, emotions, preparation, myths) and using what you've logged.
 - **Symptom check-in** built around what doctors ask: nausea and vomiting, bleeding, cramping (and whether it's one-sided), symptoms, mood and your prenatal vitamin. The Day page adds weight, blood pressure, temperature, water, medications, and later kick counts and contractions.
 - **Warning signs** from your logs (bleeding, one-sided pain, fever, severe vomiting, high blood pressure after 20 weeks, fluid, contractions, fewer movements) show as clear "call now" or "call today" banners.
 - **Doctor**: your appointments, the typical prenatal schedule with your dates, a running list of questions, and a **visit summary** to print or show on your phone.
@@ -30,7 +31,7 @@ api/            Vercel serverless functions (login, logs, LH, AI, import, export
 shared/         Cycle engine + LH scale (used by both the app and the API)
 src/            The web app (React). Installs like an app on phone and desktop
   content/phases.ts   ← all the daily-note wording. Edit freely
-  content/pregnancy/  ← the week-by-week pregnancy guide (weeks 4–42)
+  content/pregnancy/  ← the week-by-week pregnancy guide (weeks 4–42), deep*.ts explainers, library.ts
   components/art/     ← the baby and size-comparison illustrations
   lib/importers/      ← Clue + Premom file readers
 tests/          Unit tests (npm test)
