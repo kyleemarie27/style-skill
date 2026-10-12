@@ -303,6 +303,15 @@ export function timeline(model: CycleModel, logs: DayLog[], from: string, to: st
     mark(c.ovulation, { ovulation: true, ovulationConfirmed: c.ovulationConfirmed });
   }
 
+  // While pregnant there are no more periods or fertile windows to predict.
+  const preg = model.settings.pregnancy;
+  if (preg && !preg.ended) {
+    for (const [d, m] of marks) {
+      if (d > preg.lmp && (m.fertile || m.ovulation) && d > addDays(preg.lmp, 21)) marks.set(d, { period: m.period });
+    }
+    return marks;
+  }
+
   const last = model.cycles.at(-1);
   if (last) {
     const t = phaseFor(last.start, model);

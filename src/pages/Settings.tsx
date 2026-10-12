@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { prettyDate } from "../../shared/dates";
 import { api, type ImportBatch } from "../lib/api";
+import { activePregnancy } from "../../shared/pregnancy";
+import { PregnancySettings } from "../components/PregnancySettings";
 import { useStore } from "../lib/store";
 
 export function SettingsPage() {
@@ -24,6 +26,8 @@ export function SettingsPage() {
     <div className="stack">
       <h1>Settings</h1>
 
+      <PregnancySettings />
+
       <div className="card stack">
         <h2>Your cycle defaults</h2>
         <p className="muted small">Bloom learns these from your data. These are only used until it has enough history.</p>
@@ -44,7 +48,7 @@ export function SettingsPage() {
         <button className="btn primary" onClick={save}>{saved ? "Saved ✓" : "Save"}</button>
       </div>
 
-      <div className="card stack">
+      {!activePregnancy(settings) && <div className="card stack">
         <h2>Trying to conceive</h2>
         <p className="muted small">Used for the "Am I on track?" timeline. Doctors suggest a check-up after 12 months of trying under 35, or 6 months at 35+.</p>
         <label>
@@ -56,13 +60,14 @@ export function SettingsPage() {
           <span>I'm 35 or older</span>
         </label>
         <button className="btn primary" onClick={save}>{saved ? "Saved ✓" : "Save"}</button>
-      </div>
+      </div>}
 
       <div className="card stack">
         <h2>Your data</h2>
         <div className="row wrap">
           <a className="btn primary" href="#/import">Import more history</a>
           <a className="btn" href="/api/export">Download CSV</a>
+          {activePregnancy(settings) && <a className="btn" href="#/insights">Cycle history</a>}
         </div>
         {batches.length > 0 && (
           <>

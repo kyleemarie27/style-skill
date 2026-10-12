@@ -1,5 +1,5 @@
 import { isISODate } from "../../shared/dates.js";
-import type { DayLog, LhTest } from "../../shared/types.js";
+import type { DayLog, LhTest, PregLog } from "../../shared/types.js";
 import { HttpError } from "./db.js";
 
 const FLOWS = ["none", "spotting", "light", "medium", "heavy"];
@@ -28,7 +28,33 @@ export function cleanDayLog(raw: any): DayLog {
     pregnancy_test: oneOf(raw.pregnancy_test, PREG) as DayLog["pregnancy_test"],
     ovulation: typeof raw.ovulation === "boolean" ? raw.ovulation : null,
     notes: str(raw.notes),
+    preg: cleanPreg(raw.preg),
   };
+}
+
+/** Pregnancy fields: keep only known keys with sane values; null when nothing is left. */
+export function cleanPreg(raw: any): PregLog | null {
+  if (!raw || typeof raw !== "object") return null;
+  const bool = (v: unknown) => (typeof v === "boolean" ? v : null);
+  const p: PregLog = {
+    nausea: oneOf(raw.nausea, ["none", "mild", "moderate", "severe"]) as PregLog["nausea"],
+    vomits: num(raw.vomits, 0, 50),
+    bleeding: oneOf(raw.bleeding, ["none", "spotting", "light", "heavy"]) as PregLog["bleeding"],
+    pain: oneOf(raw.pain, ["none", "mild", "strong"]) as PregLog["pain"],
+    painOneSided: bool(raw.painOneSided),
+    weight: num(raw.weight, 50, 600),
+    bpSys: num(raw.bpSys, 50, 260),
+    bpDia: num(raw.bpDia, 30, 180),
+    temp: num(raw.temp, 90, 110),
+    prenatal: bool(raw.prenatal),
+    water: num(raw.water, 0, 40),
+    kicks: num(raw.kicks, 0, 600),
+    contractions: num(raw.contractions, 0, 60),
+    leaking: bool(raw.leaking),
+    meds: str(raw.meds, 500),
+  };
+  const kept = Object.fromEntries(Object.entries(p).filter(([, v]) => v !== null && v !== undefined)) as PregLog;
+  return Object.keys(kept).length ? kept : null;
 }
 
 export function cleanLhTest(raw: any): LhTest {
@@ -46,5 +72,5 @@ export function cleanLhTest(raw: any): LhTest {
 }
 
 export const DAY_COLS =
-  "date, flow, intercourse, symptoms, mood, cervical_mucus, bbt, pregnancy_test, notes, ovulation, source";
+  "date, flow, intercourse, symptoms, mood, cervical_mucus, bbt, pregnancy_test, notes, ovulation, preg, source";
 export const LH_COLS = "id, date, taken_at, ratio, level, ai_ratio, ai_level, (photo IS NOT NULL) AS has_photo, source";

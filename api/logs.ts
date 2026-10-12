@@ -18,13 +18,13 @@ export default route(async (req: VercelRequest) => {
   }
   const log = cleanDayLog(req.body?.log);
   const { rows } = await q(
-    `INSERT INTO day_logs (date, flow, intercourse, symptoms, mood, cervical_mucus, bbt, pregnancy_test, notes, ovulation, source, updated_at)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'manual',now())
+    `INSERT INTO day_logs (date, flow, intercourse, symptoms, mood, cervical_mucus, bbt, pregnancy_test, notes, ovulation, preg, source, updated_at)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,'manual',now())
      ON CONFLICT (date) DO UPDATE SET
-       flow=$2, intercourse=$3, symptoms=$4, mood=$5, cervical_mucus=$6, bbt=$7, pregnancy_test=$8, notes=$9, ovulation=$10,
+       flow=$2, intercourse=$3, symptoms=$4, mood=$5, cervical_mucus=$6, bbt=$7, pregnancy_test=$8, notes=$9, ovulation=$10, preg=$11,
        source='manual', batch_id=NULL, updated_at=now()
      RETURNING ${DAY_COLS}`,
-    [log.date, log.flow, log.intercourse, log.symptoms, log.mood, log.cervical_mucus, log.bbt, log.pregnancy_test, log.notes, log.ovulation],
+    [log.date, log.flow, log.intercourse, log.symptoms, log.mood, log.cervical_mucus, log.bbt, log.pregnancy_test, log.notes, log.ovulation, log.preg ? JSON.stringify(log.preg) : null],
   );
   return { log: rows[0] };
 });

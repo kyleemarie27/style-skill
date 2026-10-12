@@ -1,14 +1,19 @@
 import { PHASE_NAME, phaseFor } from "../../shared/cycle";
 import { addDays, isISODate, localToday, prettyDate } from "../../shared/dates";
 import { LH_LABEL } from "../../shared/lh";
+import { gaLabel, gestation } from "../../shared/pregnancy";
 import { DayEditor } from "../components/DayEditor";
+import { PregnancyEditor } from "../components/PregnancyEditor";
+import { usePregnancy } from "../lib/pregnancy";
 import { LhUploadButton } from "../components/LhUpload";
 import { api } from "../lib/api";
 import { useStore } from "../lib/store";
 
 export function DayPage({ date }: { date: string }) {
   const { model, lhTests, reload } = useStore();
+  const p = usePregnancy();
   if (!isISODate(date)) return <p>That date doesn't look right.</p>;
+  const pregDay = p && date >= p.preg.lmp;
   const info = phaseFor(date, model);
   const tests = lhTests.filter((t) => t.date === date);
   const go = (d: string) => (window.location.hash = `#/day/${d}`);
@@ -19,16 +24,17 @@ export function DayPage({ date }: { date: string }) {
         <button className="btn ghost" onClick={() => go(addDays(date, -1))} aria-label="Previous day">‹</button>
         <div className="center">
           <h1>{prettyDate(date, true)}</h1>
-          {info.cycleDay && <div className="muted small">Cycle day {info.cycleDay} · {PHASE_NAME[info.phase]}</div>}
+          {pregDay ? <div className="muted small">{gaLabel(gestation(date, p.preg))} pregnant</div>
+            : info.cycleDay && <div className="muted small">Cycle day {info.cycleDay} · {PHASE_NAME[info.phase]}</div>}
         </div>
         <button className="btn ghost" onClick={() => go(addDays(date, 1))} disabled={date >= localToday()} aria-label="Next day">›</button>
       </div>
 
       <div className="card">
-        <DayEditor date={date} />
+        {pregDay ? <PregnancyEditor date={date} preg={p.preg} /> : <DayEditor date={date} />}
       </div>
 
-      <div className="card stack">
+      {!pregDay && <div className="card stack">
         <h2>LH tests</h2>
         {tests.length === 0 && <p className="muted small">No LH tests logged for this day.</p>}
         {tests.map((t) => (
@@ -52,7 +58,7 @@ export function DayPage({ date }: { date: string }) {
           </div>
         ))}
         <div className="row wrap"><LhUploadButton date={date} /></div>
-      </div>
+      </div>}
     </div>
   );
 }

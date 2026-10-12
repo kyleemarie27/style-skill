@@ -41,6 +41,9 @@ CREATE INDEX IF NOT EXISTS lh_tests_date ON lh_tests(date);
 -- Added later: a day an app (e.g. Premom) or the user marked as confirmed ovulation.
 ALTER TABLE day_logs ADD COLUMN IF NOT EXISTS ovulation BOOLEAN;
 
+-- Added for pregnancy mode: nausea, bleeding, blood pressure and the rest, as one JSON object.
+ALTER TABLE day_logs ADD COLUMN IF NOT EXISTS preg JSONB;
+
 CREATE TABLE IF NOT EXISTS daily_notes (
   date        DATE PRIMARY KEY,
   phase       TEXT,

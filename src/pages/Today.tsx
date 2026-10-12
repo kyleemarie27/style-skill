@@ -7,6 +7,9 @@ import { DailyNote } from "../components/DailyNote";
 import { DayEditor } from "../components/DayEditor";
 import { HealthSummaryLink } from "../components/HealthChecks";
 import { LhUploadButton } from "../components/LhUpload";
+import { PositiveTestSheet } from "../components/PositiveTestSheet";
+import { usePregnancy } from "../lib/pregnancy";
+import { PregnancyToday } from "./PregnancyToday";
 import { api } from "../lib/api";
 import { useStore } from "../lib/store";
 
@@ -20,6 +23,10 @@ const SECTIONS: { key: "expect" | "superpowers" | "watchouts" | "care" | "makeTh
 ];
 
 export function TodayPage() {
+  return usePregnancy() ? <PregnancyToday /> : <CycleToday />;
+}
+
+function CycleToday() {
   const { model, byDate, lhTests, aiEnabled, dayLogs } = useStore();
   const today = localToday();
   const yesterday = addDays(today, -1);
@@ -89,6 +96,7 @@ export function TodayPage() {
 
 function Hero({ info }: { info: TodayInfo }) {
   const { model } = useStore();
+  const [positive, setPositive] = useState(false);
   if (info.phase === "unknown") {
     return (
       <div className="card hero ph-unknown stack">
@@ -137,6 +145,10 @@ function Hero({ info }: { info: TodayInfo }) {
         )}
         <div className="fact">Avg cycle<b>{model.avgCycleLength} days</b></div>
       </div>
+      {(info.phase.startsWith("tww") || info.phase === "late") && (
+        <button className="btn primary positive-btn" onClick={() => setPositive(true)}>I got a positive test 🎉</button>
+      )}
+      {positive && <PositiveTestSheet onClose={() => setPositive(false)} />}
     </div>
   );
 }

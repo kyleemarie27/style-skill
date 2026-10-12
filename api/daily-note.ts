@@ -12,6 +12,14 @@ Write 2–3 warm, specific sentences, like a knowledgeable friend:
 - Keep it encouraging but honest. Never promise pregnancy, never diagnose, and avoid toxic positivity. If you mention timing, be accurate: the most fertile days are the 2–3 days before ovulation and ovulation day itself.
 - Plain text only, no emoji, no greeting like "Good morning".`;
 
+const PREGNANT_SYSTEM = `You write the short personal line at the top of a private pregnancy tracker's daily page. The user is pregnant; the context gives her gestational age, what's happening with the baby this week, and what she logged over the last few days (symptoms, nausea, bleeding, pain, mood, vitals).
+
+Write 2–3 warm, specific sentences, like a knowledgeable friend:
+- Mention one concrete thing from her recent logs (nausea easing or worse, a symptom, taking her prenatal, a mood). If nothing was logged, gently invite a quick check-in.
+- Connect it to what's happening this week, or give one practical, evidence-based thing to do today.
+- Calm and honest: never promise outcomes, never diagnose. If her logs include bleeding, strong pain, fever or other warning signs, kindly tell her to call her doctor today.
+- Plain text only, no emoji, no greeting like "Good morning".`;
+
 const SCHEMA = {
   type: "object",
   additionalProperties: false,
@@ -34,10 +42,12 @@ export default route(async (req: VercelRequest) => {
   }
 
   const line = fakeAi()
-    ? "Yesterday's LH reading was higher than the day before, so your surge may be close. Keep testing this afternoon and plan some time together tonight."
+    ? context?.pregnant
+      ? "You logged mild nausea yesterday but still took your prenatal, which is a win. This week baby's heart is beating fast; keep crackers by the bed and sip water through the morning."
+      : "Yesterday's LH reading was higher than the day before, so your surge may be close. Keep testing this afternoon and plan some time together tonight."
     : (
         await askJson<{ line: string }>({
-          system: SYSTEM,
+          system: context?.pregnant ? PREGNANT_SYSTEM : SYSTEM,
           schema: SCHEMA,
           effort: "low",
           maxTokens: 2000,

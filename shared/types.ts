@@ -15,7 +15,62 @@ export interface DayLog {
   /** Marked as the day of ovulation (e.g. Premom's "Confirmed Ovulation"). */
   ovulation?: boolean | null;
   notes?: string | null;
+  /** Pregnancy-only fields (nausea, bleeding, blood pressure...). */
+  preg?: PregLog | null;
   source?: string | null;
+}
+
+export type Nausea = "none" | "mild" | "moderate" | "severe";
+export type PregBleeding = "none" | "spotting" | "light" | "heavy";
+export type PregPain = "none" | "mild" | "strong";
+
+/** What a pregnant user logs for a day. Every field is optional. */
+export interface PregLog {
+  nausea?: Nausea | null;
+  vomits?: number | null;
+  bleeding?: PregBleeding | null;
+  pain?: PregPain | null;
+  painOneSided?: boolean | null;
+  /** Pounds. */
+  weight?: number | null;
+  bpSys?: number | null;
+  bpDia?: number | null;
+  /** °F. */
+  temp?: number | null;
+  prenatal?: boolean | null;
+  /** Glasses of water. */
+  water?: number | null;
+  /** Minutes it took to feel 10 movements (from 28 weeks). */
+  kicks?: number | null;
+  /** Contractions in the last hour (from 28 weeks). */
+  contractions?: number | null;
+  leaking?: boolean | null;
+  meds?: string | null;
+}
+
+export interface PregQuestion {
+  id: string;
+  text: string;
+  created: string;
+  done?: string | null;
+}
+
+export interface Appointment {
+  id: string;
+  date: string;
+  title: string;
+  notes?: string | null;
+}
+
+export interface Pregnancy {
+  positiveTestDate: string;
+  /** First day of the last period. */
+  lmp: string;
+  dueDate: string;
+  dueDateSource: "lmp" | "ovulation" | "doctor";
+  ended?: { date: string; reason: "birth" | "loss" | "other" } | null;
+  questions: PregQuestion[];
+  appointments: Appointment[];
 }
 
 export interface LhTest {
@@ -39,6 +94,8 @@ export interface Settings {
   ttcSince?: string | null;
   /** 35 or older: doctors suggest a check-up after 6 months of trying instead of 12. */
   over35?: boolean;
+  /** Set once a positive test is confirmed. Bloom switches to pregnancy mode while it's active. */
+  pregnancy?: Pregnancy | null;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -48,6 +105,7 @@ export const DEFAULT_SETTINGS: Settings = {
   ttc: true,
   ttcSince: null,
   over35: false,
+  pregnancy: null,
 };
 
 /** What an importer (or the AI extractor) produces before anything is saved. */
