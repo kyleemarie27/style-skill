@@ -4,14 +4,14 @@ import { FIRST_WEEK, LAST_WEEK, TRIMESTERS, WEEKS, weekContent } from "../conten
 import { SizeArt } from "../components/art";
 import { BabySize } from "../components/BabySize";
 import { WeekGuide } from "../components/WeekGuide";
-import { usePregnancy, readLocal } from "../lib/pregnancy";
-import type { SizeTheme } from "../content/pregnancy";
+import { recentSymptoms, usePregnancy } from "../lib/pregnancy";
+import { useStore } from "../lib/store";
 
 /** #/weeks: every week at a glance, grouped by trimester. */
 export function WeeksPage() {
   const p = usePregnancy();
   if (!p) return <NotPregnant />;
-  const theme = readLocal<SizeTheme>("bloom-size-theme", "fruit");
+  const theme = "fruit" as const;
   const lmp = lmpForDueDate(p.preg.dueDate);
   return (
     <div className="stack">
@@ -46,6 +46,7 @@ export function WeeksPage() {
 /** #/week/N: the full guide for any week, to read ahead or look back. */
 export function WeekPage({ week }: { week: number }) {
   const p = usePregnancy();
+  const { dayLogs } = useStore();
   if (!p) return <NotPregnant />;
   const w = Math.max(FIRST_WEEK, Math.min(LAST_WEEK, week || p.g.weeks));
   const content = weekContent(w);
@@ -64,7 +65,7 @@ export function WeekPage({ week }: { week: number }) {
         <button className="btn ghost" onClick={() => go(w + 1)} disabled={w >= LAST_WEEK} aria-label="Next week">›</button>
       </div>
       <BabySize key={w} g={g} />
-      <WeekGuide key={"g" + w} week={content} preg={p.preg} seed={w * 7} />
+      <WeekGuide key={"g" + w} week={content} preg={p.preg} seed={w * 7} recentSymptoms={w === p.g.weeks ? recentSymptoms(dayLogs, p.today) : []} />
       <section className="card stack">
         <div className="section-title"><span className="ico" aria-hidden>📅</span>Day by day</div>
         <ol className="day-list">

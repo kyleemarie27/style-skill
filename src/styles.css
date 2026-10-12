@@ -201,6 +201,10 @@ input[type="text"], input[type="password"], input[type="number"], input[type="da
   border-radius: 12px; padding: 10px 12px; min-height: 44px;
 }
 textarea { min-height: 80px; resize: vertical; }
+/* iOS Safari gives date inputs an intrinsic width that ignores width: 100% and overflows the card. */
+input[type="date"] { -webkit-appearance: none; appearance: none; display: block; min-width: 0; max-width: 100%; }
+input[type="date"]::-webkit-date-and-time-value { text-align: left; }
+.grid2 > *, .row > input { min-width: 0; }
 input:focus, textarea:focus, select:focus, .btn:focus-visible, .chip:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
 input[type="range"] { width: 100%; accent-color: var(--brand); }
 
@@ -385,7 +389,7 @@ ol.how li::before {
 .size-eq { font-family: var(--serif); font-size: 30px; color: var(--muted); }
 .size-headline { font-size: 22px; }
 .size-headline .accent { color: var(--preg); }
-.size-stats { display: flex; justify-content: center; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+.size-stats { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
 .size-stats > span { background: var(--surface-2); border-radius: 12px; padding: 6px 12px; display: flex; flex-direction: column; align-items: center; }
 .size-stats b { font-size: 15px; }
 .size-nav .btn.ghost { font-size: 20px; min-width: 40px; color: var(--ink); }
@@ -492,3 +496,37 @@ ol.how li::before {
   .card { box-shadow: none; border: 0; padding: 0; }
   .sum-facts > div { border: 1px solid #ddd; }
 }
+
+/* ---------- deeper guide ---------- */
+.prose p { font-size: 16px; line-height: 1.65; max-width: 68ch; }
+.prose p + p { margin-top: 10px; }
+.prose-note { font-size: 14px; color: var(--muted); background: var(--surface-2); border-radius: 12px; padding: 10px 12px; }
+details.ref { border: 1px solid var(--line); border-radius: 14px; padding: 0 12px; }
+details.ref > summary { cursor: pointer; padding: 12px 0; font-weight: 600; font-size: 14px; list-style: none; display: flex; justify-content: space-between; align-items: center; }
+details.ref > summary::-webkit-details-marker { display: none; }
+details.ref > summary::after { content: "+"; font-size: 18px; color: var(--muted); }
+details.ref[open] > summary::after { content: "−"; }
+details.ref[open] { padding-bottom: 12px; }
+details.ref .tip-grid { margin-top: 0; }
+.ref-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.ref-table th, .ref-table td { text-align: left; vertical-align: top; padding: 7px 6px; border-bottom: 1px solid var(--line); }
+.ref-table th { color: var(--muted); font-weight: 600; font-size: 12px; }
+.ref-table td:first-child { white-space: nowrap; }
+@media (max-width: 480px) { .ref-table td:first-child { white-space: normal; } }
+.symptom-card .tips { margin-top: 2px; }
+.symptom-card .tip-label { margin-top: 4px; }
+.faq details { border-bottom: 1px solid var(--line); }
+.faq details:last-child { border-bottom: 0; }
+.faq summary { cursor: pointer; padding: 12px 28px 12px 0; font-weight: 600; list-style: none; position: relative; }
+.faq summary::-webkit-details-marker { display: none; }
+.faq summary::after { content: "+"; position: absolute; right: 4px; top: 10px; font-size: 18px; color: var(--muted); }
+.faq details[open] summary::after { content: "−"; }
+.faq details p { padding: 0 0 12px; font-size: 15px; line-height: 1.6; }
+.deep-dive h3.dive-title { font-family: var(--serif); font-size: 22px; line-height: 1.25; margin-top: 4px; }
+.deep-dive h4 { font-size: 15px; font-weight: 700; margin: 0 0 6px; }
+.takeaways { background: var(--preg-soft); border-radius: 14px; padding: 12px 14px; }
+.takeaways .tip-label { margin-top: 0; }
+.nutrients { list-style: none; margin: 0; padding: 0; }
+.nutrients li { padding: 10px 0; border-bottom: 1px solid var(--line); display: flex; flex-direction: column; gap: 2px; }
+.nutrients li:last-child { border-bottom: 0; }
+.nut-target { font-size: 13px; font-weight: 600; color: var(--preg); text-align: right; }

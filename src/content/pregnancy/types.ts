@@ -29,3 +29,13 @@ export interface WeekContent {
   /** One line per day of the week (day 0–6), so every day brings something new. */
   days: [string, string, string, string, string, string, string];
 }
+
+/** The in-depth layer for a week: long-form explainers, FAQs and decisions coming up. */
+export interface WeekDeep {
+  /** What's happening with the baby and how it works. Paragraphs separated by blank lines. */
+  baby: string;
+  /** What your body and hormones are doing, and why symptoms happen. */
+  body: string;
+  faq: { q: string; a: string }[];
+  decisions?: Item[];
+}
