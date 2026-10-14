@@ -3,6 +3,7 @@ import { isISODate } from "../shared/dates.js";
 import { method, route } from "./_lib/auth.js";
 import { askJson, fakeAi } from "./_lib/claude.js";
 import { HttpError, q } from "./_lib/db.js";
+import { factsPrompt, loadFacts } from "./_lib/memory.js";
 
 const SYSTEM = `You write the short personal line at the top of a private cycle and fertility tracker's daily note. The user is trying to conceive.
 
@@ -47,7 +48,7 @@ export default route(async (req: VercelRequest) => {
       : "Yesterday's LH reading was higher than the day before, so your surge may be close. Keep testing this afternoon and plan some time together tonight."
     : (
         await askJson<{ line: string }>({
-          system: context?.pregnant ? PREGNANT_SYSTEM : SYSTEM,
+          system: (context?.pregnant ? PREGNANT_SYSTEM : SYSTEM) + factsPrompt(await loadFacts()),
           schema: SCHEMA,
           effort: "low",
           maxTokens: 2000,

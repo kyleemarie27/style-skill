@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { prettyDate } from "../../shared/dates";
 import { api, type ImportBatch } from "../lib/api";
 import { activePregnancy } from "../../shared/pregnancy";
+import { MemoryCard } from "../components/MemoryCard";
 import { PregnancySettings } from "../components/PregnancySettings";
 import { useStore } from "../lib/store";
 
@@ -27,6 +28,8 @@ export function SettingsPage() {
       <h1>Settings</h1>
 
       <PregnancySettings />
+
+      {aiEnabled && <MemoryCard />}
 
       <div className="card stack">
         <h2>Your cycle defaults</h2>

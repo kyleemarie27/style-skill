@@ -530,3 +530,58 @@ details.ref .tip-grid { margin-top: 0; }
 .nutrients li { padding: 10px 0; border-bottom: 1px solid var(--line); display: flex; flex-direction: column; gap: 2px; }
 .nutrients li:last-child { border-bottom: 0; }
 .nut-target { font-size: 13px; font-weight: 600; color: var(--preg); text-align: right; }
+
+/* ---------- today's bites ---------- */
+.bites { --phase: var(--preg); }
+.bite-rail { display: flex; gap: 10px; overflow-x: auto; scroll-snap-type: x mandatory; margin-inline: -4px; padding: 2px 4px 6px; scrollbar-width: none; }
+.bite-rail::-webkit-scrollbar { display: none; }
+.bite {
+  flex: none; width: min(78%, 280px); scroll-snap-align: start; text-align: left; font: inherit; color: inherit;
+  background: var(--preg-soft); border: 1px solid transparent; border-radius: 16px; padding: 12px 14px;
+  display: flex; flex-direction: column; gap: 6px;
+}
+.bite.has-why { cursor: pointer; }
+.bite p { font-size: 15px; line-height: 1.45; }
+.bite .why { font-size: 13px; color: var(--muted); }
+.bite-tag { align-self: flex-start; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--preg); background: var(--surface); padding: 2px 8px; border-radius: 99px; }
+@media (min-width: 620px) { .bite-rail { display: grid; grid-template-columns: repeat(3, 1fr); } .bite { width: auto; } }
+.bites-h { font-family: var(--sans); font-size: 15px; font-weight: 700; }
+.bite-count { font-size: 13px; font-weight: 700; color: var(--muted); background: var(--surface-2); border-radius: 99px; padding: 2px 10px; }
+.bite-count.all { background: var(--follicular); color: #fff; }
+.week-tag { font-size: 11px; font-weight: 700; color: var(--preg); text-transform: uppercase; letter-spacing: 0.04em; }
+.bites-done { font-size: 14px; background: var(--follicular-soft); border-radius: 12px; padding: 10px 12px; }
+.milestone { display: flex; gap: 12px; align-items: center; background: var(--surface-2); border-radius: 14px; padding: 10px 12px; }
+.milestone .ms-days { flex: none; min-width: 54px; text-align: center; line-height: 1.05; }
+.milestone .ms-days b { display: block; font-family: var(--serif); font-size: 24px; color: var(--preg); }
+.milestone .ms-days span { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+
+/* ---------- body & mind ---------- */
+.body-mind { --phase: var(--luteal); }
+.change {
+  text-align: left; font: inherit; color: inherit; background: var(--surface-2); border: 1px solid transparent;
+  border-radius: 14px; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; cursor: pointer; width: 100%;
+}
+.change:hover { border-color: var(--line); }
+.change-ico { flex: none; font-size: 22px; width: 32px; text-align: center; }
+.change-pill { flex: none; font-size: 11px; font-weight: 700; padding: 1px 8px; border-radius: 99px; background: var(--surface); color: var(--muted); white-space: nowrap; }
+.st-peak .change-pill { background: var(--luteal); color: #fff; }
+.st-starting .change-pill, .st-coming .change-pill { background: var(--luteal-soft); color: var(--luteal); }
+.st-fading { opacity: 0.8; }
+.change-track { position: relative; height: 6px; border-radius: 3px; background: var(--line); }
+.change-track .span { position: absolute; top: 0; bottom: 0; border-radius: 3px; background: var(--luteal-soft); }
+.change-track .peak { position: absolute; top: 0; bottom: 0; border-radius: 3px; background: var(--luteal); opacity: 0.7; }
+.change-track .you { position: absolute; top: -3px; width: 4px; height: 12px; margin-left: -2px; border-radius: 2px; background: var(--ink); }
+
+/* ---------- deep dive, conversational ---------- */
+.dive-opener { font-family: var(--serif); font-size: 18px; line-height: 1.45; background: var(--preg-soft); border-radius: 16px 16px 16px 4px; padding: 12px 14px; }
+.deep-dive h4 { font-family: var(--serif); font-size: 18px; font-weight: 600; }
+.dive-signoff { font-style: italic; color: var(--muted); }
+.dive-next { font-size: 14px; border: 1px dashed var(--line); border-radius: 12px; padding: 10px 12px; }
+
+/* ---------- memory ---------- */
+.memory-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.memory-list li { display: flex; gap: 8px; align-items: flex-start; justify-content: space-between; background: var(--surface-2); border-radius: 12px; padding: 8px 10px 8px 12px; font-size: 14px; }
+.memory-list li .btn { flex: none; min-height: 0; padding: 2px 8px; }
+.remembered { align-self: flex-start; font-size: 12px; color: var(--muted); background: var(--surface-2); border-radius: 10px; padding: 4px 10px; }
+.bites .checklist .why { display: block; margin-top: 2px; }
+.bites .week-tag { display: inline-block; margin-left: 4px; }

@@ -3,43 +3,60 @@ import { isISODate } from "../shared/dates.js";
 import { method, route } from "./_lib/auth.js";
 import { askJson, fakeAi } from "./_lib/claude.js";
 import { HttpError, q } from "./_lib/db.js";
+import { factsPrompt, loadFacts } from "./_lib/memory.js";
 
 export interface DeepDive {
   title: string;
   minutes: number;
+  /** A friendly first line, like the start of a message from a friend. */
+  opener?: string;
   sections: { heading: string; body: string }[];
   takeaways: string[];
+  /** A short warm closing line. */
+  signoff?: string;
+  /** One line teasing tomorrow's topic. */
+  tomorrow?: string;
 }
 
 const ANGLES = [
-  "how the baby is developing right now, explained like a great science writer",
-  "what is happening in her body this week (hormones, organs, blood volume, the uterus) and why it causes the symptoms she has",
-  "nutrition and supplements that matter at this exact stage, with specific foods, amounts and why",
-  "a test, appointment or decision coming up soon (or just done), explained clearly: what it is, what results mean, what to ask",
-  "emotional health: the common feelings at this stage, what's normal, and practical ways to cope and connect",
-  "practical preparation and her partner: what to plan, buy, learn or share around this stage",
-  "one popular pregnancy myth or confusing topic relevant to this stage, and what the evidence actually says",
+  "how the baby is developing right now: the coolest, most vivid details of what's being built today",
+  "what's going on in her body this week (hormones, organs, blood volume, the uterus) and why it explains how she feels",
+  "food and supplements that matter at this exact stage: specific foods, amounts and why, plus easy ideas she can actually eat today",
+  "a test, appointment or decision coming up soon (or just done): what it is, what results mean, and good questions to ask",
+  "how she might be feeling: the common emotions at this stage, what's normal, and small ways to cope, connect and enjoy it",
+  "getting ready, with her partner: what to plan, buy, learn or talk about around this stage, and what can wait",
+  "one popular pregnancy myth or confusing topic for this stage, and what the evidence actually says",
 ];
 
-const SYSTEM = `You write the daily deep dive in a private pregnancy app. The reader is pregnant and hungry for real, detailed, trustworthy information about what's happening, what to expect and how to look after herself and the baby.
+const SYSTEM = `You write the daily deep dive in a private pregnancy app. The reader is pregnant, excited, and hungry for real, detailed, trustworthy information. She reads this every day, so it should feel like a long, thoughtful message from a friend who happens to be a brilliant OB nurse and science writer. It should not read like a textbook or a patient leaflet.
 
-Write a 450–650 word article on ONE topic matched to her exact gestational age and today's angle (given in the context). Use her recent logs when relevant (for example, if she logged nausea, the article can explain the science of nausea and what helps).
+Write about 450–600 words on ONE topic matched to her exact gestational age and today's angle (given in the context). Use what she's logged recently and what she's told Bloom about herself when relevant (for example, if she logged nausea, explain the science of nausea and what helps; if it's her first pregnancy, say so naturally).
 
-Rules:
-- Evidence-based and specific: draw on ACOG, NHS, CDC, SMFM and Mayo Clinic guidance. Use real numbers (sizes, amounts, timings) where they help. Don't invent statistics; say when evidence is limited or when things vary a lot.
-- Warm, clear and direct, like a friend who is an excellent OB nurse and science writer. No fluff, no toxic positivity, no promises about outcomes.
-- Never diagnose. If the topic touches warning signs, or her logs include bleeding, strong pain, fever, severe vomiting or (after 20 weeks) high blood pressure, headache or vision changes, include a clear line about when to call her doctor.
-- 3–5 sections, each with a short heading and 1–3 paragraphs of plain text (no markdown, no bullet characters inside bodies; separate paragraphs with a blank line).
-- 3–4 short key takeaways.
-- Don't repeat the app's weekly summary verbatim; go deeper than it.`;
+Voice:
+- Talk to her directly as "you". Use contractions, short sentences and the odd aside in parentheses. Sound curious and a bit delighted by how amazing this is, without being saccharine.
+- Open with a one or two sentence "opener" that feels like the start of a message ("Okay, today's one is wild: ..."). Vary it every day; no "Hey mama", no "Hi there".
+- Section headings are the questions she'd actually ask, in her words ("Wait, why am I so tired?", "So what can I actually eat?"), not textbook labels.
+- Explain the science with vivid comparisons and real numbers (sizes, amounts, timings), then say what it means for her day.
+- Evidence-based: draw on ACOG, NHS, CDC, SMFM and Mayo Clinic guidance. Don't invent statistics; say when evidence is limited or when it varies a lot. No toxic positivity and no promises about outcomes.
+- Never diagnose. If the topic touches warning signs, or her logs include bleeding, strong pain, fever, severe vomiting or (after 20 weeks) high blood pressure, headache or vision changes, include a clear, calm line about when to call her doctor.
+
+Format:
+- 3–5 sections, each with a question-style heading and 1–3 short paragraphs of plain text (no markdown, no bullet characters; separate paragraphs with a blank line).
+- "takeaways": 3 short "if you only remember this" lines, written casually.
+- "signoff": one warm closing sentence.
+- "tomorrow": one sentence teasing tomorrow's topic (given in the context), to give her something to look forward to.
+- Don't repeat the app's weekly summary; go deeper than it.`;
 
 const SCHEMA = {
   type: "object",
   additionalProperties: false,
-  required: ["title", "minutes", "sections", "takeaways"],
+  required: ["title", "minutes", "opener", "sections", "takeaways", "signoff", "tomorrow"],
   properties: {
     title: { type: "string" },
     minutes: { type: "integer" },
+    opener: { type: "string" },
+    signoff: { type: "string" },
+    tomorrow: { type: "string" },
     sections: {
       type: "array",
       items: {
@@ -54,14 +71,17 @@ const SCHEMA = {
 };
 
 const FAKE: DeepDive = {
-  title: "The placenta: the organ you're building right now",
+  title: "You're building a whole new organ right now",
   minutes: 4,
+  opener: "Okay, today's one is honestly kind of wild: on top of everything else, your body is building an organ from scratch. And it's going to be thrown away in about nine months.",
   sections: [
-    { heading: "A temporary organ with a big job", body: "Right now, the outer layer of cells around your embryo is growing into the placenta. Over the next few weeks it will take over feeding the baby, delivering oxygen and removing waste.\n\nIt also becomes a hormone factory, making hCG now and, from around 10–12 weeks, all of the progesterone that keeps the pregnancy going." },
-    { heading: "Why it makes you so tired", body: "Building a whole new organ takes energy, and the progesterone it helps maintain has a sedating effect. That's a big part of first-trimester exhaustion." },
-    { heading: "When to call your doctor", body: "Light spotting can be normal, but heavy bleeding, strong cramps or one-sided pain need a same-day call." },
+    { heading: "Wait, I'm making an organ?", body: "Yep. The outer layer of cells around your embryo is turning into the placenta. Over the next few weeks it takes over feeding the baby, delivering oxygen and clearing waste (basically lungs, kidneys and a kitchen in one).\n\nIt's also a hormone factory. Right now it's pumping out hCG, and from around 10–12 weeks it makes all the progesterone that keeps the pregnancy going." },
+    { heading: "Is that why I'm so tired?", body: "A big part of it, yes. Building a new organ takes real energy, and progesterone has a sedating effect. So if you're falling asleep on the couch at 8pm, that's not you being lazy. That's your body working a night shift." },
+    { heading: "When should I call someone?", body: "Light spotting can be normal this early. Heavy bleeding, strong cramps or pain on one side are worth a same-day call, every time." },
   ],
-  takeaways: ["The placenta takes over around 10–12 weeks", "Tiredness now is your body doing real work", "Heavy bleeding or one-sided pain: call the same day"],
+  takeaways: ["The placenta takes over around 10–12 weeks", "Tired = your body doing real work, so rest without guilt", "Heavy bleeding or one-sided pain: call the same day"],
+  signoff: "Go easy on yourself today. You're doing more than it looks like.",
+  tomorrow: "Tomorrow: why your sense of smell suddenly feels like a superpower.",
 };
 
 /**
@@ -78,16 +98,17 @@ export default route(async (req: VercelRequest) => {
     if (cached.rows[0] && cached.rows[0].key === String(key)) return { ...cached.rows[0].content, cached: true };
   }
 
-  const dow = Number(context?.dayOfWeek) || 0;
-  const angle = ANGLES[Math.abs(dow) % ANGLES.length];
+  const dow = Math.abs(Number(context?.dayOfWeek) || 0);
+  const angle = ANGLES[dow % ANGLES.length];
+  const tomorrow = ANGLES[(dow + 1) % ANGLES.length];
   const dive = fakeAi()
     ? FAKE
     : await askJson<DeepDive>({
-        system: SYSTEM,
+        system: SYSTEM + factsPrompt(await loadFacts()),
         schema: SCHEMA,
         effort: "medium",
         maxTokens: 8000,
-        content: [{ type: "text", text: `Today's angle: ${angle}\n\nContext (JSON):\n${JSON.stringify(context ?? {}).slice(0, 8000)}` }],
+        content: [{ type: "text", text: `Today's angle: ${angle}\nTomorrow's angle (for the teaser only): ${tomorrow}\n\nContext (JSON):\n${JSON.stringify(context ?? {}).slice(0, 8000)}` }],
       });
 
   await q(

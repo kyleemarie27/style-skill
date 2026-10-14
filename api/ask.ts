@@ -1,8 +1,9 @@
 import Anthropic from "@anthropic-ai/sdk";
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { method, route } from "./_lib/auth.js";
-import { apiKey, fakeAi, MODEL, requireClaude } from "./_lib/claude.js";
+import { apiKey, askJson, fakeAi, MODEL, requireClaude } from "./_lib/claude.js";
 import { HttpError } from "./_lib/db.js";
+import { factsPrompt, loadFacts, saveFacts, type Fact } from "./_lib/memory.js";
 
 const SYSTEM = `You are Bloom, the assistant inside a private cycle and fertility tracker. The user is trying to conceive and is asking about her own cycle, her data, or reproductive health in general.
 
@@ -28,6 +29,7 @@ How to answer:
 - Early-pregnancy anxiety is common. Be reassuring where the evidence supports it, without false promises; never guarantee an outcome.
 - Urgent: heavy bleeding, bleeding with strong cramps, severe one-sided pain, shoulder-tip pain or fainting (possible ectopic, especially before 12 weeks); fever ≥ 100.4°F; can't keep fluids down for 24 hours; after 20 weeks a severe headache, vision changes, sudden swelling or BP ≥ 140/90; fluid leaking; regular contractions before 37 weeks; reduced fetal movement after 28 weeks. Tell her plainly to call her provider or go to labor & delivery / the ER now, and why.
 - If something would be good to raise at her next appointment, suggest adding it to her "Questions for my doctor" list in Bloom.
+- She's curious and excited, so feed that: when it fits, end with one thing to look forward to or one small thing she could try today.
 - Plain text with simple markdown (**bold**, "- " bullets). No headings, no tables.`;
 
 interface Msg {
@@ -35,19 +37,67 @@ interface Msg {
   content: string;
 }
 
+const LEARN_SYSTEM = `You maintain the memory for Bloom, a private cycle and pregnancy app. Read the latest chat exchange and decide what is worth remembering about the user for future conversations.
+
+Remember durable, personal things she says about herself: her history (first pregnancy, previous losses, IVF, conditions), medications and allergies, diet (vegetarian, aversions), her body and how it tends to react, work and routine, partner and family, her care provider and birth plans, preferences for how she likes information, and recurring worries or hopes.
+
+Don't remember: anything only the assistant said, general facts, one-off daily symptoms (the app logs those), or anything already in memory. Write each fact as one short third-person line ("First pregnancy", "Vegetarian; eats eggs and dairy", "Partner is Sam", "Nervous about the glucose test"). If she corrects or contradicts a remembered fact, put its id in "forget" and add the corrected version. Usually there is nothing new: return empty lists.`;
+
+const LEARN_SCHEMA = {
+  type: "object",
+  additionalProperties: false,
+  required: ["add", "forget"],
+  properties: {
+    add: { type: "array", items: { type: "string" } },
+    forget: { type: "array", items: { type: "string" } },
+  },
+};
+
+/** POST /api/ask {learn: true, messages} → {added, facts}: update the memory from the latest exchange. */
+async function learn(messages: Msg[]) {
+  const facts = await loadFacts();
+  const exchange = messages.slice(-4).map((m) => `${m.role === "user" ? "Her" : "Bloom"}: ${m.content}`).join("\n\n");
+  if (!messages.some((m) => m.role === "user")) return { added: [], facts };
+  const out = fakeAi()
+    ? { add: /first (pregnancy|baby)/i.test(exchange) ? ["First pregnancy"] : [], forget: [] }
+    : await askJson<{ add: string[]; forget: string[] }>({
+        system: LEARN_SYSTEM,
+        schema: LEARN_SCHEMA,
+        effort: "low",
+        maxTokens: 2000,
+        content: [{ type: "text", text: `Current memory (JSON):\n${JSON.stringify(facts.map(({ id, text }) => ({ id, text })))}\n\nLatest exchange:\n${exchange}` }],
+      });
+  const known = new Set(facts.map((f) => f.text.toLowerCase()));
+  const added = out.add.map((t) => t.trim()).filter((t) => t && !known.has(t.toLowerCase())).slice(0, 5);
+  if (!added.length && !out.forget.length) return { added, facts };
+  const today = new Date().toISOString().slice(0, 10);
+  const next: Fact[] = [
+    ...facts.filter((f) => !out.forget.includes(f.id)),
+    ...added.map((text) => ({ id: Math.random().toString(36).slice(2, 10), text, added: today })),
+  ];
+  return { added, facts: await saveFacts(next) };
+}
+
 /**
  * POST /api/ask {messages, context} → streams the answer as plain text.
- * The browser sends a compact summary of the user's data as `context`.
+ * The browser sends a compact summary of the user's data as `context`; what Bloom remembers
+ * about her from earlier chats is added here.
+ * GET /api/ask → {facts}; PUT /api/ask {facts} → {facts} (view and edit the memory);
+ * POST /api/ask {learn: true, messages} → learn from the latest exchange.
  */
 export default route(async (req: VercelRequest, res: VercelResponse) => {
-  method(req, "POST");
+  const m = method(req, "GET", "PUT", "POST");
+  if (m === "GET") return { facts: await loadFacts() };
+  if (m === "PUT") return { facts: await saveFacts(Array.isArray(req.body?.facts) ? req.body.facts : []) };
   const raw: unknown[] = Array.isArray(req.body?.messages) ? req.body.messages : [];
   const messages: Msg[] = raw
     .filter((m): m is Msg => !!m && typeof m === "object" && ["user", "assistant"].includes((m as Msg).role) && typeof (m as Msg).content === "string")
     .map((m) => ({ role: m.role, content: m.content.slice(0, 4000) }))
     .slice(-20);
+  if (req.body?.learn) return learn(messages);
   if (!messages.length || messages.at(-1)!.role !== "user") throw new HttpError(400, "Ask a question first.");
   const context = JSON.stringify(req.body?.context ?? {}).slice(0, 20_000);
+  const memory = factsPrompt(await loadFacts());
 
   res.setHeader("Content-Type", "text/plain; charset=utf-8");
   res.setHeader("Cache-Control", "no-store");
@@ -74,7 +124,7 @@ export default route(async (req: VercelRequest, res: VercelResponse) => {
       betas: ["server-side-fallback-2026-07-01"],
       fallbacks: "default",
       output_config: { effort: "medium" },
-      system: `${req.body?.context?.pregnant ? PREGNANT_SYSTEM : SYSTEM}\n\nHer data (JSON, as of today):\n${context}`,
+      system: `${req.body?.context?.pregnant ? PREGNANT_SYSTEM : SYSTEM}\n\nHer data (JSON, as of today):\n${context}${memory}`,
       messages,
     });
     res.status(200);

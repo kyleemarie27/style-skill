@@ -16,7 +16,7 @@ export function DeepDive({ g, preg, week }: { g: Gestation; preg: Pregnancy; wee
   const [err, setErr] = useState("");
   const [added, setAdded] = useState<string[]>([]);
   const date = localToday();
-  const key = `dive-${gaLabel(g).replace(" ", "")}`;
+  const key = `dive2-${gaLabel(g).replace(" ", "")}`;
 
   const context = useMemo(() => ({
     pregnant: true,
@@ -55,9 +55,10 @@ export function DeepDive({ g, preg, week }: { g: Gestation; preg: Pregnancy; wee
   return (
     <article className="deep-dive stack">
       <div>
-        <div className="tiny muted">Today's deep dive · about {dive.minutes || 4} min read</div>
+        <div className="tiny muted">Today's deep dive · grab a tea, about {dive.minutes || 4} min</div>
         <h3 className="dive-title">{dive.title}</h3>
       </div>
+      {dive.opener && <p className="dive-opener">{dive.opener}</p>}
       {dive.sections.map((s) => (
         <section key={s.heading}>
           <h4>{s.heading}</h4>
@@ -66,10 +67,12 @@ export function DeepDive({ g, preg, week }: { g: Gestation; preg: Pregnancy; wee
       ))}
       {dive.takeaways.length > 0 && (
         <div className="takeaways">
-          <div className="tip-label">Key takeaways</div>
+          <div className="tip-label">If you only remember this</div>
           <ul className="tips">{dive.takeaways.map((t) => <li key={t}>{t}</li>)}</ul>
         </div>
       )}
+      {dive.signoff && <p className="dive-signoff">{dive.signoff}</p>}
+      {dive.tomorrow && <p className="dive-next">🔮 {dive.tomorrow}</p>}
       <button className="btn ghost small" style={{ alignSelf: "flex-start" }} disabled={added.includes(dive.title)} onClick={() => ask(`About today's read, "${dive.title}": `)}>
         {added.includes(dive.title) ? "Added to your questions ✓" : "+ Add a question about this for my doctor"}
       </button>
