@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { babySize, formatLength, formatWeight, type Gestation } from "../../shared/pregnancy";
 import { weekContent } from "../content/pregnancy";
 import { BabyArt, SizeArt } from "./art";
@@ -9,8 +9,11 @@ const PX_PER_MM = 96 / 25.4;
 /**
  * "How big is baby?": the baby next to a fruit or vegetable of the same size, with today's
  * length and weight (interpolated per day). Objects and animals appear as a quiet text line.
+ * On Today it doubles as the hero: `header` and `footer` wrap it, and `href` makes the art a link.
  */
-export function BabySize({ g }: { g: Gestation }) {
+export function BabySize({ g, header, footer, href, className = "" }: {
+  g: Gestation; header?: ReactNode; footer?: ReactNode; href?: string; className?: string;
+}) {
   const [actual, setActual] = useState(false);
   const days = Math.max(28, g.totalDays);
   const size = babySize(days);
@@ -21,8 +24,8 @@ export function BabySize({ g }: { g: Gestation }) {
   const showActual = actual && canActual;
 
   return (
-    <section className="card stack size-card" aria-label="Baby's size">
-      <div className="section-title"><span className="ico" aria-hidden>📏</span>How big is baby?</div>
+    <section className={`card stack size-card ${className}`} aria-label="Baby's size">
+      {header ?? <h3 className="card-h">How big is baby?</h3>}
 
       <div className="size-stage">
         {showActual ? (
@@ -33,7 +36,7 @@ export function BabySize({ g }: { g: Gestation }) {
             <div className="tiny muted">Roughly actual size on your screen.</div>
           </div>
         ) : (
-          <>
+          <a className="size-pair" href={href} aria-label={href ? "Open this week's guide" : undefined}>
             <figure className="size-fig">
               <div className="size-bubble baby"><svg viewBox="0 0 100 100" role="img" aria-label="Baby illustration"><BabyArt days={days} /></svg></div>
               <figcaption className="tiny muted">Baby</figcaption>
@@ -43,7 +46,7 @@ export function BabySize({ g }: { g: Gestation }) {
               <div className="size-bubble"><SizeArt theme="fruit" art={fruit.art} size={150} title={fruit.name} /></div>
               <figcaption className="tiny muted">{fruit.name.replace(/^an? /, "")}</figcaption>
             </figure>
-          </>
+          </a>
         )}
       </div>
 
@@ -54,10 +57,11 @@ export function BabySize({ g }: { g: Gestation }) {
           <span><b>{formatLength(size.lengthMm)}</b><span className="tiny muted">{size.measure}</span></span>
           {weight && <span><b>{weight}</b><span className="tiny muted">weight</span></span>}
           {canActual && (
-            <button className="chip static-toggle" aria-pressed={showActual} onClick={() => setActual(!actual)}>📐 Actual size</button>
+            <button className="chip static-toggle" aria-pressed={showActual} aria-label="Show actual size" title="Actual size" onClick={() => setActual(!actual)}>📐</button>
           )}
         </div>
       </div>
+      {footer}
     </section>
   );
 }

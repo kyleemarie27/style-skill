@@ -3,8 +3,8 @@ import { gestation, lmpForDueDate } from "../../shared/pregnancy";
 import { FIRST_WEEK, LAST_WEEK, TRIMESTERS, WEEKS, weekContent } from "../content/pregnancy";
 import { SizeArt } from "../components/art";
 import { BabySize } from "../components/BabySize";
-import { BodyMind } from "../components/BodyMind";
-import { WeekGuide } from "../components/WeekGuide";
+import { DeepDive } from "../components/DeepDive";
+import { WeekGuide, type GuideTab } from "../components/WeekGuide";
 import { recentSymptoms, usePregnancy } from "../lib/pregnancy";
 import { useStore } from "../lib/store";
 
@@ -45,9 +45,9 @@ export function WeeksPage() {
 }
 
 /** #/week/N: the full guide for any week, to read ahead or look back. */
-export function WeekPage({ week }: { week: number }) {
+export function WeekPage({ week, tab }: { week: number; tab?: string }) {
   const p = usePregnancy();
-  const { dayLogs } = useStore();
+  const { dayLogs, aiEnabled } = useStore();
   if (!p) return <NotPregnant />;
   const w = Math.max(FIRST_WEEK, Math.min(LAST_WEEK, week || p.g.weeks));
   const content = weekContent(w);
@@ -66,8 +66,16 @@ export function WeekPage({ week }: { week: number }) {
         <button className="btn ghost" onClick={() => go(w + 1)} disabled={w >= LAST_WEEK} aria-label="Next week">›</button>
       </div>
       <BabySize key={w} g={g} />
-      <BodyMind key={"b" + w} week={w} logged={w === p.g.weeks ? recentSymptoms(dayLogs, p.today) : []} />
-      <WeekGuide key={"g" + w} week={content} preg={p.preg} seed={w * 7} recentSymptoms={w === p.g.weeks ? recentSymptoms(dayLogs, p.today) : []} />
+      <p className="week-teaser center">{content.headline}</p>
+      <WeekGuide
+        key={"g" + w + (tab ?? "")}
+        week={content}
+        preg={p.preg}
+        seed={w === p.g.weeks ? p.g.totalDays : w * 7}
+        recentSymptoms={w === p.g.weeks ? recentSymptoms(dayLogs, p.today) : []}
+        deepDive={aiEnabled && w === p.g.weeks ? <DeepDive g={p.g} preg={p.preg} week={content} /> : undefined}
+        initial={tab as GuideTab | undefined}
+      />
       <section className="card stack">
         <div className="section-title"><span className="ico" aria-hidden>📅</span>Day by day</div>
         <ol className="day-list">

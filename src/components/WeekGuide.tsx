@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { prettyDate } from "../../shared/dates";
 import { standardSchedule } from "../../shared/pregnancy";
 import type { Pregnancy } from "../../shared/types";
@@ -8,51 +8,46 @@ import {
   trimesterOf, weekDeep, type WeekContent,
 } from "../content/pregnancy";
 import { readLocal, writeLocal } from "../lib/pregnancy";
+import { BodyMind } from "./BodyMind";
 
-type TabId = "deep" | "baby" | "body" | "care" | "watch" | "decide" | "faq" | "todo" | "partner";
+export type GuideTab = "read" | "baby" | "you" | "plan";
 
 /**
- * "This week": the week's guide in tabs. Each tab leads with a real explainer, then tables,
- * explainers for symptoms you've logged, and short tappable cards. `seed` (gestational day)
- * rotates the trimester tips so they change daily. `deepDive` (Today only) adds the daily
- * AI deep dive as the first tab.
+ * The week's guide in four tabs: Today's read (the daily AI deep dive, current week only),
+ * Baby, You (body and mind, symptoms, food and self-care) and Plan (decisions, to-dos, partner, FAQ).
+ * "When to call" sits under every tab so safety info is never hidden. `seed` (gestational day)
+ * rotates the trimester tips so they change daily.
  */
-export function WeekGuide({ week, preg, seed, recentSymptoms = [], deepDive }: {
-  week: WeekContent; preg: Pregnancy; seed: number; recentSymptoms?: string[]; deepDive?: ReactNode;
+export function WeekGuide({ week, preg, seed, recentSymptoms = [], deepDive, initial }: {
+  week: WeekContent; preg: Pregnancy; seed: number; recentSymptoms?: string[]; deepDive?: ReactNode; initial?: GuideTab;
 }) {
   const deep = weekDeep(week.week);
-  const tabs: { id: TabId; label: string; icon: string }[] = [
-    ...(deepDive ? [{ id: "deep" as const, label: "Deep dive", icon: "📖" }] : []),
-    { id: "baby", label: "Baby", icon: "👶" },
-    { id: "body", label: "Your body", icon: "🌙" },
-    { id: "care", label: "Take care", icon: "🫖" },
-    { id: "watch", label: "Watch for", icon: "⚠️" },
-    ...(deep.decisions?.length ? [{ id: "decide" as const, label: "Decisions", icon: "🧭" }] : []),
-    { id: "faq", label: "FAQ", icon: "💬" },
-    { id: "todo", label: "To-do", icon: "✅" },
-    { id: "partner", label: "Partner", icon: "🤝" },
+  const tabs: { id: GuideTab; label: string }[] = [
+    ...(deepDive ? [{ id: "read" as const, label: "Read" }] : []),
+    { id: "baby", label: "Baby" },
+    { id: "you", label: "You" },
+    { id: "plan", label: "Plan" },
   ];
-  const [tab, setTab] = useState<TabId>(tabs[0].id);
+  const [tab, setTab] = useState<GuideTab>(tabs.some((t) => t.id === initial) ? initial! : tabs[0].id);
   const tri = TRIMESTERS[trimesterOf(week.week)];
   const pick = (pool: Item[], n: number, s: number) => rotate(pool, seed + s).slice(0, n);
   const logged = recentSymptoms.filter((s) => SYMPTOMS[s]);
+  const ref = useRef<HTMLElement>(null);
+  // Arriving from a Today link (#/week/N/baby): bring the guide into view.
+  useEffect(() => {
+    if (initial) ref.current?.scrollIntoView({ block: "start" });
+  }, [initial]);
 
   return (
-    <section className="card stack week-guide" aria-label={`Week ${week.week} guide`}>
-      <div>
-        <div className="section-title"><span className="ico" aria-hidden>🗓️</span>Week {week.week} · {tri.name}</div>
-        <h2 style={{ marginTop: 6 }}>{week.headline}</h2>
-      </div>
-      <div className="seg scroll" role="tablist" aria-label="Guide sections">
+    <section ref={ref} className="card stack week-guide" aria-label={`Week ${week.week} guide`}>
+      <div className="tabs guide-tabs" role="tablist" aria-label="Guide sections">
         {tabs.map((t) => (
-          <button key={t.id} role="tab" aria-selected={tab === t.id} onClick={() => setTab(t.id)}>
-            <span aria-hidden>{t.icon}</span> {t.label}
-          </button>
+          <button key={t.id} role="tab" aria-selected={tab === t.id} onClick={() => setTab(t.id)}>{t.label}</button>
         ))}
       </div>
 
       <div role="tabpanel" className="fade-in stack" key={tab}>
-        {tab === "deep" && deepDive}
+        {tab === "read" && deepDive}
 
         {tab === "baby" && (
           <>
@@ -61,40 +56,24 @@ export function WeekGuide({ week, preg, seed, recentSymptoms = [], deepDive }: {
           </>
         )}
 
-        {tab === "body" && (
+        {tab === "you" && (
           <>
             <Prose text={deep.body} />
+            <BodyMind week={week.week} logged={recentSymptoms} />
             {logged.length > 0 && (
               <div className="guide-group">
                 <div className="tip-label">What you've logged lately</div>
                 <div className="tip-grid">{logged.map((s) => <SymptomCard key={s} name={s} />)}</div>
               </div>
             )}
-            <Group label="Body" items={week.body} />
-            <Group label="Mind & mood" items={week.mind} />
-            {week.week <= 16 && (
-              <details className="ref">
-                <summary>Typical hCG levels by week</summary>
-                <table className="ref-table">
-                  <thead><tr><th>Weeks</th><th>hCG (mIU/mL)</th></tr></thead>
-                  <tbody>{HCG.map((r) => <tr key={r.weeks}><td>{r.weeks}</td><td>{r.range}</td></tr>)}</tbody>
-                </table>
-                <p className="tiny muted">Ranges are very wide. Doctors look at whether hCG rises over 48 hours, not at a single number.</p>
-              </details>
-            )}
+            <Group label="Take care this week" items={[...(week.care.food ?? []), ...pick(tri.food, 2, 1), ...(week.care.movement ?? []), ...pick(tri.movement, 1, 2), ...(week.care.rest ?? []), ...pick(tri.rest, 1, 3)]} />
             <details className="ref">
               <summary>Every symptom, explained</summary>
               <div className="tip-grid">{Object.keys(SYMPTOMS).map((s) => <SymptomCard key={s} name={s} />)}</div>
             </details>
-          </>
-        )}
-
-        {tab === "care" && (
-          <>
-            <p className="prose-note">{CALORIES}</p>
-            <Group label="Food" items={[...(week.care.food ?? []), ...pick(tri.food, 3, 1)]} />
             <details className="ref">
               <summary>Daily nutrient targets</summary>
+              <p className="prose-note">{CALORIES}</p>
               <ul className="nutrients">
                 {NUTRIENTS.map((n) => (
                   <li key={n.name}>
@@ -111,8 +90,6 @@ export function WeekGuide({ week, preg, seed, recentSymptoms = [], deepDive }: {
               <p className="small"><b>Avoid:</b> {FOOD_SAFETY.avoid}</p>
               <p className="small"><b>Medicines:</b> {FOOD_SAFETY.meds}</p>
             </details>
-            <Group label="Movement" items={[...(week.care.movement ?? []), ...pick(tri.movement, 2, 2)]} />
-            <Group label="Rest & self-care" items={[...(week.care.rest ?? []), ...pick(tri.rest, 2, 3)]} />
             <details className="ref">
               <summary>Healthy weight gain</summary>
               <table className="ref-table">
@@ -121,40 +98,57 @@ export function WeekGuide({ week, preg, seed, recentSymptoms = [], deepDive }: {
               </table>
               <p className="tiny muted">Institute of Medicine guidance. About 1–4.5 lb in the whole first trimester is typical.</p>
             </details>
-          </>
-        )}
-
-        {tab === "watch" && (
-          <>
-            <Cards items={[...week.watchouts, ...pick(tri.watchouts, 2, 4)]} tone="watch" />
-            <div className="call-now">
-              <div className="tip-label">Call your doctor right away for</div>
-              <ul className="tips">{CALL_NOW.map((i) => <li key={i.t}>{i.t}</li>)}</ul>
-            </div>
-          </>
-        )}
-
-        {tab === "decide" && deep.decisions && (
-          <>
-            <p className="prose-note">Choices coming up. There's no wrong answer; these are yours to talk through with your doctor.</p>
-            <Cards items={deep.decisions} />
-          </>
-        )}
-
-        {tab === "faq" && (
-          <div className="faq">
-            {deep.faq.map((f) => (
-              <details key={f.q}>
-                <summary>{f.q}</summary>
-                <p>{f.a}</p>
+            {week.week <= 16 && (
+              <details className="ref">
+                <summary>Typical hCG levels by week</summary>
+                <table className="ref-table">
+                  <thead><tr><th>Weeks</th><th>hCG (mIU/mL)</th></tr></thead>
+                  <tbody>{HCG.map((r) => <tr key={r.weeks}><td>{r.weeks}</td><td>{r.range}</td></tr>)}</tbody>
+                </table>
+                <p className="tiny muted">Ranges are very wide. Doctors look at whether hCG rises over 48 hours, not at a single number.</p>
               </details>
-            ))}
-          </div>
+            )}
+          </>
         )}
 
-        {tab === "todo" && <Todo week={week} preg={preg} />}
-        {tab === "partner" && <Cards items={week.partner} />}
+        {tab === "plan" && (
+          <>
+            <div className="guide-group">
+              <div className="tip-label">To-do this week</div>
+              <Todo week={week} preg={preg} />
+            </div>
+            {deep.decisions?.length ? (
+              <details className="ref" open>
+                <summary>Decisions coming up</summary>
+                <p className="small muted">There's no wrong answer; these are yours to talk through with your doctor.</p>
+                <Cards items={deep.decisions} />
+              </details>
+            ) : null}
+            <details className="ref">
+              <summary>For your partner</summary>
+              <Cards items={week.partner} />
+            </details>
+            <details className="ref">
+              <summary>Questions people ask this week</summary>
+              <div className="faq">
+                {deep.faq.map((f) => (
+                  <details key={f.q}>
+                    <summary>{f.q}</summary>
+                    <p>{f.a}</p>
+                  </details>
+                ))}
+              </div>
+            </details>
+          </>
+        )}
       </div>
+
+      <details className="ref when-to-call">
+        <summary>⚠️ When to call your doctor</summary>
+        <Cards items={[...week.watchouts, ...pick(tri.watchouts, 2, 4)]} tone="watch" />
+        <div className="tip-label">Call right away for</div>
+        <ul className="tips">{CALL_NOW.map((i) => <li key={i.t}>{i.t}</li>)}</ul>
+      </details>
     </section>
   );
 }

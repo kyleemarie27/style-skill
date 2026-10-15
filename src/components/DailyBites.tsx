@@ -2,7 +2,7 @@ import { useState } from "react";
 import { addDays } from "../../shared/dates";
 import type { Gestation } from "../../shared/pregnancy";
 import type { Pregnancy } from "../../shared/types";
-import { dailyBites, dailyTodos, nextMilestone, type Bite, type WeekContent } from "../content/pregnancy";
+import { dailyBites, dailyTodos, type Bite, type WeekContent } from "../content/pregnancy";
 import { readLocal, writeLocal } from "../lib/pregnancy";
 
 const dayKey = (date: string) => `bloom-bites-${date}`;
@@ -25,6 +25,7 @@ export function DailyBites({ g, preg, week, today }: { g: Gestation; preg: Pregn
   const weekKey = `bloom-todo-${preg.positiveTestDate}-w${week.week}`;
   const [done, setDone] = useState<string[]>(() => readLocal(dayKey(today), []));
   const [weekDone, setWeekDone] = useState<string[]>(() => readLocal(weekKey, []));
+  const [open, setOpen] = useState(false);
   const isDone = (t: string, scope: "day" | "week") => done.includes(t) || (scope === "week" && weekDone.includes(t));
 
   const toggle = (t: string, scope: "day" | "week") => {
@@ -41,32 +42,27 @@ export function DailyBites({ g, preg, week, today }: { g: Gestation; preg: Pregn
 
   const count = todos.filter((i) => isDone(i.t, i.scope)).length;
   const days = streak(today);
-  const next = nextMilestone(g.totalDays);
 
   return (
     <section className="card stack bites" aria-label="Today's bites">
       <div className="row between" style={{ alignItems: "baseline" }}>
-        <div className="section-title"><span className="ico" aria-hidden>🍪</span>Today's bites</div>
-        <span className="tiny muted">New every morning</span>
+        <h3 className="card-h">Today's bites</h3>
+        <span className="tiny muted">Swipe · tap for more</span>
       </div>
-
-      {next && (
-        <div className="milestone">
-          <div className="ms-days"><b>{next.inDays}</b><span>{next.inDays === 1 ? "day" : "days"}</span></div>
-          <div className="small"><span className="tiny muted">Coming up · week {next.week}</span><br />{next.icon} {next.t}</div>
-        </div>
-      )}
 
       <div className="bite-rail">
         {bites.map((b) => <BiteCard key={b.t} bite={b} />)}
       </div>
 
-      <div className="stack" style={{ gap: 8 }}>
-        <div className="row between" style={{ alignItems: "center" }}>
-          <h3 className="bites-h">Little things for today</h3>
-          <span className={`bite-count${count === todos.length ? " all" : ""}`}>{count}/{todos.length}</span>
-        </div>
-        <ul className="checklist">
+      <div className="stack" style={{ gap: 10 }}>
+        <button className="todo-toggle" aria-expanded={open} onClick={() => setOpen(!open)}>
+          <span>Little things for today</span>
+          <span className="row" style={{ gap: 8, alignItems: "center" }}>
+            <span className={`bite-count${count === todos.length ? " all" : ""}`}>{count}/{todos.length}</span>
+            <span className="chev" aria-hidden>›</span>
+          </span>
+        </button>
+        {open && <ul className="checklist">
           {todos.map((i) => (
             <li key={i.t}>
               <label>
@@ -79,7 +75,7 @@ export function DailyBites({ g, preg, week, today }: { g: Gestation; preg: Pregn
               </label>
             </li>
           ))}
-        </ul>
+        </ul>}
         {count === todos.length ? (
           <p className="bites-done">All done for today. That's real care for you and the baby. 🎉</p>
         ) : days >= 2 ? (

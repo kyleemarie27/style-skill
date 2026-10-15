@@ -15,35 +15,27 @@ const STATUS: Record<ChangeStatus, string> = {
 };
 
 /**
- * Your body & mind right now: what's usually happening at this week, what's on the way and
- * what's winding down, each with a little timeline across the whole pregnancy.
+ * Body & mind at this week: what's usually happening now, what's on the way and what's winding
+ * down, each with a little timeline across the whole pregnancy. Lives in the week guide's "You" tab.
  */
 export function BodyMind({ week, logged = [] }: { week: number; logged?: string[] }) {
-  const [kind, setKind] = useState<"body" | "mind">("body");
   const [all, setAll] = useState(false);
   const { now, coming, fading } = changesAt(week);
-  const pick = (list: ChangeNow[]) => list.filter((c) => c.kind === kind);
-  const nowK = pick(now);
-  const shown = all ? nowK : nowK.slice(0, 4);
+  const shown = all ? now : now.slice(0, 3);
 
   return (
-    <section className="card stack body-mind" aria-label="Your body and mind right now">
-      <div className="row between wrap">
-        <div className="section-title"><span className="ico" aria-hidden>🌗</span>Body & mind · week {week}</div>
-        <div className="tabs" role="tablist">
-          <button role="tab" aria-selected={kind === "body"} onClick={() => { setKind("body"); setAll(false); }}>Body</button>
-          <button role="tab" aria-selected={kind === "mind"} onClick={() => { setKind("mind"); setAll(false); }}>Mind</button>
-        </div>
+    <div className="stack body-mind" style={{ gap: 12 }}>
+      <div className="row between" style={{ alignItems: "baseline" }}>
+        <div className="tip-label" style={{ marginTop: 0 }}>Body & mind right now</div>
+        <span className="tiny muted">Tap any for the why</span>
       </div>
-      <p className="muted small">What's usually going on right now, and what changes next. Everyone's different; tap any one for the why.</p>
-
-      <Group label="Happening now" items={shown} week={week} logged={logged} />
-      {nowK.length > shown.length && (
-        <button className="btn ghost small" style={{ alignSelf: "flex-start" }} onClick={() => setAll(true)}>Show {nowK.length - shown.length} more</button>
+      <Group label="" items={shown} week={week} logged={logged} />
+      {now.length > shown.length && (
+        <button className="btn ghost small" style={{ alignSelf: "flex-start" }} onClick={() => setAll(true)}>Show all {now.length}</button>
       )}
-      <Group label="Coming up" items={pick(coming)} week={week} logged={logged} />
-      <Group label="Winding down" items={pick(fading)} week={week} logged={logged} />
-    </section>
+      <Group label="Coming up" items={coming} week={week} logged={logged} />
+      {all && <Group label="Winding down" items={fading} week={week} logged={logged} />}
+    </div>
   );
 }
 
@@ -51,7 +43,7 @@ function Group({ label, items, week, logged }: { label: string; items: ChangeNow
   if (!items.length) return null;
   return (
     <div className="stack" style={{ gap: 6 }}>
-      <div className="tip-label">{label}</div>
+      {label && <div className="tip-label">{label}</div>}
       {items.map((c) => <ChangeRow key={c.id} c={c} week={week} logged={!!c.symptom && logged.includes(c.symptom)} />)}
     </div>
   );
@@ -67,8 +59,8 @@ function ChangeRow({ c, week, logged }: { c: ChangeNow; week: number; logged: bo
         <span className="change-ico" aria-hidden>{c.icon}</span>
         <div className="stack" style={{ gap: 2, flex: 1, minWidth: 0 }}>
           <div className="row between" style={{ gap: 8, alignItems: "baseline" }}>
-            <b>{c.name}</b>
-            <span className="change-pill">{STATUS[c.status]}</span>
+            <b>{c.name}{c.kind === "mind" && <span className="mind-tag">mind</span>}</b>
+            {c.status !== "peak" && c.status !== "now" && <span className="change-pill">{STATUS[c.status]}</span>}
           </div>
           <span className="tiny muted">{when}{logged ? " · you've logged this" : ""}</span>
         </div>
