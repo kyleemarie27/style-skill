@@ -2,103 +2,107 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { addDays, localToday, prettyDate } from "../../shared/dates";
 import { gaLabel, gaLong, type Gestation, type PregFlag } from "../../shared/pregnancy";
 import type { Pregnancy } from "../../shared/types";
-import { FIRST_WEEK, LAST_WEEK, TRIMESTERS, weekContent, type WeekContent } from "../content/pregnancy";
-import { AskBloomCard } from "../components/AskBloom";
+import { nextMilestone, TRIMESTERS, type WeekContent } from "../content/pregnancy";
 import { BabySize } from "../components/BabySize";
-import { BodyMind } from "../components/BodyMind";
 import { DailyBites } from "../components/DailyBites";
-import { PregnancyEditor } from "../components/PregnancyEditor";
-import { DeepDive } from "../components/DeepDive";
-import { WeekGuide } from "../components/WeekGuide";
+import { useDeepDive } from "../components/DeepDive";
+import { QuickCheckIn } from "../components/QuickCheckIn";
 import { api } from "../lib/api";
-import { newId, recentSymptoms, usePregnancy, useSavePregnancy } from "../lib/pregnancy";
+import { newId, usePregnancy, useSavePregnancy } from "../lib/pregnancy";
 import { useStore } from "../lib/store";
 
 export function PregnancyToday() {
   const p = usePregnancy()!;
-  const { byDate, aiEnabled, dayLogs } = useStore();
+  const { aiEnabled } = useStore();
   const { preg, g, week, flags, today } = p;
-  const yesterday = addDays(today, -1);
-  const [checkDay, setCheckDay] = useState<"yesterday" | "today">(byDate.has(yesterday) ? "today" : "yesterday");
   const dayLine = week.days[Math.max(0, Math.min(6, g.days))];
-  const logged = recentSymptoms(dayLogs, today);
+  const next = nextMilestone(g.totalDays);
 
   return (
-    <div className="stack preg">
-      <PregHero preg={preg} g={g} />
+    <div className="stack preg today-stack">
+      <BabySize
+        g={g}
+        href={`#/week/${g.weeks}`}
+        className={`hero-size tri-${g.trimester}`}
+        header={
+          <div className="stack" style={{ gap: 2 }}>
+            <div className="muted small">{prettyDate(localToday(), true)}</div>
+            <h1>{gaLong(g)}</h1>
+          </div>
+        }
+        footer={<Progress g={g} preg={preg} />}
+      />
 
       {flags.length > 0 && <Alerts flags={flags} preg={preg} />}
 
       <section className="card stack today-card">
-        <div className="section-title"><span className="ico" aria-hidden>☀️</span>Today · {gaLabel(g)}</div>
+        <h3 className="card-h">Today</h3>
         <p className="today-line">{dayLine}</p>
         {aiEnabled && <PregLine g={g} preg={preg} week={week} />}
+        {next && (
+          <p className="milestone-line">
+            <b>In {next.inDays} {next.inDays === 1 ? "day" : "days"}:</b> {next.t} <span aria-hidden>{next.icon}</span>
+          </p>
+        )}
       </section>
 
       <DailyBites key={today} g={g} preg={preg} week={week} today={today} />
 
-      <BodyMind week={g.weeks} logged={logged} />
+      <QuickCheckIn today={today} />
 
-      <BabySize g={g} />
-
-      <div className="card stack">
-        <div className="row between wrap">
-          <h2>How are you feeling?</h2>
-          <div className="tabs" role="tablist">
-            <button role="tab" aria-selected={checkDay === "yesterday"} onClick={() => setCheckDay("yesterday")}>Yesterday</button>
-            <button role="tab" aria-selected={checkDay === "today"} onClick={() => setCheckDay("today")}>Today</button>
-          </div>
-        </div>
-        <p className="muted small">The things your doctor will ask about. Tap what fits; it saves as you go.</p>
-        <PregnancyEditor key={checkDay} date={checkDay === "yesterday" ? yesterday : today} preg={preg} compact />
-        <div className="row wrap">
-          <a className="btn ghost" href={`#/day/${checkDay === "yesterday" ? yesterday : today}`}>Weight, blood pressure & more →</a>
-        </div>
-      </div>
-
-      <WeekGuide
-        week={week}
-        preg={preg}
-        seed={g.totalDays}
-        recentSymptoms={logged}
-        deepDive={aiEnabled ? <DeepDive g={g} preg={preg} week={week} /> : undefined}
-      />
-
-      <WeekRail current={g.weeks} />
-
-      <AskBloomCard suggestions={suggestions(g)} />
+      <ThisWeek g={g} preg={preg} week={week} ai={aiEnabled} />
 
       <p className="tiny muted center">Bloom gives general information, not medical advice. Your doctor or midwife knows your situation best.</p>
     </div>
   );
 }
 
-function PregHero({ preg, g }: { preg: Pregnancy; g: Gestation }) {
-  const r = 46;
-  const c = 2 * Math.PI * r;
+/** A thin trimester progress bar with the due date and days to go. */
+function Progress({ g, preg }: { g: Gestation; preg: Pregnancy }) {
   const tri = TRIMESTERS[g.trimester];
   return (
-    <div className={`card hero preg-hero tri-${g.trimester}`}>
-      <div className="row between" style={{ alignItems: "center", gap: 14 }}>
-        <div className="stack" style={{ gap: 6, minWidth: 0 }}>
-          <div className="muted small">{prettyDate(localToday(), true)}</div>
-          <span className="phase-pill"><span className="dot" />{tri.name}</span>
-          <h1 style={{ marginTop: 2 }}>{gaLong(g)} pregnant</h1>
-        </div>
-        <svg className="ring" viewBox="0 0 110 110" width="104" height="104" role="img" aria-label={`${Math.round(g.pct * 100)}% of the way to your due date`}>
-          <circle cx="55" cy="55" r={r} fill="none" stroke="var(--surface-2)" strokeWidth="9" />
-          <circle cx="55" cy="55" r={r} fill="none" stroke="var(--phase)" strokeWidth="9" strokeLinecap="round"
-            strokeDasharray={`${c * g.pct} ${c}`} transform="rotate(-90 55 55)" />
-          <text x="55" y="53" textAnchor="middle" className="ring-big">{g.weeks}</text>
-          <text x="55" y="70" textAnchor="middle" className="ring-small">weeks</text>
-        </svg>
+    <div className="stack" style={{ gap: 6 }}>
+      <div className="preg-bar" role="img" aria-label={`${Math.round(g.pct * 100)}% of the way to your due date`}>
+        <span style={{ width: `${Math.max(2, g.pct * 100)}%` }} />
+        <i style={{ left: `${(13 / 40) * 100}%` }} />
+        <i style={{ left: `${(27 / 40) * 100}%` }} />
       </div>
-      <div className="facts">
-        <div className="fact">Due date<b>{prettyDate(preg.dueDate)}</b></div>
-        <div className="fact">To go<b>{g.daysToGo} days</b></div>
-        <div className="fact">Day<b>{g.totalDays} of 280</b></div>
+      <div className="row between small muted">
+        <span>{tri.name}</span>
+        <span>Due {prettyDate(preg.dueDate)} · {g.daysToGo} days to go</span>
       </div>
     </div>
+  );
+}
+
+/** A teaser for the week: today's read and quick links into the week's guide. */
+function ThisWeek({ g, preg, week, ai }: { g: Gestation; preg: Pregnancy; week: WeekContent; ai: boolean }) {
+  const base = `#/week/${g.weeks}`;
+  return (
+    <section className="card stack">
+      <div className="row between" style={{ alignItems: "baseline" }}>
+        <h3 className="card-h">Week {g.weeks}</h3>
+        <a className="small" href={base}>Full guide ›</a>
+      </div>
+      <p className="week-teaser">{week.headline}</p>
+      {ai && <ReadTeaser g={g} preg={preg} week={week} href={`${base}/read`} />}
+      <div className="week-links">
+        <a href={`${base}/baby`}>👶 Baby</a>
+        <a href={`${base}/you`}>🌙 You</a>
+        <a href={`${base}/plan`}>🗓️ Plan</a>
+      </div>
+    </section>
+  );
+}
+
+function ReadTeaser({ g, preg, week, href }: { g: Gestation; preg: Pregnancy; week: WeekContent; href: string }) {
+  const { dive, err } = useDeepDive(g, preg, week);
+  if (err) return null;
+  return (
+    <a className="read-teaser" href={href}>
+      <span className="tiny muted">Today's read{dive ? ` · ${dive.minutes || 4} min` : ""}</span>
+      <b>{dive ? dive.title : <span className="row muted small"><span className="spin" /> Writing today's read…</span>}</b>
+    </a>
   );
 }
 
@@ -132,6 +136,7 @@ function PregLine({ g, preg, week }: { g: Gestation; preg: Pregnancy; week: Week
   const { byDate } = useStore();
   const [line, setLine] = useState<string | null>(null);
   const [err, setErr] = useState("");
+  const [more, setMore] = useState(false);
   const date = localToday();
   const key = `preg-${gaLabel(g).replace(" ", "")}`;
   const ctx = useRef<unknown>(null);
@@ -160,46 +165,15 @@ function PregLine({ g, preg, week }: { g: Gestation; preg: Pregnancy; week: Week
     };
   }, [date, key]);
 
+  if (err) return <p className="small muted">Couldn't write today's note: {err}</p>;
+  if (!line) return <p className="muted row small"><span className="spin" /> Writing your note…</p>;
   return (
-    <div className="for-you">
-      <div className="tip-label">💌 For you today</div>
-      {err ? <p className="small muted">Couldn't write today's note: {err}</p>
-        : <p>{line ?? <span className="muted row"><span className="spin" /> Writing your note…</span>}</p>}
-    </div>
+    <button className={`for-you-note${more ? " open" : ""}`} onClick={() => setMore(!more)} aria-expanded={more}>
+      <span className="note-text">{line}</span>
+      {!more && line.length > 150 && <span className="why-hint">more</span>}
+    </button>
   );
 }
 
-function WeekRail({ current }: { current: number }) {
-  const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    // Scroll only the rail sideways; scrollIntoView would also scroll the page.
-    const rail = ref.current;
-    const el = rail?.querySelector<HTMLElement>("[aria-current]");
-    if (rail && el) rail.scrollLeft = el.offsetLeft - rail.offsetLeft - (rail.clientWidth - el.clientWidth) / 2;
-  }, []);
-  const weeks = Array.from({ length: LAST_WEEK - FIRST_WEEK - 1 }, (_, i) => FIRST_WEEK + i);
-  return (
-    <section className="card stack">
-      <div className="row between">
-        <div className="section-title"><span className="ico" aria-hidden>🧭</span>Your weeks</div>
-        <a className="small" href="#/weeks">See all →</a>
-      </div>
-      <div className="week-rail" ref={ref}>
-        {weeks.map((w) => (
-          <a key={w} href={`#/week/${w}`} className={`wk tri-${w < 14 ? 1 : w < 28 ? 2 : 3}${w < current ? " past" : ""}`} aria-current={w === current ? "true" : undefined}>
-            <b>{w}</b>
-            <span className="tiny">{weekContent(w).size.fruit.name.replace(/^an? /, "").replace(/^(a |head of |bunch of )/, "")}</span>
-          </a>
-        ))}
-      </div>
-    </section>
-  );
-}
 
-function suggestions(g: Gestation): string[] {
-  if (g.weeks < 9) return ["Is this cramping normal?", "What can't I eat now?", "What happens at my first appointment?"];
-  if (g.weeks < 14) return ["When will the nausea ease?", "Should I do NIPT screening?", "When should we tell people?"];
-  if (g.weeks < 28) return ["When will I feel kicks?", "What's checked at the anatomy scan?", "How much weight should I gain?"];
-  return ["How do I do kick counts?", "How do I know it's real labor?", "What should go in my hospital bag?"];
-}
 

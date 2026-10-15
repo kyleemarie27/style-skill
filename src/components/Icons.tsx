@@ -24,3 +24,6 @@ export const SproutIcon = () => (
 export const StethIcon = () => (
   <svg viewBox="0 0 24 24" {...p}><path d="M6 3v6a5 5 0 0 0 10 0V3" /><path d="M11 14v2a4 4 0 0 0 8 0v-3" /><circle cx="19" cy="11" r="2" /></svg>
 );
+export const ChatIcon = () => (
+  <svg viewBox="0 0 24 24" {...p}><path d="M20 12a8 8 0 0 1-11.6 7.1L4 20l1-4.1A8 8 0 1 1 20 12z" /><path d="M8.5 11h.01M12 11h.01M15.5 11h.01" strokeWidth="2.6" /></svg>
+);

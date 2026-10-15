@@ -1,4 +1,5 @@
-import { CalendarIcon, ChartIcon, GearIcon, PlusIcon, SproutIcon, StethIcon, SunIcon } from "./components/Icons";
+import { AskPage } from "./components/AskBloom";
+import { CalendarIcon, ChartIcon, ChatIcon, GearIcon, PlusIcon, SproutIcon, StethIcon, SunIcon } from "./components/Icons";
 import { localToday } from "../shared/dates";
 import { activePregnancy } from "../shared/pregnancy";
 import { useRoute, useStore } from "./lib/store";
@@ -39,19 +40,24 @@ export function App() {
         {pregnant ? link("weeks", "Weeks", SproutIcon, page === "weeks" || page === "week" || page === "calendar")
           : link("calendar", "Calendar", CalendarIcon, page === "calendar")}
         {link(`day/${today}`, "Log", PlusIcon, page === "day")}
+        {link("ask", "Ask", ChatIcon, page === "ask")}
         {pregnant ? link("doctor", "Doctor", StethIcon, page === "doctor")
           : link("insights", "Insights", ChartIcon, page === "insights")}
-        {link("settings", "Settings", GearIcon, page === "settings" || page === "import" || (pregnant && page === "insights"))}
+        <span className="nav-settings">{link("settings", "Settings", GearIcon, page === "settings" || page === "import" || (pregnant && page === "insights"))}</span>
       </nav>
       <main className="main">
+        {page === "today" && (
+          <a className="settings-btn" href="#/settings" aria-label="Settings"><GearIcon /></a>
+        )}
         {page === "calendar" ? <CalendarPage />
           : page === "day" ? <DayPage date={arg ?? today} />
           : page === "insights" ? <InsightsPage />
           : page === "settings" ? <SettingsPage />
           : page === "import" ? <ImportPage />
           : page === "weeks" ? <WeeksPage />
-          : page === "week" ? <WeekPage week={Number(arg)} />
+          : page === "week" ? <WeekPage week={Number(arg)} tab={route[2]} />
           : page === "doctor" ? <DoctorPage />
+          : page === "ask" ? <AskPage key={arg ?? ""} first={arg ? decodeURIComponent(arg) : null} />
           : <TodayPage />}
       </main>
     </div>

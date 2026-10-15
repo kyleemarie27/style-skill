@@ -32,6 +32,20 @@ How to answer:
 - She's curious and excited, so feed that: when it fits, end with one thing to look forward to or one small thing she could try today.
 - Plain text with simple markdown (**bold**, "- " bullets). No headings, no tables.`;
 
+const PREG_SYMPTOMS = "Fatigue, Tender breasts, Frequent peeing, Food aversions, Cravings, Bloating, Constipation, Heartburn, Headache, Dizziness, Discharge change, Insomnia, Back pain, Leg cramps, Round ligament pain, Braxton Hicks, Swollen feet, Itching, Severe headache, Vision changes, Sudden swelling";
+const MOODS = "Happy, Calm, Energetic, Anxious, Irritable, Sad, Sensitive";
+
+/** How the model offers save-buttons. The app hides these lines and shows a button for each; nothing saves until she taps. */
+function actionsPrompt(pregnant: boolean, today: string) {
+  return `
+
+Saving things from the chat: the app can turn suggestions into one-tap buttons. When she mentions something she'd plausibly want saved, add up to 3 lines at the very end of your answer, each exactly in this form (valid JSON, one per line, nothing after them):
+[[bloom:{"type":"log","date":"YYYY-MM-DD","symptoms":["Fatigue"],"mood":"Anxious","notes":"short note"${pregnant ? ',"nausea":"mild","bleeding":"spotting","pain":"mild","prenatal":true' : ""}}]]${pregnant ? `
+[[bloom:{"type":"question","text":"A clear question for her doctor, in her voice"}]]
+[[bloom:{"type":"appointment","date":"YYYY-MM-DD","title":"Anatomy scan"}]]` : ""}
+Rules: "log" is for things she says happened to her (today is ${today}; resolve "yesterday" etc. to real dates); include only the fields she actually mentioned. symptoms must come from: ${PREG_SYMPTOMS}. mood from: ${MOODS}.${pregnant ? ` nausea: none|mild|moderate|severe; bleeding: none|spotting|light|heavy; pain: none|mild|strong.` : ""} ${pregnant ? `Offer a "question" when something is worth raising at her next visit, and an "appointment" only when she mentions a specific date. ` : ""}If she explicitly asks you to log or save something, always include the matching line. Never mention this markup or say "I've logged it"; say something like "Tap below to save it" instead. Most answers need no lines at all.`;
+}
+
 interface Msg {
   role: "user" | "assistant";
   content: string;
@@ -98,6 +112,8 @@ export default route(async (req: VercelRequest, res: VercelResponse) => {
   if (!messages.length || messages.at(-1)!.role !== "user") throw new HttpError(400, "Ask a question first.");
   const context = JSON.stringify(req.body?.context ?? {}).slice(0, 20_000);
   const memory = factsPrompt(await loadFacts());
+  const pregnant = !!req.body?.context?.pregnant;
+  const today = typeof req.body?.context?.today === "string" ? req.body.context.today.slice(0, 10) : new Date().toISOString().slice(0, 10);
 
   res.setHeader("Content-Type", "text/plain; charset=utf-8");
   res.setHeader("Cache-Control", "no-store");
@@ -105,7 +121,7 @@ export default route(async (req: VercelRequest, res: VercelResponse) => {
 
   if (fakeAi()) {
     const answer = req.body?.context?.pregnant
-      ? "Mild cramping in early pregnancy is very common: your uterus is growing and the ligaments around it are stretching.\n\n- Rest, drink water and try a warm (not hot) shower\n- Acetaminophen is fine if you need it\n\nCall your doctor today if the cramps are strong, one-sided, or come with bleeding."
+      ? `Mild cramping in early pregnancy is very common: your uterus is growing and the ligaments around it are stretching.\n\n- Rest, drink water and try a warm (not hot) shower\n- Acetaminophen is fine if you need it\n\nCall your doctor today if the cramps are strong, one-sided, or come with bleeding. Tap below to save it.\n[[bloom:{"type":"log","date":"${req.body?.context?.today ?? "2026-01-01"}","pain":"mild","symptoms":["Fatigue"]}]]\n[[bloom:{"type":"question","text":"Is the mild cramping I've been having normal at this stage?"}]]`
       : "Your cycles look healthy: they average **30 days**, which sits right inside the normal 24–38 range.\n\n- Most of yours land around 29 days\n- A couple ran longer (34 and 36 days), which usually just means you ovulated later that month\n\nKeep testing LH twice a day around your usual ovulation days so Bloom can confirm it.";
     res.status(200);
     for (const word of answer.split(/(?<= )/)) {
@@ -124,7 +140,7 @@ export default route(async (req: VercelRequest, res: VercelResponse) => {
       betas: ["server-side-fallback-2026-07-01"],
       fallbacks: "default",
       output_config: { effort: "medium" },
-      system: `${req.body?.context?.pregnant ? PREGNANT_SYSTEM : SYSTEM}\n\nHer data (JSON, as of today):\n${context}${memory}`,
+      system: `${pregnant ? PREGNANT_SYSTEM : SYSTEM}${actionsPrompt(pregnant, today)}\n\nHer data (JSON, as of today):\n${context}${memory}`,
       messages,
     });
     res.status(200);

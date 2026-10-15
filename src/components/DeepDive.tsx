@@ -8,13 +8,11 @@ import { newId, useSavePregnancy } from "../lib/pregnancy";
 import { useStore } from "../lib/store";
 import { Prose } from "./WeekGuide";
 
-/** Today's in-depth article: written once a day by AI for this exact gestational day. */
-export function DeepDive({ g, preg, week }: { g: Gestation; preg: Pregnancy; week: WeekContent }) {
+/** Today's deep dive for this gestational day: written once a day by AI, cached on the server. */
+export function useDeepDive(g: Gestation, preg: Pregnancy, week: WeekContent) {
   const { byDate } = useStore();
-  const save = useSavePregnancy();
   const [dive, setDive] = useState<Dive | null>(null);
   const [err, setErr] = useState("");
-  const [added, setAdded] = useState<string[]>([]);
   const date = localToday();
   const key = `dive2-${gaLabel(g).replace(" ", "")}`;
 
@@ -44,6 +42,15 @@ export function DeepDive({ g, preg, week }: { g: Gestation; preg: Pregnancy; wee
       live = false;
     };
   }, [date, key, context]);
+  return { dive, err };
+}
+
+/** Today's in-depth article: written once a day by AI for this exact gestational day. */
+export function DeepDive({ g, preg, week }: { g: Gestation; preg: Pregnancy; week: WeekContent }) {
+  const save = useSavePregnancy();
+  const { dive, err } = useDeepDive(g, preg, week);
+  const [added, setAdded] = useState<string[]>([]);
+  const date = localToday();
 
   if (err) return <p className="small muted">Couldn't write today's deep dive: {err}</p>;
   if (!dive) return <p className="muted row"><span className="spin" /> Writing today's deep dive…</p>;
