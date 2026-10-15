@@ -3,6 +3,7 @@ import { gestation, lmpForDueDate } from "../../shared/pregnancy";
 import { FIRST_WEEK, LAST_WEEK, TRIMESTERS, WEEKS, weekContent } from "../content/pregnancy";
 import { SizeArt } from "../components/art";
 import { BabySize } from "../components/BabySize";
+import { BodyMind } from "../components/BodyMind";
 import { WeekGuide } from "../components/WeekGuide";
 import { recentSymptoms, usePregnancy } from "../lib/pregnancy";
 import { useStore } from "../lib/store";
@@ -65,6 +66,7 @@ export function WeekPage({ week }: { week: number }) {
         <button className="btn ghost" onClick={() => go(w + 1)} disabled={w >= LAST_WEEK} aria-label="Next week">›</button>
       </div>
       <BabySize key={w} g={g} />
+      <BodyMind key={"b" + w} week={w} logged={w === p.g.weeks ? recentSymptoms(dayLogs, p.today) : []} />
       <WeekGuide key={"g" + w} week={content} preg={p.preg} seed={w * 7} recentSymptoms={w === p.g.weeks ? recentSymptoms(dayLogs, p.today) : []} />
       <section className="card stack">
         <div className="section-title"><span className="ico" aria-hidden>📅</span>Day by day</div>

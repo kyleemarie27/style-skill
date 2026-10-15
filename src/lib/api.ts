@@ -46,6 +46,9 @@ export const api = {
     call<{ line: string }>("daily-note", { method: "POST", json: { date, phase, context, refresh } }),
   deepDive: (date: string, key: string, context: unknown, refresh = false) =>
     call<DeepDive>("deep-dive", { method: "POST", json: { date, key, context, refresh } }),
+  memory: () => call<{ facts: Fact[] }>("ask"),
+  saveMemory: (facts: Fact[]) => call<{ facts: Fact[] }>("ask", { method: "PUT", json: { facts } }),
+  learn: (messages: ChatMsg[]) => call<{ added: string[]; facts: Fact[] }>("ask", { method: "POST", json: { learn: true, messages } }),
   imports: () => call<{ batches: ImportBatch[] }>("import"),
   commitImport: (source: string, bundle: ImportBundle) =>
     call<{ batchId: number; counts: ImportBatch["counts"] }>("import", {
@@ -60,8 +63,18 @@ export const api = {
 export interface DeepDive {
   title: string;
   minutes: number;
+  opener?: string;
   sections: { heading: string; body: string }[];
   takeaways: string[];
+  signoff?: string;
+  tomorrow?: string;
+}
+
+/** Something Bloom remembers about you from chat. */
+export interface Fact {
+  id: string;
+  text: string;
+  added: string;
 }
 
 export interface ChatMsg {

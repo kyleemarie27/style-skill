@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { localToday } from "../../shared/dates";
 import { activePregnancy } from "../../shared/pregnancy";
-import { askBloom, type ChatMsg } from "../lib/api";
+import { api, askBloom, type ChatMsg } from "../lib/api";
 import { buildAskContext } from "../lib/askContext";
 import { useStore } from "../lib/store";
 
@@ -68,6 +68,7 @@ function AskSheet({ first, onClose }: { first: string | null; onClose: () => voi
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [learned, setLearned] = useState<string[]>([]);
   const endRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
   const sentFirst = useRef(false);
@@ -86,6 +87,8 @@ function AskSheet({ first, onClose }: { first: string | null; onClose: () => voi
       const done: ChatMsg[] = [...next, { role: "assistant", content: answer }];
       setMsgs(done);
       save(done);
+      // Quietly pick up anything worth remembering about her for next time.
+      api.learn(done.slice(-4)).then((r) => r.added.length && setLearned((l) => [...l, ...r.added])).catch(() => {});
     } catch (e) {
       if ((e as Error).name === "AbortError") return;
       setMsgs(next.slice(0, -1));
@@ -118,7 +121,7 @@ function AskSheet({ first, onClose }: { first: string | null; onClose: () => voi
           <h2>Ask Bloom</h2>
           <div className="row" style={{ gap: 4 }}>
             {msgs.length > 0 && !busy && (
-              <button className="btn ghost small" onClick={() => { setMsgs([]); save([]); }}>New chat</button>
+              <button className="btn ghost small" onClick={() => { setMsgs([]); save([]); setLearned([]); }}>New chat</button>
             )}
             <button className="btn ghost" onClick={close}>Close</button>
           </div>
@@ -130,6 +133,9 @@ function AskSheet({ first, onClose }: { first: string | null; onClose: () => voi
               {m.role === "assistant" ? (m.content ? <Markdown text={m.content} /> : <span className="row muted small"><span className="spin" /> Thinking about your data…</span>) : m.content}
             </div>
           ))}
+          {learned.length > 0 && !busy && (
+            <a className="remembered" href="#/settings">💾 Bloom will remember: {learned.join(" · ")}</a>
+          )}
           {error && <div className="notice err small">{error}</div>}
           <div ref={endRef} />
         </div>

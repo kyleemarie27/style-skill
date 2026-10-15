@@ -5,6 +5,8 @@ import type { Pregnancy } from "../../shared/types";
 import { FIRST_WEEK, LAST_WEEK, TRIMESTERS, weekContent, type WeekContent } from "../content/pregnancy";
 import { AskBloomCard } from "../components/AskBloom";
 import { BabySize } from "../components/BabySize";
+import { BodyMind } from "../components/BodyMind";
+import { DailyBites } from "../components/DailyBites";
 import { PregnancyEditor } from "../components/PregnancyEditor";
 import { DeepDive } from "../components/DeepDive";
 import { WeekGuide } from "../components/WeekGuide";
@@ -19,6 +21,7 @@ export function PregnancyToday() {
   const yesterday = addDays(today, -1);
   const [checkDay, setCheckDay] = useState<"yesterday" | "today">(byDate.has(yesterday) ? "today" : "yesterday");
   const dayLine = week.days[Math.max(0, Math.min(6, g.days))];
+  const logged = recentSymptoms(dayLogs, today);
 
   return (
     <div className="stack preg">
@@ -26,13 +29,17 @@ export function PregnancyToday() {
 
       {flags.length > 0 && <Alerts flags={flags} preg={preg} />}
 
-      <BabySize g={g} />
-
       <section className="card stack today-card">
         <div className="section-title"><span className="ico" aria-hidden>☀️</span>Today · {gaLabel(g)}</div>
         <p className="today-line">{dayLine}</p>
         {aiEnabled && <PregLine g={g} preg={preg} week={week} />}
       </section>
+
+      <DailyBites key={today} g={g} preg={preg} week={week} today={today} />
+
+      <BodyMind week={g.weeks} logged={logged} />
+
+      <BabySize g={g} />
 
       <div className="card stack">
         <div className="row between wrap">
@@ -53,7 +60,7 @@ export function PregnancyToday() {
         week={week}
         preg={preg}
         seed={g.totalDays}
-        recentSymptoms={recentSymptoms(dayLogs, today)}
+        recentSymptoms={logged}
         deepDive={aiEnabled ? <DeepDive g={g} preg={preg} week={week} /> : undefined}
       />
 

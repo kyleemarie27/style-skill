@@ -28,3 +28,6 @@ export function weekContent(week: number): WeekContent {
 }
 
 export const trimesterOf = (week: number): 1 | 2 | 3 => (week < 14 ? 1 : week < 28 ? 2 : 3);
+
+export { CHANGES, changesAt, type Change, type ChangeNow, type ChangeStatus } from "./changes";
+export { HABITS, MILESTONES, dailyBites, dailyTodos, nextMilestone, type Bite, type DailyTodo } from "./bites";
