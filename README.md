@@ -12,11 +12,18 @@ No ads, no pop-ups, no notifications. You log in on your phone or computer and s
 
 Tap **I got a positive test** (on Today during the two-week wait, in Settings, or by choosing *Positive* in a day's pregnancy test). Bloom works out your due date from your own data (LH-confirmed ovulation + 38 weeks when it has one, otherwise last period + 40 weeks adjusted for your cycle length) and you can change it any time. Then everything switches over:
 
-- **Today** is five calm sections: baby's size next to a fruit (with weeks, due date and a trimester progress bar), today's line and your AI note with a countdown to the next milestone, **Today's bites** (three swipeable insights and three small to-dos you can expand and check off), a one-tap **check-in** (Good, Okay, Queasy, Wiped, Worried, plus your prenatal), and a **Week** card with today's read and links into the guide. Warning signs appear right under the baby card when there are any.
+- **Today** follows the shape of a day, and each thing lives in one place:
+  1. **Baby's size** next to a fruit, with weeks, due date, a trimester progress bar and a countdown to the next milestone. Warning signs appear right under it when there are any.
+  2. **Today:** today's line, your personal AI note, and a link to today's 4-minute read.
+  3. **How are you feeling?** Five moods, your symptoms and your prenatal, one tap each. *Details* opens the full log.
+  4. **Little things for today:** three small to-dos (one from the week's list, two habits), with a streak.
+  5. **Today's question:** something to answer in a few lines, plus this week's **bump photo**. On set days it's a *moment* instead: a letter to the baby, a time capsule, a date with your partner, a lullaby. Everything is kept on the **Memories** page (a week-by-week bump flip-book and all your answers).
+- **Symptoms:** the ten most common ones in pregnancy are always there. Tap *+ Add your own* for anything else; log it on 3 different days and it becomes one of your regular options. Bleeding, cramping, warning signs and vitals live on the Log page.
+- **Your partner gets their own view.** They log in with the same password on their own phone and pick *I'm the partner*. Bloom then opens to a page for them: how you're doing today (from your check-in) with how to help with each thing you logged, one thing to do today, their role this week, what they might be feeling, and your next appointment. Their Ask answers are written to them, and their chats don't go into what Bloom remembers about you. Names and "this is my partner's phone" are in Settings → Pregnancy.
 - **How big is baby?** A drawing of the baby that changes with each gestational day, next to the fruit or vegetable it matches (with an everyday object and an animal as extra comparisons), plus today's length and weight. Before 14 weeks you can see baby at roughly actual size on screen.
-- **The week guide** (Weeks tab, or a link from Today) has four tabs: Read (today's deep dive) · Baby · You (body and mind changes over time, symptoms you've logged, food and self-care, reference tables) · Plan (to-dos, decisions, partner, FAQ). *When to call your doctor* sits under every tab. Every week has long-form explainers of the baby's development and your body and hormones, "is this normal?" FAQs, and decisions coming up. Symptoms you've logged get their own "why it happens / what helps / when to call" cards. There's also a reference library: nutrient targets, food and medicine safety, hCG ranges and weight-gain guidance.
+- **The week guide** (Weeks tab, or a link from Today) has four tabs: Read (today's deep dive) · Baby · You (body and mind changes over time, symptoms you've logged, food and self-care, reference tables) · Plan (to-dos, decisions, FAQ, and a link to your partner's page). *When to call your doctor* sits under every tab. Every week has long-form explainers of the baby's development and your body and hormones, "is this normal?" FAQs, and decisions coming up. Symptoms you've logged get their own "why it happens / what helps / when to call" cards. There's also a reference library: nutrient targets, food and medicine safety, hCG ranges and weight-gain guidance.
 - **Daily deep dive**: a 4-minute read written fresh each day by AI for your exact gestational day, in a chatty, friend-who's-an-OB-nurse voice with question-style headings. It covers a different angle each day of the week (development, body, nutrition, tests and decisions, emotions, preparation, myths), uses what you've logged, and ends with a teaser for tomorrow.
-- **Symptom check-in** built around what doctors ask: nausea and vomiting, bleeding, cramping (and whether it's one-sided), symptoms, mood and your prenatal vitamin. The Day page adds weight, blood pressure, temperature, water, medications, and later kick counts and contractions.
+- **The Log page** is built around what doctors ask: symptoms (with nausea severity and vomiting), bleeding, cramping (and whether it's one-sided), warning signs, mood and your prenatal vitamin, plus weight, blood pressure, temperature, water, medications, and later kick counts and contractions.
 - **Warning signs** from your logs (bleeding, one-sided pain, fever, severe vomiting, high blood pressure after 20 weeks, fluid, contractions, fewer movements) show as clear "call now" or "call today" banners.
 - **Doctor**: your appointments, the typical prenatal schedule with your dates, a running list of questions, and a **visit summary** to print or show on your phone.
 - **Weeks**: every week from 4 to 42, to read ahead or look back. The calendar shows pregnancy weeks and appointments instead of predicted periods.
@@ -28,11 +35,12 @@ If a pregnancy ends, Settings → Pregnancy → *My pregnancy has ended* switche
 ## What's in this folder
 
 ```
-api/            Vercel serverless functions (login, logs, LH, AI, import, export)
+api/            Vercel serverless functions (login, logs, LH, AI, import, export, memories)
 shared/         Cycle engine + LH scale (used by both the app and the API)
 src/            The web app (React). Installs like an app on phone and desktop
   content/phases.ts   ← all the daily-note wording. Edit freely
-  content/pregnancy/  ← the week-by-week pregnancy guide (weeks 4–42), deep*.ts explainers, library.ts
+  content/pregnancy/  ← the week-by-week pregnancy guide (weeks 4–42), deep*.ts explainers, library.ts,
+                        journal.ts (daily questions and moments), partner.ts (the partner view)
   components/art/     ← the baby and size-comparison illustrations
   lib/importers/      ← Clue + Premom file readers
 tests/          Unit tests (npm test)

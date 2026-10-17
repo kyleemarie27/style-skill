@@ -1,4 +1,4 @@
-import type { DayLog, ImportBundle, LhLevel, LhTest, Settings } from "../../shared/types";
+import type { BumpPhoto, DayLog, ImportBundle, JournalEntry, LhLevel, LhTest, Settings } from "../../shared/types";
 
 export class AuthError extends Error {}
 
@@ -56,9 +56,17 @@ export const api = {
       json: { source, dayLogs: bundle.dayLogs, lhTests: bundle.lhTests },
     }),
   undoImport: (id: number) => call("import?id=" + id, { method: "DELETE" }),
+  memories: (preg: string) => call<{ entries: JournalEntry[]; photos: BumpPhoto[] }>(`memories?preg=${preg}`),
+  saveAnswer: (entry: JournalEntry) => call<{ entry: JournalEntry | null }>("memories", { method: "PUT", json: { entry } }),
+  saveBump: (preg: string, week: number, date: string, photo: string) =>
+    call<{ photo: BumpPhoto }>("memories", { method: "POST", json: { preg, week, date, photo } }),
+  deleteBump: (preg: string, week: number) => call(`memories?preg=${preg}&week=${week}`, { method: "DELETE" }),
   extract: (body: { fileName: string; mediaType: string; data?: string; text?: string; source: string }) =>
     call<ImportBundle>("import-extract", { method: "POST", json: body }),
 };
+
+/** Where a bump photo is served from. The date makes a replaced photo a new URL, so caching stays safe. */
+export const bumpUrl = (preg: string, p: BumpPhoto) => `/api/memories?preg=${preg}&week=${p.week}&v=${p.date}`;
 
 export interface DeepDive {
   title: string;

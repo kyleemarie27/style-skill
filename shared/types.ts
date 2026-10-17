@@ -71,6 +71,22 @@ export interface Pregnancy {
   ended?: { date: string; reason: "birth" | "loss" | "other" } | null;
   questions: PregQuestion[];
   appointments: Appointment[];
+  /** First names, so the partner view can say "How Kylee is doing" instead of guessing pronouns. */
+  momName?: string | null;
+  partnerName?: string | null;
+}
+
+/** An answer to the daily question, kept as a keepsake. */
+export interface JournalEntry {
+  date: string;
+  prompt: string;
+  answer: string;
+}
+
+/** One bump photo per pregnancy week. The image itself is fetched separately. */
+export interface BumpPhoto {
+  week: number;
+  date: string;
 }
 
 export interface LhTest {

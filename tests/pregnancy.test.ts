@@ -147,7 +147,7 @@ describe("pregnancy content", () => {
 describe("in-depth guide", () => {
   it("has explainers and FAQs for every week, and a symptom guide for every check-in symptom", async () => {
     const { DEEP, SYMPTOMS } = await import("../src/content/pregnancy");
-    const { PREG_SYMPTOMS } = await import("../src/components/PregnancyEditor");
+    const { TOP_SYMPTOMS, WARNING_SYMPTOMS } = await import("../src/lib/symptoms");
     for (let w = 4; w <= 42; w++) {
       const d = DEEP[w];
       expect(d, `week ${w}`).toBeDefined();
@@ -155,7 +155,7 @@ describe("in-depth guide", () => {
       expect(d.body.length, `week ${w} body`).toBeGreaterThan(200);
       expect(d.faq.length, `week ${w} faq`).toBeGreaterThanOrEqual(w <= 39 ? 3 : 1);
     }
-    for (const s of [...PREG_SYMPTOMS, "Nausea", "Spotting", "Cramping"]) expect(SYMPTOMS[s], s).toBeDefined();
+    for (const s of [...TOP_SYMPTOMS, ...WARNING_SYMPTOMS, "Spotting", "Cramping"]) expect(SYMPTOMS[s], s).toBeDefined();
   });
 });
 

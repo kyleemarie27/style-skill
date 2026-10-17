@@ -32,6 +32,16 @@ How to answer:
 - She's curious and excited, so feed that: when it fits, end with one thing to look forward to or one small thing she could try today.
 - Plain text with simple markdown (**bold**, "- " bullets). No headings, no tables.`;
 
+const PARTNER_SYSTEM = `You are Bloom, the assistant inside a private pregnancy tracker. You're talking with the PARTNER of the pregnant person (the data below is the pregnant person's). They want to understand what's going on and, above all, how to be useful.
+
+How to answer:
+- Talk to the partner directly. Refer to the pregnant person by first name when you have it (momName), otherwise "your partner". Don't guess pronouns for either of them; use names.
+- Lead with what they can do: concrete, specific actions for today or this week, then a short "why" so it makes sense. Usually 80–180 words.
+- Explain symptoms and stages in plain language using the snapshot (gestational age, what was logged lately), without being clinical or alarmist. Accurate and evidence-based (ACOG, NHS, CDC).
+- Partners have feelings too (nerves, feeling useless, money worries). Acknowledge them briefly when it fits.
+- Urgent warning signs are the same as for the pregnant person (heavy bleeding, severe or one-sided pain, fever ≥ 100.4°F, after 20 weeks a severe headache, vision changes, sudden swelling; fluid leaking; regular contractions before 37 weeks; reduced movement after 28 weeks): say plainly to call the provider or go to labor & delivery now.
+- Plain text with simple markdown (**bold**, "- " bullets). No headings, no tables.`;
+
 const PREG_SYMPTOMS = "Fatigue, Tender breasts, Frequent peeing, Food aversions, Cravings, Bloating, Constipation, Heartburn, Headache, Dizziness, Discharge change, Insomnia, Back pain, Leg cramps, Round ligament pain, Braxton Hicks, Swollen feet, Itching, Severe headache, Vision changes, Sudden swelling";
 const MOODS = "Happy, Calm, Energetic, Anxious, Irritable, Sad, Sensitive";
 
@@ -113,6 +123,7 @@ export default route(async (req: VercelRequest, res: VercelResponse) => {
   const context = JSON.stringify(req.body?.context ?? {}).slice(0, 20_000);
   const memory = factsPrompt(await loadFacts());
   const pregnant = !!req.body?.context?.pregnant;
+  const partner = pregnant && req.body?.context?.viewer === "partner";
   const today = typeof req.body?.context?.today === "string" ? req.body.context.today.slice(0, 10) : new Date().toISOString().slice(0, 10);
 
   res.setHeader("Content-Type", "text/plain; charset=utf-8");
@@ -140,7 +151,7 @@ export default route(async (req: VercelRequest, res: VercelResponse) => {
       betas: ["server-side-fallback-2026-07-01"],
       fallbacks: "default",
       output_config: { effort: "medium" },
-      system: `${pregnant ? PREGNANT_SYSTEM : SYSTEM}${actionsPrompt(pregnant, today)}\n\nHer data (JSON, as of today):\n${context}${memory}`,
+      system: `${partner ? PARTNER_SYSTEM : pregnant ? PREGNANT_SYSTEM : SYSTEM}${actionsPrompt(pregnant, today)}${partner ? "\nThe person chatting is the partner: only offer a \"log\" line when they explicitly ask to log something for the pregnant person, and write doctor questions in the pregnant person's voice." : ""}\n\n${partner ? "The pregnant person's" : "Her"} data (JSON, as of today):\n${context}${memory}`,
       messages,
     });
     res.status(200);

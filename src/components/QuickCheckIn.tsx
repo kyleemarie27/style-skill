@@ -1,67 +1,50 @@
 import { addDays } from "../../shared/dates";
-import type { DayLog } from "../../shared/types";
+import type { DayLog, Pregnancy } from "../../shared/types";
 import { useStore } from "../lib/store";
+import { SymptomPicker } from "./SymptomPicker";
 
-interface Feeling {
-  id: string;
-  icon: string;
-  label: string;
-  on: (l: DayLog) => boolean;
-  set: (l: DayLog, on: boolean) => DayLog;
-}
-
-const moodList = (l: DayLog) => (l.mood ?? "").split(",").map((m) => m.trim()).filter(Boolean);
-const withMood = (mood: string) => ({
-  on: (l: DayLog) => moodList(l).includes(mood),
-  set: (l: DayLog, on: boolean) => {
-    const rest = moodList(l).filter((m) => m !== mood);
-    return { ...l, mood: (on ? [...rest, mood] : rest).join(", ") || null };
-  },
-});
-const withSymptom = (s: string) => ({
-  on: (l: DayLog) => !!l.symptoms?.includes(s),
-  set: (l: DayLog, on: boolean) => {
-    const rest = (l.symptoms ?? []).filter((x) => x !== s);
-    return { ...l, symptoms: on ? [...rest, s] : rest };
-  },
-});
-
-/** Five quick "weather" chips that map onto the real log fields. */
-const FEELINGS: Feeling[] = [
-  { id: "good", icon: "😊", label: "Good", ...withMood("Happy") },
-  { id: "okay", icon: "😐", label: "Okay", ...withMood("Calm") },
-  {
-    id: "queasy", icon: "🤢", label: "Queasy",
-    on: (l) => !!l.preg?.nausea && l.preg.nausea !== "none",
-    set: (l, on) => ({ ...l, preg: { ...l.preg, nausea: on ? (l.preg?.nausea && l.preg.nausea !== "none" ? l.preg.nausea : "mild") : "none" } }),
-  },
-  { id: "wiped", icon: "😴", label: "Wiped", ...withSymptom("Fatigue") },
-  { id: "worried", icon: "😟", label: "Worried", ...withMood("Anxious") },
+/** Five moods as faces. Each maps onto the mood field the Log page uses. */
+const MOODS: { mood: string; icon: string; label: string }[] = [
+  { mood: "Happy", icon: "😊", label: "Good" },
+  { mood: "Calm", icon: "😐", label: "Okay" },
+  { mood: "Sad", icon: "😔", label: "Low" },
+  { mood: "Anxious", icon: "😟", label: "Worried" },
+  { mood: "Irritable", icon: "😤", label: "Cranky" },
 ];
 
-/** Today's one-row check-in. Everything else (bleeding, cramping, vitals) lives on the Log page. */
-export function QuickCheckIn({ today }: { today: string }) {
+const moodList = (l: DayLog) => (l.mood ?? "").split(",").map((m) => m.trim()).filter(Boolean);
+
+/**
+ * Today's check-in: mood, symptoms and the prenatal, all saving on tap. Bleeding, pain, warning
+ * signs and vitals live on the Log page ("Details"), which is also where other days are logged.
+ */
+export function QuickCheckIn({ today, preg }: { today: string; preg: Pregnancy }) {
   const { byDate, saveDay } = useStore();
   const log: DayLog = byDate.get(today) ?? { date: today };
   const yesterday = addDays(today, -1);
-  const toggle = (f: Feeling) => saveDay(f.set(log, !f.on(log)));
   const prenatal = !!log.preg?.prenatal;
+  const moods = moodList(log);
+  const toggleMood = (m: string) => {
+    const rest = moods.filter((x) => x !== m);
+    saveDay({ ...log, mood: (moods.includes(m) ? rest : [...rest, m]).join(", ") || null });
+  };
 
   return (
     <section className="card stack" aria-label="How are you feeling today?">
       <div className="row between" style={{ alignItems: "baseline" }}>
-        <h3 className="card-h">How are you feeling today?</h3>
-        <a className="small" href={`#/day/${today}`}>Log more ›</a>
+        <h3 className="card-h">How are you feeling?</h3>
+        <a className="small" href={`#/day/${today}`}>Details ›</a>
       </div>
       <div className="feelings">
-        {FEELINGS.map((f) => (
-          <button key={f.id} className="feeling" aria-pressed={f.on(log)} onClick={() => toggle(f)}>
+        {MOODS.map((f) => (
+          <button key={f.mood} className="feeling" aria-pressed={moods.includes(f.mood)} onClick={() => toggleMood(f.mood)}>
             <span aria-hidden>{f.icon}</span>{f.label}
           </button>
         ))}
       </div>
+      <SymptomPicker log={log} since={preg.lmp} onChange={saveDay} label="Anything going on?" />
       <div className="row between wrap" style={{ alignItems: "center" }}>
-        <button className="chip" aria-pressed={prenatal} onClick={() => saveDay({ ...log, preg: { ...log.preg, prenatal: !prenatal } })}>
+        <button className="chip cm" aria-pressed={prenatal} onClick={() => saveDay({ ...log, preg: { ...log.preg, prenatal: !prenatal } })}>
           💊 {prenatal ? "Prenatal taken" : "Took my prenatal"}
         </button>
         {!byDate.has(yesterday) && <a className="small muted" href={`#/day/${yesterday}`}>Log yesterday ›</a>}

@@ -5,23 +5,26 @@ import type { Pregnancy } from "../../shared/types";
 import { rotate, type Item } from "../content/phases";
 import {
   CALL_NOW, CALORIES, FOOD_SAFETY, HCG, NUTRIENTS, SYMPTOMS, TRIMESTERS, WEIGHT_GAIN,
-  trimesterOf, weekDeep, type WeekContent,
+  partnerItems, trimesterOf, weekDeep, type WeekContent,
 } from "../content/pregnancy";
 import { readLocal, writeLocal } from "../lib/pregnancy";
+import { useViewer } from "../lib/viewer";
 import { BodyMind } from "./BodyMind";
 
 export type GuideTab = "read" | "baby" | "you" | "plan";
 
 /**
  * The week's guide in four tabs: Today's read (the daily AI deep dive, current week only),
- * Baby, You (body and mind, symptoms, food and self-care) and Plan (decisions, to-dos, partner, FAQ).
+ * Baby, You (body and mind, symptoms, food and self-care) and Plan (to-dos, decisions, FAQ). Partner tips
+ * live on the partner's own Today; on the partner's phone, Plan shows their role for the week instead.
  * "When to call" sits under every tab so safety info is never hidden. `seed` (gestational day)
  * rotates the trimester tips so they change daily.
  */
-export function WeekGuide({ week, preg, seed, recentSymptoms = [], deepDive, initial }: {
-  week: WeekContent; preg: Pregnancy; seed: number; recentSymptoms?: string[]; deepDive?: ReactNode; initial?: GuideTab;
+export function WeekGuide({ week, preg, seed, recentSymptoms = [], deepDive, initial, current = false }: {
+  week: WeekContent; preg: Pregnancy; seed: number; recentSymptoms?: string[]; deepDive?: ReactNode; initial?: GuideTab; current?: boolean;
 }) {
   const deep = weekDeep(week.week);
+  const viewer = useViewer();
   const tabs: { id: GuideTab; label: string }[] = [
     ...(deepDive ? [{ id: "read" as const, label: "Read" }] : []),
     { id: "baby", label: "Baby" },
@@ -124,10 +127,15 @@ export function WeekGuide({ week, preg, seed, recentSymptoms = [], deepDive, ini
                 <Cards items={deep.decisions} />
               </details>
             ) : null}
-            <details className="ref">
-              <summary>For your partner</summary>
-              <Cards items={week.partner} />
-            </details>
+            {viewer === "partner" ? (
+              <Group label="Your role this week" items={partnerItems(week, preg.momName ?? "")} />
+            ) : current ? (
+              <a className="partner-link" href="#/partner">
+                <span aria-hidden>🤝</span>
+                <span><b>{preg.partnerName?.trim() || "Your partner"}'s page</b><span className="tiny muted block">How to help this week, one thing to do each day</span></span>
+                <span aria-hidden>›</span>
+              </a>
+            ) : null}
             <details className="ref">
               <summary>Questions people ask this week</summary>
               <div className="faq">

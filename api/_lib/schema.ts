@@ -59,6 +59,24 @@ CREATE TABLE IF NOT EXISTS deep_dives (
   created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- Added for keepsakes: answers to the daily question, and one bump photo per pregnancy week.
+-- preg is the pregnancy's positive-test date, so a later pregnancy starts with a fresh album.
+CREATE TABLE IF NOT EXISTS journal (
+  date        DATE PRIMARY KEY,
+  prompt      TEXT NOT NULL,
+  answer      TEXT NOT NULL,
+  updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS bump_photos (
+  preg        DATE NOT NULL,
+  week        INTEGER NOT NULL,
+  date        DATE NOT NULL,
+  photo       BYTEA NOT NULL,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+  PRIMARY KEY (preg, week)
+);
+
 CREATE TABLE IF NOT EXISTS settings (
   key    TEXT PRIMARY KEY,
   value  JSONB NOT NULL

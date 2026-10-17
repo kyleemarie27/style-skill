@@ -27,7 +27,9 @@ export function weekContent(week: number): WeekContent {
   return WEEKS.find((x) => x.week === w)!;
 }
 
-export const trimesterOf = (week: number): 1 | 2 | 3 => (week < 14 ? 1 : week < 28 ? 2 : 3);
+export { trimesterOf } from "./bites";
 
 export { CHANGES, changesAt, type Change, type ChangeNow, type ChangeStatus } from "./changes";
-export { HABITS, MILESTONES, dailyBites, dailyTodos, nextMilestone, type Bite, type DailyTodo } from "./bites";
+export { HABITS, MILESTONES, dailyTodos, nextMilestone, type DailyTodo } from "./bites";
+export { MOMENTS, QUESTIONS, todaysPrompt, type Prompt } from "./journal";
+export { HOW_TO_HELP, PARTNER_DAILY, PARTNER_FEELINGS, fillName, moodsOf, partnerFeeling, partnerItems, partnerMove } from "./partner";

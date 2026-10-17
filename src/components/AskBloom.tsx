@@ -6,6 +6,7 @@ import { actionLabel, mergeLog, parseAnswer, type ChatAction } from "../lib/chat
 import { newId, usePregnancy, useSavePregnancy } from "../lib/pregnancy";
 import { buildAskContext } from "../lib/askContext";
 import { useStore } from "../lib/store";
+import { useViewer } from "../lib/viewer";
 
 /** A chat message as kept on this device: which suggested saves were tapped. */
 type Msg = ChatMsg & { saved?: number[] };
@@ -61,12 +62,19 @@ export function pregnancySuggestions(weeks: number): string[] {
   return ["How do I do kick counts?", "How do I know it's real labor?", "What should go in my hospital bag?", "I've had some tightening today"];
 }
 
+function partnerSuggestions(weeks: number): string[] {
+  if (weeks < 14) return ["How can I help with the nausea?", "What's happening with the baby this week?", "Should I go to the first appointment?", "How do I support the exhaustion?"];
+  if (weeks < 28) return ["When can I feel the baby kick?", "What happens at the anatomy scan?", "What should we be preparing now?", "How can I help with back pain?"];
+  return ["How will I know it's real labor?", "What should I pack for the hospital?", "How do I support during labor?", "What can I do in the first weeks home?"];
+}
+
 /** The Ask tab: a full-page chat. `first` (from #/ask/<question>) is sent straight away in a new chat. */
 export function AskPage({ first }: { first: string | null }) {
   const { model, dayLogs, lhTests, settings, aiEnabled } = useStore();
   const pregnant = !!activePregnancy(settings);
   const p = usePregnancy();
-  const suggestions = p ? pregnancySuggestions(p.g.weeks) : CYCLE_SUGGESTIONS;
+  const partner = useViewer() === "partner" && !!p;
+  const suggestions = p ? (partner ? partnerSuggestions(p.g.weeks) : pregnancySuggestions(p.g.weeks)) : CYCLE_SUGGESTIONS;
   const [msgs, setMsgs] = useState<Msg[]>(() => (first ? [] : load()));
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
@@ -90,13 +98,14 @@ export function AskPage({ first }: { first: string | null }) {
     setBusy(true);
     abortRef.current = new AbortController();
     try {
-      const context = buildAskContext(model, dayLogs, lhTests, settings, localToday());
+      const base = buildAskContext(model, dayLogs, lhTests, settings, localToday());
+      const context = partner ? { ...base, viewer: "partner", momName: p!.preg.momName, partnerName: p!.preg.partnerName } : base;
       const plain = next.map(({ role, content }) => ({ role, content }));
       const answer = await askBloom(plain, context, (text) => setMsgs([...next, { role: "assistant", content: text }]), abortRef.current.signal);
       const done: Msg[] = [...next, { role: "assistant", content: answer }];
       update(done);
-      // Quietly pick up anything worth remembering about her for next time.
-      api.learn(done.slice(-4).map(({ role, content }) => ({ role, content })))
+      // Quietly pick up anything worth remembering about her for next time (not from the partner's chats).
+      if (!partner) api.learn(done.slice(-4).map(({ role, content }) => ({ role, content })))
         .then((r) => r.added.length && setLearned((l) => [...l, ...r.added])).catch(() => {});
     } catch (e) {
       if ((e as Error).name === "AbortError") return;
@@ -144,7 +153,9 @@ export function AskPage({ first }: { first: string | null }) {
       <div className="ask-msgs">
         {msgs.length === 0 && (
           <div className="stack ask-empty">
-            <p className="muted">{pregnant
+            <p className="muted">{partner
+              ? "Ask anything about what's going on, or how to help. Bloom knows what's been logged lately."
+              : pregnant
               ? "Ask about symptoms, food and medicine safety, or what's coming next. Tell Bloom how you're feeling and it can log it for you, or save questions for your doctor."
               : "Ask about your cycle, symptoms, LH tests or timing. Answers use your history."}</p>
             <div className="chips">
@@ -186,7 +197,7 @@ export function AskPage({ first }: { first: string | null }) {
       </div>
 
       <form className="row ask-input" onSubmit={(e) => { e.preventDefault(); const q = draft; setDraft(""); send(q, msgs); }}>
-        <input type="text" placeholder={msgs.length ? "Ask a follow-up…" : "Ask anything, or tell Bloom how you feel…"} value={draft} onChange={(e) => setDraft(e.target.value)} aria-label="Your message" />
+        <input type="text" placeholder={msgs.length ? "Ask a follow-up…" : "Ask, or tell Bloom how you feel…"} value={draft} onChange={(e) => setDraft(e.target.value)} aria-label="Your message" />
         <button className="btn primary" disabled={busy || !draft.trim()}>{busy ? <span className="spin" /> : "Send"}</button>
       </form>
       <p className="tiny muted center">General information, not medical advice.</p>
