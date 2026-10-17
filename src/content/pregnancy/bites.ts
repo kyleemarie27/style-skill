@@ -1,10 +1,9 @@
-import { TRIMESTERS } from "./common";
 import type { Item, WeekContent } from "./types";
 
-const trimesterOf = (week: number): 1 | 2 | 3 => (week < 14 ? 1 : week < 28 ? 2 : 3);
+export const trimesterOf = (week: number): 1 | 2 | 3 => (week < 14 ? 1 : week < 28 ? 2 : 3);
 
 /**
- * Today's bites: a few small insights to read in a minute and a short to-do list to check off.
+ * Little things for today: a short to-do list to check off.
  * Everything rotates by gestational day, so each day of the week brings something new.
  */
 
@@ -23,7 +22,6 @@ export const HABITS: Record<1 | 2 | 3, Habit[]> = {
     { t: "Go to bed 30 minutes earlier tonight", why: "Your body is building a placenta. It needs the sleep." },
     { t: "Put crackers by your bed for tomorrow morning", why: "A few bites before you stand up can blunt morning nausea." },
     { t: "Eat one folate-rich food: greens, beans, lentils or an orange", why: "Folate supports the baby's brain and spinal cord." },
-    { t: "Write one line about how you're feeling", why: "You'll love reading these back later, and it helps untangle worries." },
     { t: "Ask someone to take one chore off your plate this week" },
     { t: "Check the label of any supplement or medicine you're unsure about", why: "Your pharmacist can tell you in a minute what's fine in pregnancy." },
   ],
@@ -35,7 +33,6 @@ export const HABITS: Record<1 | 2 | 3, Habit[]> = {
     { t: "Practice side-sleeping with a pillow between your knees", why: "Getting used to it now makes the third trimester easier." },
     { t: "Moisturize your belly and hips", why: "It won't prevent stretch marks, but it helps with itchy, stretching skin." },
     { t: "Get two servings of calcium: yogurt, milk, cheese or fortified tofu", why: "Baby's bones are hardening fast." },
-    { t: "Take a bump photo", why: "Future you will want these, even on days you don't feel cute." },
     { t: "Talk or sing to the baby for a minute", why: "From around 18 weeks, baby can start to hear sounds.", minWeek: 18 },
     { t: "Write down one question for your next appointment" },
     { t: "Do 5 minutes of cat-cow stretches for your back" },
@@ -55,11 +52,6 @@ export const HABITS: Record<1 | 2 | 3, Habit[]> = {
   ],
 };
 
-export interface Bite extends Item {
-  tag: string;
-  icon: string;
-}
-
 export interface DailyTodo extends Item {
   /** Where the check mark is stored: today's list, or the week's to-do list (shared with the guide). */
   scope: "day" | "week";
@@ -70,16 +62,6 @@ function take<T>(pool: T[], n: number, seed: number): T[] {
   if (!pool.length) return [];
   const k = ((seed % pool.length) + pool.length) % pool.length;
   return [...pool.slice(k), ...pool.slice(0, k)].slice(0, Math.min(n, pool.length));
-}
-
-/** Three short insights for today: one about baby, one about you, and one practical tip. */
-export function dailyBites(week: WeekContent, day: number, totalDays: number): Bite[] {
-  const tri = TRIMESTERS[trimesterOf(week.week)];
-  const tag = (tag: string, icon: string) => (i: Item): Bite => ({ ...i, tag, icon });
-  const baby = week.baby.map(tag("Baby", "👶"));
-  const you = [...week.body.map(tag("Your body", "🌙")), ...week.mind.map(tag("Your mind", "💭"))];
-  const tips = [...tri.food.map(tag("Eat", "🥑")), ...tri.movement.map(tag("Move", "🧘‍♀️")), ...tri.rest.map(tag("Rest", "🛋️"))];
-  return [...take(baby, 1, day), ...take(you, 1, day), ...take(tips, 1, totalDays)];
 }
 
 /** Today's to-dos: one from this week's list (spread across the week) plus two small habits. */

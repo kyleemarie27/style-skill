@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CHANGES, changesAt, dailyBites, dailyTodos, nextMilestone, SYMPTOMS, WEEKS, weekContent } from "../src/content/pregnancy";
+import { CHANGES, changesAt, dailyTodos, nextMilestone, SYMPTOMS, WEEKS, weekContent } from "../src/content/pregnancy";
 
 describe("body & mind changes", () => {
   it("has sane windows and only links to symptoms that exist", () => {
@@ -33,17 +33,15 @@ describe("body & mind changes", () => {
   });
 });
 
-describe("today's bites", () => {
-  it("gives three insights and three to-dos every day, different across the week", () => {
+describe("little things for today", () => {
+  it("gives three to-dos every day, different across the week", () => {
     const week = weekContent(10);
     const seen = new Set<string>();
     for (let d = 0; d < 7; d++) {
-      const bites = dailyBites(week, d, 70 + d);
       const todos = dailyTodos(week, d, 70 + d);
-      expect(bites).toHaveLength(3);
       expect(todos).toHaveLength(3);
       expect(new Set(todos.map((t) => t.t)).size).toBe(3);
-      seen.add(bites.map((b) => b.t).join("|"));
+      seen.add(todos.map((b) => b.t).join("|"));
     }
     expect(seen.size).toBeGreaterThan(3);
   });

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { api } from "../lib/api";
 import { useStore } from "../lib/store";
+import { askViewerNext } from "../lib/viewer";
 
 export function LoginPage() {
   const { setAuthed } = useStore();
@@ -17,6 +18,7 @@ export function LoginPage() {
           setErr("");
           try {
             await api.login(pw);
+            askViewerNext();
             setAuthed(true);
           } catch (e) {
             setErr((e as Error).message);

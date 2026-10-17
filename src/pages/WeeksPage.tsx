@@ -18,7 +18,10 @@ export function WeeksPage() {
     <div className="stack">
       <div className="row between wrap">
         <h1>Your weeks</h1>
-        <a className="btn ghost" href="#/calendar">Calendar →</a>
+        <span className="row" style={{ gap: 4 }}>
+          <a className="btn ghost" href="#/memories">Memories</a>
+          <a className="btn ghost" href="#/calendar">Calendar →</a>
+        </span>
       </div>
       {([1, 2, 3] as const).map((t) => (
         <section key={t} className="stack" style={{ gap: 8 }}>
@@ -75,6 +78,7 @@ export function WeekPage({ week, tab }: { week: number; tab?: string }) {
         recentSymptoms={w === p.g.weeks ? recentSymptoms(dayLogs, p.today) : []}
         deepDive={aiEnabled && w === p.g.weeks ? <DeepDive g={p.g} preg={p.preg} week={content} /> : undefined}
         initial={tab as GuideTab | undefined}
+        current={w === p.g.weeks}
       />
       <section className="card stack">
         <div className="section-title"><span className="ico" aria-hidden>📅</span>Day by day</div>

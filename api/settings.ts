@@ -34,7 +34,10 @@ function cleanPregnancy(p: any): Pregnancy | null {
     .filter((x: any) => isISODate(x?.date) && text(x?.title))
     .slice(0, 200)
     .map((x: any) => ({ id: id(x.id), date: x.date, title: text(x.title, 120)!, notes: text(x.notes) }));
-  return { positiveTestDate: p.positiveTestDate, lmp: p.lmp, dueDate: p.dueDate, dueDateSource: source, ended, questions, appointments };
+  return {
+    positiveTestDate: p.positiveTestDate, lmp: p.lmp, dueDate: p.dueDate, dueDateSource: source, ended, questions, appointments,
+    momName: text(p.momName, 40), partnerName: text(p.partnerName, 40),
+  };
 }
 
 export default route(async (req: VercelRequest) => {

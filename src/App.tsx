@@ -9,13 +9,18 @@ import { DoctorPage } from "./pages/DoctorPage";
 import { ImportPage } from "./pages/Import";
 import { InsightsPage } from "./pages/Insights";
 import { LoginPage } from "./pages/Login";
+import { MemoriesPage } from "./pages/MemoriesPage";
+import { PartnerToday } from "./pages/PartnerToday";
 import { SettingsPage } from "./pages/Settings";
 import { TodayPage } from "./pages/Today";
 import { WeekPage, WeeksPage } from "./pages/WeeksPage";
+import { WhoPage } from "./pages/WhoPage";
+import { shouldAskViewer, useViewer } from "./lib/viewer";
 
 export function App() {
   const { loading, authed, settings } = useStore();
   const [route] = useRoute();
+  const viewer = useViewer();
 
   if (loading || authed === null) {
     return <div className="main center muted" style={{ paddingTop: "30vh" }}><span className="spin" /></div>;
@@ -25,6 +30,9 @@ export function App() {
   const [page, arg] = route;
   const today = localToday();
   const pregnant = !!activePregnancy(settings);
+  // The partner's phone: a Today written for them, and no Log tab (logging is the pregnant partner's).
+  const partner = pregnant && viewer === "partner";
+  if (pregnant && shouldAskViewer()) return <div className="app pregnant"><main className="main"><WhoPage /></main></div>;
   const link = (href: string, label: string, Icon: () => React.JSX.Element, active: boolean) => (
     <a href={`#/${href}`} className={active ? "active" : ""} aria-current={active ? "page" : undefined}>
       <Icon />
@@ -39,7 +47,7 @@ export function App() {
         {link("today", "Today", SunIcon, page === "today")}
         {pregnant ? link("weeks", "Weeks", SproutIcon, page === "weeks" || page === "week" || page === "calendar")
           : link("calendar", "Calendar", CalendarIcon, page === "calendar")}
-        {link(`day/${today}`, "Log", PlusIcon, page === "day")}
+        {!partner && link(`day/${today}`, "Log", PlusIcon, page === "day")}
         {link("ask", "Ask", ChatIcon, page === "ask")}
         {pregnant ? link("doctor", "Doctor", StethIcon, page === "doctor")
           : link("insights", "Insights", ChartIcon, page === "insights")}
@@ -58,6 +66,9 @@ export function App() {
           : page === "week" ? <WeekPage week={Number(arg)} tab={route[2]} />
           : page === "doctor" ? <DoctorPage />
           : page === "ask" ? <AskPage key={arg ?? ""} first={arg ? decodeURIComponent(arg) : null} />
+          : page === "memories" ? <MemoriesPage />
+          : page === "partner" && pregnant ? <PartnerToday />
+          : partner ? <PartnerToday />
           : <TodayPage />}
       </main>
     </div>
