@@ -17,7 +17,7 @@ export interface Session {
 const COOKIE = "bloom_session";
 const SESSION_DAYS = 60;
 /** Wrong passwords allowed per device (IP) in the window, and across everyone, before logins pause. */
-const MAX_FAILS_PER_IP = 5;
+const MAX_FAILS_PER_IP = 8;
 const MAX_FAILS_TOTAL = 30;
 const FAIL_WINDOW_MIN = 15;
 export const MIN_PASSWORD = 10;
@@ -97,7 +97,9 @@ export async function login(req: VercelRequest, pw: unknown): Promise<{ role: Ro
   if (!found) {
     await q("INSERT INTO login_attempts (ip) VALUES ($1)", [ip]);
     await new Promise((r) => setTimeout(r, 600));
-    throw new HttpError(401, "That password isn't right.");
+    throw new HttpError(401, hashes.me
+      ? "That password isn't right. The shared password from setup no longer works: partners log in with their own (set in Settings → Security on the main account)."
+      : "That password isn't right.");
   }
   await q("DELETE FROM login_attempts WHERE ip=$1", [ip]);
   return found;

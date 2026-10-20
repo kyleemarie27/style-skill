@@ -35,6 +35,7 @@ export default defineConfig({
       workbox: { navigateFallbackDenylist: [/^\/api\//] },
     }),
   ],
-  server: { proxy: { "/api": "http://localhost:3001" } },
+  // Keep the Host header, like Vercel does, so the API's same-origin check sees the real site.
+  server: { proxy: { "/api": { target: "http://localhost:3001", changeOrigin: false } } },
   test: { include: ["tests/**/*.test.ts"] },
 });

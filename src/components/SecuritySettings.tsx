@@ -30,6 +30,8 @@ function PasswordForm({ setup, onDone }: { setup: boolean; onDone: () => Promise
   const [busy, setBusy] = useState(false);
   const submit = async () => {
     setMsg(null);
+    if (!cur) return setMsg({ ok: false, t: "Type your current password first." });
+    if (next.length < 10) return setMsg({ ok: false, t: `The new password needs at least 10 characters (it has ${next.length}).` });
     if (next !== again) return setMsg({ ok: false, t: "The new passwords don't match." });
     setBusy(true);
     try {
@@ -49,7 +51,7 @@ function PasswordForm({ setup, onDone }: { setup: boolean; onDone: () => Promise
       <input type="password" autoComplete="current-password" placeholder={setup ? "Current (shared) password" : "Current password"} value={cur} onChange={(e) => setCur(e.target.value)} aria-label="Current password" />
       <input type="password" autoComplete="new-password" placeholder="New password (10+ characters)" value={next} onChange={(e) => setNext(e.target.value)} aria-label="New password" />
       <input type="password" autoComplete="new-password" placeholder="New password again" value={again} onChange={(e) => setAgain(e.target.value)} aria-label="New password again" />
-      <button className="btn primary" disabled={busy || !cur || next.length < 10}>{busy ? <span className="spin" /> : "Save password"}</button>
+      <button className="btn primary" disabled={busy}>{busy ? <span className="spin" /> : "Save password"}</button>
       {msg && <p className={`small${msg.ok ? " ok-text" : ""}`} style={msg.ok ? undefined : { color: "var(--period)" }}>{msg.t}</p>}
     </form>
   );
@@ -60,13 +62,15 @@ function PartnerLogin({ name, exists, onDone }: { name: string; exists: boolean;
   const [msg, setMsg] = useState<{ ok: boolean; t: string } | null>(null);
   const [busy, setBusy] = useState(false);
   const Name = name.charAt(0).toUpperCase() + name.slice(1);
+  const [show, setShow] = useState(true);
   const save = async () => {
-    setBusy(true);
     setMsg(null);
+    if (pw.length < 10) return setMsg({ ok: false, t: `Use at least 10 characters (that's ${pw.length}).` });
+    setBusy(true);
     try {
       await api.setPartnerPassword(pw);
+      setMsg({ ok: true, t: `Saved. Tell ${Name} the password: ${pw}. Any old sessions were logged out.` });
       setPw("");
-      setMsg({ ok: true, t: `Saved. ${Name} logs in with this password; any old sessions were logged out.` });
       await onDone();
     } catch (e) {
       setMsg({ ok: false, t: (e as Error).message });
@@ -88,10 +92,12 @@ function PartnerLogin({ name, exists, onDone }: { name: string; exists: boolean;
           : `Give ${name} a separate password, so yours stays yours. ${Name} will see your check-ins and can add doctor questions, but can't change your logs or settings.`}
       </p>
       <div className="row" style={{ gap: 8 }}>
-        <input type="password" autoComplete="new-password" placeholder={exists ? `New password for ${name}` : `${Name}'s password (10+ characters)`} value={pw} onChange={(e) => setPw(e.target.value)} aria-label={`${Name}'s password`} style={{ flex: 1, minWidth: 0 }} />
-        <button className="btn" disabled={busy || pw.length < 10}>{exists ? "Reset" : "Create"}</button>
+        <input type={show ? "text" : "password"} autoComplete="off" autoCapitalize="none" autoCorrect="off" spellCheck={false} placeholder={exists ? `New password for ${name}` : `${Name}'s password (10+ characters)`} value={pw} onChange={(e) => setPw(e.target.value)} aria-label={`${Name}'s password`} style={{ flex: 1, minWidth: 0 }} />
+        <button type="button" className="btn ghost small" onClick={() => setShow(!show)}>{show ? "Hide" : "Show"}</button>
+        <button className="btn primary" disabled={busy}>{busy ? <span className="spin" /> : exists ? "Reset" : "Create"}</button>
       </div>
       {exists && <button type="button" className="btn ghost danger small" style={{ alignSelf: "flex-start" }} onClick={remove}>Remove {name}'s login</button>}
+      {pw.length > 0 && pw.length < 10 && !msg && <p className="tiny muted">{10 - pw.length} more character{10 - pw.length === 1 ? "" : "s"} to go.</p>}
       {msg && <p className="small" style={msg.ok ? undefined : { color: "var(--period)" }}>{msg.t}</p>}
     </form>
   );

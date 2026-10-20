@@ -80,7 +80,7 @@ Imports never overwrite what you've logged yourself, and each import can be undo
 
 - **Two logins.** The main account and the partner each have a password (stored as salted scrypt hashes). Until you set your own in Settings → Security, the `APP_PASSWORD` from setup works as yours; once you do, it stops working and anyone logged in with it is signed out. Set or reset the partner's password, or remove it, in the same place.
 - **Real sessions.** Each signed-in device is a row in the database (only a hash of the cookie is stored). Logging out ends it for good. Settings → Security lists every device and can log any of them out, or all of them at once. Sessions end after 60 days without use.
-- **Guessing is blocked.** After 5 wrong passwords from one place (or 30 overall) in 15 minutes, logins pause for 15 minutes.
+- **Guessing is blocked.** After 8 wrong passwords from one place (or 30 overall) in 15 minutes, logins pause for 15 minutes.
 - **Browser protections.** A strict Content Security Policy, HTTPS-only (HSTS), no framing, no referrers, `noindex`, and API responses that are never cached. Changes must come from Bloom's own pages.
 - **What still leaves your database:** questions, daily notes, strip photos and imports are sent to Anthropic's API to answer them. Fonts load from Google Fonts.
 

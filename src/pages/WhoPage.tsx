@@ -37,6 +37,7 @@ export function WhoPage() {
           setAuthed(false);
           return;
         }
+        if (pw.length < 10) throw new Error(`Use at least 10 characters (that's ${pw.length}).`);
         if (pw !== pw2) throw new Error("The two passwords don't match.");
         await api.claimPartner(pw);
       }
@@ -89,7 +90,7 @@ export function WhoPage() {
           <p className="small muted">Next, set a password of your own in Settings so the shared one stops working.</p>
         )}
         {err && <div className="notice err small">{err}</div>}
-        <button className="btn primary block" disabled={!who || busy || (who === "partner" && !partnerExists && pw.length < 10)} onClick={done}>
+        <button className="btn primary block" disabled={!who || busy} onClick={done}>
           {busy ? <span className="spin" /> : "Continue"}
         </button>
       </div>
