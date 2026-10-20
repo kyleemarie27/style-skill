@@ -77,6 +77,35 @@ CREATE TABLE IF NOT EXISTS bump_photos (
   PRIMARY KEY (preg, week)
 );
 
+-- Added with separate logins: the partner writes their own answers. Each person has one answer per day.
+ALTER TABLE journal ADD COLUMN IF NOT EXISTS author TEXT NOT NULL DEFAULT 'me';
+ALTER TABLE journal DROP CONSTRAINT IF EXISTS journal_pkey;
+CREATE UNIQUE INDEX IF NOT EXISTS journal_date_author ON journal(date, author);
+
+-- Logins. role is 'me' or 'partner'; hash is scrypt. Without a 'me' row, APP_PASSWORD works as hers.
+CREATE TABLE IF NOT EXISTS accounts (
+  role        TEXT PRIMARY KEY CHECK (role IN ('me','partner')),
+  hash        TEXT NOT NULL,
+  updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- One row per signed-in device. id_hash is a SHA-256 of the cookie, so a database leak can't be replayed.
+CREATE TABLE IF NOT EXISTS sessions (
+  id_hash     TEXT PRIMARY KEY,
+  role        TEXT NOT NULL,
+  label       TEXT,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+  last_seen   TIMESTAMPTZ NOT NULL DEFAULT now(),
+  expires_at  TIMESTAMPTZ NOT NULL
+);
+
+-- Wrong passwords, to pause logins after too many guesses.
+CREATE TABLE IF NOT EXISTS login_attempts (
+  ip  TEXT NOT NULL,
+  at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS login_attempts_at ON login_attempts(at);
+
 CREATE TABLE IF NOT EXISTS settings (
   key    TEXT PRIMARY KEY,
   value  JSONB NOT NULL

@@ -209,10 +209,12 @@ const ICON: Record<ChatAction["type"], string> = { log: "📝", question: "🩺"
 
 /** One suggested save. Nothing happens until she taps it. */
 function ActionButton({ action, saved, onSaved }: { action: ChatAction; saved: boolean; onSaved: () => void }) {
-  const { byDate, saveDay, settings } = useStore();
+  const { byDate, saveDay, settings, role } = useStore();
   const savePreg = useSavePregnancy();
   const preg = activePregnancy(settings);
   const [err, setErr] = useState("");
+  // Logging is the main account's; the partner can still save doctor questions and appointments.
+  if (action.type === "log" && role === "partner") return null;
   const apply = async () => {
     setErr("");
     try {

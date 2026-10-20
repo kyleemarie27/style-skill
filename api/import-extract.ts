@@ -90,4 +90,4 @@ export default route(async (req: VercelRequest) => {
   });
   out.dayLogs = out.dayLogs.map((d) => ({ ...d, source: source || "import" }));
   return out;
-});
+}, { roles: ["me"] });

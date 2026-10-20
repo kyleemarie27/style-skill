@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { method, route } from "./_lib/auth.js";
+import { method, requireRole, route } from "./_lib/auth.js";
 import { HttpError, q } from "./_lib/db.js";
 import { cleanLhTest, LH_COLS } from "./_lib/rows.js";
 
@@ -12,6 +12,7 @@ const MAX_PHOTO_BYTES = 1_500_000;
  */
 export default route(async (req: VercelRequest, res: VercelResponse) => {
   const m = method(req, "GET", "POST", "DELETE");
+  if (m !== "GET") await requireRole(req, "me");
   const id = Number(req.query.id);
   if (m === "GET") {
     if (!id) throw new HttpError(400, "Missing id");

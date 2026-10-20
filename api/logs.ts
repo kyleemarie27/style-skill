@@ -1,5 +1,5 @@
 import type { VercelRequest } from "@vercel/node";
-import { method, route } from "./_lib/auth.js";
+import { method, requireRole, route } from "./_lib/auth.js";
 import { q } from "./_lib/db.js";
 import { cleanDayLog, DAY_COLS, LH_COLS } from "./_lib/rows.js";
 
@@ -16,6 +16,7 @@ export default route(async (req: VercelRequest) => {
     ]);
     return { dayLogs: days.rows, lhTests: lh.rows };
   }
+  await requireRole(req, "me");
   const log = cleanDayLog(req.body?.log);
   const { rows } = await q(
     `INSERT INTO day_logs (date, flow, intercourse, symptoms, mood, cervical_mucus, bbt, pregnancy_test, notes, ovulation, preg, source, updated_at)

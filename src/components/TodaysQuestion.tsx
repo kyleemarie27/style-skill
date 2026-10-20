@@ -5,16 +5,23 @@ import type { Pregnancy } from "../../shared/types";
 import { todaysPrompt } from "../content/pregnancy";
 import { bumpUrl } from "../lib/api";
 import { useMemories } from "../lib/memories";
+import { useViewer } from "../lib/viewer";
+import type { JournalEntry } from "../../shared/types";
 
 /**
  * The day's last card: one question to answer (or, on some days, a little moment to make), plus
- * this week's bump photo. Answers and photos are kept on the Memories page.
+ * this week's bump photo. You each get your own question; your partner's answer shows once you've
+ * written yours. Answers and photos are kept on the Memories page.
  */
 export function TodaysQuestion({ g, preg, today }: { g: Gestation; preg: Pregnancy; today: string }) {
+  const role = useViewer();
   const { entries, photos, error, saveAnswer, saveBump } = useMemories(preg);
-  const prompt = todaysPrompt(g.totalDays, preg.partnerName);
-  const mine = entries?.find((e) => e.date === today);
-  const before = entries?.find((e) => e.date !== today && e.prompt === prompt.t);
+  const otherName = (role === "me" ? preg.partnerName : preg.momName)?.trim() || "";
+  const prompt = todaysPrompt(g.totalDays, otherName, role);
+  const isMine = (e: JournalEntry) => (e.author ?? "me") === role;
+  const mine = entries?.find((e) => e.date === today && isMine(e));
+  const theirs = entries?.find((e) => e.date === today && !isMine(e));
+  const before = entries?.find((e) => e.date !== today && isMine(e) && e.prompt === prompt.t);
   const [draft, setDraft] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
@@ -63,9 +70,27 @@ export function TodaysQuestion({ g, preg, today }: { g: Gestation; preg: Pregnan
       {before && editing && !mine && (
         <p className="small muted last-time">Last time ({prettyDate(before.date)}): “{before.answer.length > 140 ? before.answer.slice(0, 140) + "…" : before.answer}”</p>
       )}
+      {entries !== null && <TheirAnswer name={otherName || "Your partner"} theirs={theirs} answered={!!mine} sameQuestion={theirs?.prompt === prompt.t} />}
 
       <BumpRow g={g} preg={preg} today={today} has={photos.find((p) => p.week === g.weeks)} onPick={(f) => saveBump(g.weeks, today, f)} />
     </section>
+  );
+}
+
+/** The other person's answer for today: hidden until you've written yours. */
+function TheirAnswer({ name, theirs, answered, sameQuestion }: { name: string; theirs?: JournalEntry; answered: boolean; sameQuestion: boolean }) {
+  if (!theirs) {
+    return answered ? <p className="tiny muted their-wait">{name} hasn't answered yet today. It'll show up here.</p> : null;
+  }
+  if (theirs.locked) {
+    return <p className="their-locked small">🔒 {name} answered today. Add yours to see it.</p>;
+  }
+  return (
+    <div className="their-answer">
+      <div className="tip-label">{name}'s answer</div>
+      {!sameQuestion && <p className="small muted">{theirs.prompt}</p>}
+      <p className="answer-text">{theirs.answer}</p>
+    </div>
   );
 }
 

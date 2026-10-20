@@ -9,27 +9,21 @@ export function useMemories(preg: Pregnancy) {
   const [photos, setPhotos] = useState<BumpPhoto[]>([]);
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    let live = true;
-    api.memories(id)
-      .then((r) => {
-        if (!live) return;
-        setEntries(r.entries);
-        setPhotos(r.photos);
-      })
-      .catch((e) => live && setError((e as Error).message));
-    return () => {
-      live = false;
-    };
+  const load = useCallback(async () => {
+    const r = await api.memories(id);
+    setEntries(r.entries);
+    setPhotos(r.photos);
   }, [id]);
 
+  useEffect(() => {
+    load().catch((e) => setError((e as Error).message));
+  }, [load]);
+
+  /** Save your answer, then reload: answering is what unlocks your partner's answer for that day. */
   const saveAnswer = useCallback(async (entry: JournalEntry) => {
-    const r = await api.saveAnswer(entry);
-    setEntries((prev) => {
-      const rest = (prev ?? []).filter((e) => e.date !== entry.date);
-      return (r.entry ? [r.entry, ...rest] : rest).sort((a, b) => b.date.localeCompare(a.date));
-    });
-  }, []);
+    await api.saveAnswer(entry);
+    await load();
+  }, [load]);
 
   const saveBump = useCallback(async (week: number, date: string, file: File) => {
     const image = await resizeImage(file, 1280, 0.82);

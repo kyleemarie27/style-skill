@@ -17,8 +17,8 @@ export function LoginPage() {
           setBusy(true);
           setErr("");
           try {
-            await api.login(pw);
-            askViewerNext();
+            const r = await api.login(pw);
+            askViewerNext(r.setup);
             setAuthed(true);
           } catch (e) {
             setErr((e as Error).message);
@@ -31,7 +31,7 @@ export function LoginPage() {
           <img src="/icon-192.png" width={44} height={44} style={{ borderRadius: 12 }} alt="" />
           <h1>Bloom</h1>
         </div>
-        <p className="muted">Your private cycle and fertility tracker.</p>
+        <p className="muted">Your private cycle and pregnancy tracker.</p>
         <label>
           <div className="field-label">Password</div>
           <input type="password" autoComplete="current-password" value={pw} onChange={(e) => setPw(e.target.value)} autoFocus />

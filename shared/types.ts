@@ -76,11 +76,14 @@ export interface Pregnancy {
   partnerName?: string | null;
 }
 
-/** An answer to the daily question, kept as a keepsake. */
+/** An answer to the daily question, kept as a keepsake. Each of you has one per day. */
 export interface JournalEntry {
   date: string;
+  author?: "me" | "partner";
   prompt: string;
   answer: string;
+  /** The other person answered this day, but you haven't yet: no question or answer is sent. */
+  locked?: boolean;
 }
 
 /** One bump photo per pregnancy week. The image itself is fetched separately. */

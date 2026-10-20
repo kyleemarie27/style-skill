@@ -1,6 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { method, route } from "./_lib/auth.js";
+import { method, requireRole, route } from "./_lib/auth.js";
 import { apiKey, askJson, fakeAi, MODEL, requireClaude } from "./_lib/claude.js";
 import { HttpError } from "./_lib/db.js";
 import { factsPrompt, loadFacts, saveFacts, type Fact } from "./_lib/memory.js";
@@ -111,6 +111,8 @@ async function learn(messages: Msg[]) {
  */
 export default route(async (req: VercelRequest, res: VercelResponse) => {
   const m = method(req, "GET", "PUT", "POST");
+  // What Bloom remembers is hers: only the main account can see, edit or add to it.
+  if (m !== "POST" || req.body?.learn) await requireRole(req, "me");
   if (m === "GET") return { facts: await loadFacts() };
   if (m === "PUT") return { facts: await saveFacts(Array.isArray(req.body?.facts) ? req.body.facts : []) };
   const raw: unknown[] = Array.isArray(req.body?.messages) ? req.body.messages : [];

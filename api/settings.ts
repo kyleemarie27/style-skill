@@ -1,8 +1,8 @@
 import type { VercelRequest } from "@vercel/node";
 import { isISODate } from "../shared/dates.js";
 import { DEFAULT_SETTINGS, type Pregnancy, type Settings } from "../shared/types.js";
-import { method, route } from "./_lib/auth.js";
-import { q } from "./_lib/db.js";
+import { getSession, method, route } from "./_lib/auth.js";
+import { HttpError, q } from "./_lib/db.js";
 
 const clamp = (v: unknown, lo: number, hi: number, d: number) => {
   const n = Number(v);
@@ -43,7 +43,14 @@ function cleanPregnancy(p: any): Pregnancy | null {
 export default route(async (req: VercelRequest) => {
   const m = method(req, "GET", "PUT");
   if (m === "PUT") {
-    const b = req.body?.settings ?? {};
+    let b = req.body?.settings ?? {};
+    if ((await getSession(req))?.role === "partner") {
+      // The partner can add doctor questions and appointments, and nothing else.
+      const { rows } = await q<{ value: Settings }>("SELECT value FROM settings WHERE key='main'");
+      const cur = { ...DEFAULT_SETTINGS, ...(rows[0]?.value ?? {}) };
+      if (!cur.pregnancy) throw new HttpError(403, "Only available on the main account.");
+      b = { ...cur, pregnancy: { ...cur.pregnancy, questions: b.pregnancy?.questions, appointments: b.pregnancy?.appointments } };
+    }
     const pregnancy = cleanPregnancy(b.pregnancy);
     const s: Settings = {
       cycleLength: clamp(b.cycleLength, 20, 45, DEFAULT_SETTINGS.cycleLength),

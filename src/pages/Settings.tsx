@@ -4,18 +4,19 @@ import { api, type ImportBatch } from "../lib/api";
 import { activePregnancy } from "../../shared/pregnancy";
 import { MemoryCard } from "../components/MemoryCard";
 import { PregnancySettings } from "../components/PregnancySettings";
+import { SecuritySettings } from "../components/SecuritySettings";
 import { useStore } from "../lib/store";
 
 export function SettingsPage() {
-  const { settings, setSettings, reload, setAuthed, aiEnabled } = useStore();
+  const { settings, setSettings, reload, setAuthed, aiEnabled, role } = useStore();
   const [form, setForm] = useState(settings);
   const [saved, setSaved] = useState(false);
   const [batches, setBatches] = useState<ImportBatch[]>([]);
 
   useEffect(() => setForm(settings), [settings]);
   useEffect(() => {
-    api.imports().then((r) => setBatches(r.batches)).catch(() => {});
-  }, []);
+    if (role === "me") api.imports().then((r) => setBatches(r.batches)).catch(() => {});
+  }, [role]);
 
   const save = async () => {
     await setSettings(form);
@@ -27,6 +28,7 @@ export function SettingsPage() {
     <div className="stack">
       <h1>Settings</h1>
 
+      {role === "partner" ? <SecuritySettings /> : <>
       <PregnancySettings />
 
       {aiEnabled && <MemoryCard />}
@@ -97,6 +99,9 @@ export function SettingsPage() {
           </>
         )}
       </div>
+
+      <SecuritySettings />
+      </>}
 
       <div className="card stack">
         <h2>Install Bloom</h2>

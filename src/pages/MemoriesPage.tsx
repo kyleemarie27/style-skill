@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { prettyDate } from "../../shared/dates";
+import { localToday, prettyDate } from "../../shared/dates";
 import { gaLabel, gestation } from "../../shared/pregnancy";
 import { bumpUrl } from "../lib/api";
 import { useMemories } from "../lib/memories";
 import { usePregnancy } from "../lib/pregnancy";
-import type { BumpPhoto, Pregnancy } from "../../shared/types";
+import type { BumpPhoto, JournalEntry, Pregnancy } from "../../shared/types";
+import { useViewer } from "../lib/viewer";
 
 /** #/memories: the bump photo flip-book and every answer to the daily question. */
 export function MemoriesPage() {
@@ -24,6 +25,13 @@ export function MemoriesPage() {
 function Memories({ preg }: { preg: Pregnancy }) {
   const { entries, photos, error, deleteBump } = useMemories(preg);
   const [open, setOpen] = useState<BumpPhoto | null>(null);
+  const role = useViewer();
+  const today = localToday();
+  const names = { me: preg.momName?.trim() || "You", partner: preg.partnerName?.trim() || "Your partner" };
+  // One card per day, with both of your answers.
+  const days = new Map<string, JournalEntry[]>();
+  for (const e of entries ?? []) days.set(e.date, [...(days.get(e.date) ?? []), e]);
+  const order = (e: JournalEntry) => ((e.author ?? "me") === role ? 0 : 1);
 
   return (
     <div className="stack preg">
@@ -66,14 +74,26 @@ function Memories({ preg }: { preg: Pregnancy }) {
 
       <section className="stack" style={{ gap: 12 }}>
         <h3 className="card-h">Your answers</h3>
+        <p className="small muted">You each answer your own question every day. You see each other's once you've written yours.</p>
         {error && <p className="small muted">Couldn't load your answers: {error}</p>}
         {entries === null && !error && <p className="muted row small"><span className="spin" /></p>}
         {entries?.length === 0 && <p className="small muted">Answer today's question on the Today page and it's saved here.</p>}
-        {entries?.map((e) => (
-          <article key={e.date} className="card stack memory-entry">
-            <div className="tiny muted">{prettyDate(e.date, true)} · {gaLabel(gestation(e.date, preg))}</div>
-            <p className="question small">{e.prompt}</p>
-            <p className="answer-text">{e.answer}</p>
+        {[...days].map(([date, list]) => (
+          <article key={date} className="card stack memory-entry">
+            <div className="tiny muted">{prettyDate(date, true)} · {gaLabel(gestation(date, preg))}</div>
+            {[...list].sort((a, b) => order(a) - order(b)).map((e) => {
+              const author = e.author ?? "me";
+              const who = author === role ? "You" : names[author];
+              return e.locked ? (
+                <p key={author} className="their-locked small">🔒 {who} answered {date === today ? "today. Answer yours on Today to see it." : "this day. You didn't, so that one stays a secret."}</p>
+              ) : (
+                <div key={author} className="stack" style={{ gap: 4 }}>
+                  <div className="tip-label">{who}</div>
+                  <p className="question small">{e.prompt}</p>
+                  <p className="answer-text">{e.answer}</p>
+                </div>
+              );
+            })}
           </article>
         ))}
       </section>
