@@ -1,12 +1,16 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { buildModel, type CycleModel } from "../../shared/cycle";
 import { DEFAULT_SETTINGS, type DayLog, type LhTest, type Settings } from "../../shared/types";
-import { api, AuthError } from "./api";
+import { api, AuthError, type AuthStatus, type Role } from "./api";
 
 interface Store {
   loading: boolean;
   authed: boolean | null;
   aiEnabled: boolean;
+  /** Whose login this is. The partner's phone gets its own Today and can't change logs or settings. */
+  role: Role;
+  auth: AuthStatus | null;
+  refreshAuth: () => Promise<void>;
   dayLogs: DayLog[];
   lhTests: LhTest[];
   settings: Settings;
@@ -23,6 +27,7 @@ const Ctx = createContext<Store | null>(null);
 export function StoreProvider({ children }: { children: ReactNode }) {
   const [authed, setAuthed] = useState<boolean | null>(null);
   const [aiEnabled, setAi] = useState(false);
+  const [auth, setAuth] = useState<AuthStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [dayLogs, setDayLogs] = useState<DayLog[]>([]);
   const [lhTests, setLhTests] = useState<LhTest[]>([]);
@@ -43,10 +48,17 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const refreshAuth = useCallback(async () => {
+    const s = await api.status();
+    setAuth(s);
+    setAi(s.ai);
+  }, []);
+
   useEffect(() => {
     api
       .status()
       .then((s) => {
+        setAuth(s);
         setAi(s.ai);
         if (s.authed) return reload();
         setAuthed(false);
@@ -79,6 +91,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     loading,
     authed,
     aiEnabled,
+    role: auth?.role ?? "me",
+    auth,
+    refreshAuth,
     dayLogs,
     lhTests,
     settings,
@@ -90,9 +105,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setAuthed: (v) => {
       setAuthed(v);
       if (v) {
-        api.status().then((s) => setAi(s.ai));
+        refreshAuth();
         reload();
-      }
+      } else setAuth(null);
     },
   };
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

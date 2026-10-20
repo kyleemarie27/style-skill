@@ -53,3 +53,15 @@ describe("partner view", () => {
     expect(fillName("Take something off your partner's plate.", "Kylee", true)).toBe("Take something off Kylee's plate.");
   });
 });
+
+describe("partner's question", () => {
+  it("has a filled-in prompt for every day, separate from hers", () => {
+    let differs = 0;
+    for (let d = 28; d <= 42 * 7 + 6; d++) {
+      const p = todaysPrompt(d, "Kylee", "partner");
+      expect(p.t, `day ${d}`).not.toMatch(/\{/);
+      if (p.t !== todaysPrompt(d, "Ty", "me").t) differs++;
+    }
+    expect(differs).toBeGreaterThan(200);
+  });
+});

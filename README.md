@@ -19,7 +19,7 @@ Tap **I got a positive test** (on Today during the two-week wait, in Settings, o
   4. **Little things for today:** three small to-dos (one from the week's list, two habits), with a streak.
   5. **Today's question:** something to answer in a few lines, plus this week's **bump photo**. On set days it's a *moment* instead: a letter to the baby, a time capsule, a date with your partner, a lullaby. Everything is kept on the **Memories** page (a week-by-week bump flip-book and all your answers).
 - **Symptoms:** the ten most common ones in pregnancy are always there. Tap *+ Add your own* for anything else; log it on 3 different days and it becomes one of your regular options. Bleeding, cramping, warning signs and vitals live on the Log page.
-- **Your partner gets their own view.** They log in with the same password on their own phone and pick *I'm the partner*. Bloom then opens to a page for them: how you're doing today (from your check-in) with how to help with each thing you logged, one thing to do today, their role this week, what they might be feeling, and your next appointment. Their Ask answers are written to them, and their chats don't go into what Bloom remembers about you. Names and "this is my partner's phone" are in Settings → Pregnancy.
+- **Your partner gets their own login and view.** Bloom opens to a page for them: how you're doing today (from your check-in) with how to help with each thing you logged, one thing to do today, their role this week, what they might be feeling, your next appointment, and their own daily question. You each see the other's answer only once you've written yours that day (the server enforces it). The partner can read your check-ins and add doctor questions or appointments, but can't change your logs, settings, imports or what Bloom remembers. Their Ask answers are written to them, and their chats don't go into Bloom's memory about you.
 - **How big is baby?** A drawing of the baby that changes with each gestational day, next to the fruit or vegetable it matches (with an everyday object and an animal as extra comparisons), plus today's length and weight. Before 14 weeks you can see baby at roughly actual size on screen.
 - **The week guide** (Weeks tab, or a link from Today) has four tabs: Read (today's deep dive) · Baby · You (body and mind changes over time, symptoms you've logged, food and self-care, reference tables) · Plan (to-dos, decisions, FAQ, and a link to your partner's page). *When to call your doctor* sits under every tab. Every week has long-form explainers of the baby's development and your body and hormones, "is this normal?" FAQs, and decisions coming up. Symptoms you've logged get their own "why it happens / what helps / when to call" cards. There's also a reference library: nutrient targets, food and medicine safety, hCG ranges and weight-gain guidance.
 - **Daily deep dive**: a 4-minute read written fresh each day by AI for your exact gestational day, in a chatty, friend-who's-an-OB-nurse voice with question-style headings. It covers a different angle each day of the week (development, body, nutrition, tests and decisions, emotions, preparation, myths), uses what you've logged, and ends with a teaser for tomorrow.
@@ -55,7 +55,7 @@ tests/          Unit tests (npm test)
    | Name | Value |
    |------|-------|
    | `APP_PASSWORD` | the password you'll log in with |
-   | `SESSION_SECRET` | any long random string (e.g. mash the keyboard for 40+ characters) |
+   | `SESSION_SECRET` | any long random string (no longer used by new versions; harmless to keep) |
    | `ANTHROPIC_API_KEY` | `sk-ant-…` (optional; turns on strip reading, the personal daily line and smart import) |
 
 4. **Redeploy.** Go to Deployments → ⋯ on the latest → **Redeploy**.
@@ -75,6 +75,14 @@ Settings → *Import more history* (or the button on the first screen):
 - **Anything else:** spreadsheets, JSON, PDFs or screenshots. If the built-in readers don't recognise a file, AI extracts the dates. You always see a preview first.
 
 Imports never overwrite what you've logged yourself, and each import can be undone in Settings.
+
+## Security
+
+- **Two logins.** The main account and the partner each have a password (stored as salted scrypt hashes). Until you set your own in Settings → Security, the `APP_PASSWORD` from setup works as yours; once you do, it stops working and anyone logged in with it is signed out. Set or reset the partner's password, or remove it, in the same place.
+- **Real sessions.** Each signed-in device is a row in the database (only a hash of the cookie is stored). Logging out ends it for good. Settings → Security lists every device and can log any of them out, or all of them at once. Sessions end after 60 days without use.
+- **Guessing is blocked.** After 5 wrong passwords from one place (or 30 overall) in 15 minutes, logins pause for 15 minutes.
+- **Browser protections.** A strict Content Security Policy, HTTPS-only (HSTS), no framing, no referrers, `noindex`, and API responses that are never cached. Changes must come from Bloom's own pages.
+- **What still leaves your database:** questions, daily notes, strip photos and imports are sent to Anthropic's API to answer them. Fonts load from Google Fonts.
 
 ## Notes
 - **AI model:** Claude (`claude-opus-5-5`) via the Anthropic API, called only from the server. The daily line is cached, so AI runs at most once a day for it, plus once per strip photo.

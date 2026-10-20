@@ -82,7 +82,7 @@ export default route(async (req: VercelRequest) => {
   await q("UPDATE import_batches SET counts=$2 WHERE id=$1", [batchId, JSON.stringify(counts)]);
   await q("DELETE FROM daily_notes");
   return { batchId, counts };
-});
+}, { roles: ["me"] });
 
 // jsonb_to_recordset wants JSON arrays for text[] columns, which JSON.stringify already gives us.
 function toSqlJson(d: ReturnType<typeof cleanDayLog>) {

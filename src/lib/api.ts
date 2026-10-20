@@ -2,6 +2,29 @@ import type { BumpPhoto, DayLog, ImportBundle, JournalEntry, LhLevel, LhTest, Se
 
 export class AuthError extends Error {}
 
+/** Which login this is: the main account ("me") or the partner's. */
+export type Role = "me" | "partner";
+
+export interface AuthStatus {
+  authed: boolean;
+  role: Role | null;
+  ai: boolean;
+  /** Still logged in with the setup password from Vercel; time to pick a personal one. */
+  setup: boolean;
+  /** A partner login exists. */
+  partner: boolean;
+}
+
+/** A signed-in device, for Settings. */
+export interface SignedIn {
+  id: string;
+  role: Role;
+  label: string | null;
+  created_at: string;
+  last_seen: string;
+  current: boolean;
+}
+
 async function call<T>(path: string, init: RequestInit & { json?: unknown } = {}): Promise<T> {
   const { json, ...rest } = init;
   const res = await fetch(`/api/${path}`, {
@@ -32,9 +55,16 @@ export interface ImportBatch {
 }
 
 export const api = {
-  status: () => call<{ authed: boolean; ai: boolean }>("auth"),
-  login: (password: string) => call<{ ok: true }>("auth", { method: "POST", json: { password } }),
+  status: () => call<AuthStatus>("auth"),
+  login: (password: string) => call<{ ok: true; role: Role; setup: boolean }>("auth", { method: "POST", json: { password } }),
   logout: () => call("auth", { method: "DELETE" }),
+  changePassword: (current: string, next: string) => call("auth", { method: "PUT", json: { action: "password", current, next } }),
+  setPartnerPassword: (password: string) => call("auth", { method: "PUT", json: { action: "partner", password } }),
+  claimPartner: (password: string) => call("auth", { method: "PUT", json: { action: "claim-partner", password } }),
+  removePartner: () => call("auth?partner=1", { method: "DELETE" }),
+  sessions: () => call<{ sessions: SignedIn[] }>("auth?sessions=1"),
+  endSession: (id: string) => call(`auth?session=${encodeURIComponent(id)}`, { method: "DELETE" }),
+  logoutOthers: () => call("auth?others=1", { method: "DELETE" }),
   data: () => call<{ dayLogs: DayLog[]; lhTests: LhTest[] }>("logs"),
   saveDay: (log: DayLog) => call<{ log: DayLog }>("logs", { method: "PUT", json: { log } }),
   settings: () => call<{ settings: Settings }>("settings"),

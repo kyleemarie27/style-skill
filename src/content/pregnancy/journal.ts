@@ -165,15 +165,111 @@ export const QUESTIONS: Record<1 | 2 | 3, string[]> = {
   ],
 };
 
-/** Today's prompt for a gestational day: a moment if one falls today, otherwise the next question in the trimester's pool. */
-export function todaysPrompt(totalDays: number, partner?: string | null): Prompt {
+/**
+ * The partner's own daily question. Moments line up with the pregnant partner's where they can
+ * (letters to the baby in the same weeks), so you get to read each other's on the same day.
+ * {partner} here means the pregnant partner.
+ */
+export const PARTNER_MOMENTS: { week: number; day: number; p: Prompt }[] = [
+  { week: 5, day: 0, p: { t: "Write down how you found out: where you were, what you felt, and what you said first.", moment: true, hint: "The details fade fast. Get them down while they're fresh." } },
+  { week: 7, day: 3, p: { t: "Start your own list of names you love, even the silly ones.", moment: true } },
+  { week: 8, day: 3, p: { t: "Write your first letter to the baby. Start with \"Right now you're the size of a raspberry, and…\"", moment: true } },
+  { week: 11, day: 3, p: { t: "Time capsule: what's going on at work, what's in the news, what are you two watching?", moment: true } },
+  { week: 12, day: 3, p: { t: "If you've heard the heartbeat or seen a scan, what went through your head?", moment: true } },
+  { week: 16, day: 3, p: { t: "Plan a date with {partner}, just the two of you. Where are you going?", moment: true } },
+  { week: 20, day: 0, p: { t: "Halfway! What's surprised you most so far?", moment: true } },
+  { week: 22, day: 3, p: { t: "Have you felt a kick from the outside yet? Describe it, or what you're waiting for.", moment: true } },
+  { week: 24, day: 3, p: { t: "Your second letter to the baby: what do you want to show them first?", moment: true } },
+  { week: 26, day: 3, p: { t: "Write the baby a short note. {partner} might be asking for one today.", moment: true } },
+  { week: 28, day: 0, p: { t: "Third trimester. What do you want to remember about watching this pregnancy?", moment: true } },
+  { week: 31, day: 3, p: { t: "What do you hope you'll be like in the delivery room?", moment: true } },
+  { week: 34, day: 3, p: { t: "Write the story of how you and {partner} met, from your side, for the baby to read one day.", moment: true } },
+  { week: 36, day: 0, p: { t: "Your third letter: what do you want the baby to know on the day they're born?", moment: true } },
+  { week: 38, day: 3, p: { t: "Describe an ordinary day right now, so you'll remember life just before.", moment: true } },
+  { week: 40, day: 0, p: { t: "It's the due date! However today is going, write it down.", moment: true } },
+];
+
+export const PARTNER_QUESTIONS: Record<1 | 2 | 3, string[]> = {
+  1: [
+    "What's one thing that made you smile today?",
+    "When did it feel most real this week?",
+    "What are you most excited about right now?",
+    "What's on your mind that you haven't said out loud?",
+    "What did you do for {partner} today, big or small?",
+    "What did {partner} do today that impressed you?",
+    "What do you hope the baby gets from you?",
+    "What do you hope the baby gets from {partner}?",
+    "What's one thing you want to do with the baby that your parents did with you?",
+    "What's one thing you'd do differently from how you were raised?",
+    "What's the best advice anyone has given you so far?",
+    "Describe today in three words.",
+    "What made you laugh this week?",
+    "What's a place you want to take the baby one day?",
+    "What's something you want to say to the baby today?",
+    "What does a good day look like for the two of you right now?",
+    "Who are you most excited to tell, and how do you picture it?",
+    "What's one thing you're learning about pregnancy that surprised you?",
+    "What's worrying you this week? Writing it down can shrink it.",
+    "If the baby could know one thing about today, what would it be?",
+  ],
+  2: [
+    "What's something you want to teach the baby?",
+    "What name are you leaning toward today?",
+    "What did you do today that you're proud of?",
+    "What's a book, show or song you want to share with the baby?",
+    "What's a small thing {partner} did this week that you loved?",
+    "What kind of parent do you hope to be on hard days?",
+    "What's something about your own childhood you want to recreate?",
+    "Describe a lazy Sunday with the baby, a year from now.",
+    "What do you picture the baby looking like?",
+    "What made today good?",
+    "What's one thing you've stopped worrying about?",
+    "What's one thing you're still worried about?",
+    "What's a family recipe you want the baby to grow up eating?",
+    "How are you and {partner} different from when you found out?",
+    "What's one thing you want to get ready before the baby comes?",
+    "What would you want the baby to know about who you are right now?",
+    "If you could ask the baby one question, what would it be?",
+    "What's one thing you love about {partner} right now?",
+    "What's the funniest thing that happened this week?",
+    "Who do you want the baby to have in their corner?",
+  ],
+  3: [
+    "What do you want the first hour after the birth to feel like?",
+    "What's one thing you want to do before the baby arrives?",
+    "What are you nervous about, and what calms you down?",
+    "What did you get ready today?",
+    "How do you want to feel bringing the baby home?",
+    "What's one thing {partner} has done that made you proud?",
+    "What sound or song do you want playing when the baby is born?",
+    "What are you most curious about: who they'll look like, their personality, their first cry?",
+    "How do you hope the baby's first year feels for the two of you?",
+    "What's one thing you want to keep for yourself once you're a parent?",
+    "What's one thing you've learned about yourself these last months?",
+    "How do you want to celebrate the baby's birthday each year?",
+    "What do you hope never changes about you and {partner}?",
+    "What would you tell the baby about the world they're arriving in?",
+    "What's in your hospital bag that you'd never have guessed?",
+    "What word describes this week?",
+    "What's the first thing you want to show the baby at home?",
+    "What do you need to hear today? Write it to yourself.",
+    "What's one promise you want to make the baby?",
+    "What made you laugh this week?",
+  ],
+};
+
+/**
+ * Today's prompt for a gestational day: a moment if one falls today, otherwise the next question
+ * in the trimester's pool. `partner` is the other person's name; `role` picks whose prompts.
+ */
+export function todaysPrompt(totalDays: number, partner?: string | null, role: "me" | "partner" = "me"): Prompt {
   const week = Math.floor(totalDays / 7);
   const day = totalDays % 7;
-  const moment = MOMENTS.find((m) => m.week === week && m.day === day);
+  const moment = (role === "me" ? MOMENTS : PARTNER_MOMENTS).find((m) => m.week === week && m.day === day);
   const fill = (t: string) => t.replaceAll("{partner}", partner?.trim() || "your partner");
   if (moment) return { ...moment.p, t: fill(moment.p.t) };
   const tri = trimesterOf(week);
-  const pool = QUESTIONS[tri];
+  const pool = (role === "me" ? QUESTIONS : PARTNER_QUESTIONS)[tri];
   const start = tri === 1 ? 0 : tri === 2 ? 14 * 7 : 28 * 7;
   return { t: fill(pool[(((totalDays - start) % pool.length) + pool.length) % pool.length]) };
 }

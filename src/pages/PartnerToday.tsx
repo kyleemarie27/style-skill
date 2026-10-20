@@ -5,6 +5,7 @@ import type { DayLog } from "../../shared/types";
 import { fillName, HOW_TO_HELP, moodsOf, partnerFeeling, partnerItems, partnerMove } from "../content/pregnancy";
 import { readLocal, usePregnancy, writeLocal } from "../lib/pregnancy";
 import { useStore } from "../lib/store";
+import { TodaysQuestion } from "../components/TodaysQuestion";
 import { Alerts, PregnancyHero } from "./PregnancyToday";
 
 /**
@@ -40,6 +41,8 @@ export function PartnerToday() {
         </div>
         <ComingUp />
       </section>
+
+      <TodaysQuestion g={g} preg={preg} today={today} />
 
       <p className="tiny muted center">Bloom gives general information, not medical advice.</p>
     </div>

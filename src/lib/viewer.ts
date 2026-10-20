@@ -1,37 +1,21 @@
-import { useSyncExternalStore } from "react";
 import { readLocal, writeLocal } from "./pregnancy";
+import { useStore } from "./store";
 
 /**
- * Who's using Bloom on this device. Both partners share one login; the partner's phone opens to
- * a page written for them. Kept per device, so existing logins stay as they were ("me").
+ * Who's using Bloom: the main account ("me") or the partner. It comes from the login, so the
+ * server enforces it too (the partner can't change logs or settings, and reads answers only once
+ * they've written their own).
  */
 export type Viewer = "me" | "partner";
 
-const KEY = "bloom-viewer";
-/** Set right after logging in, so a new device asks who's using it (only in pregnancy mode). */
-const ASK_KEY = "bloom-ask-viewer";
-const listeners = new Set<() => void>();
-
-const read = (): Viewer => (readLocal<string>(KEY, "me") === "partner" ? "partner" : "me");
-
-export function setViewer(v: Viewer) {
-  writeLocal(KEY, v);
-  writeLocal(ASK_KEY, false);
-  listeners.forEach((l) => l());
-}
-
-export function askViewerNext() {
-  writeLocal(ASK_KEY, true);
-}
-
-export const shouldAskViewer = () => readLocal(ASK_KEY, false);
-
 export function useViewer(): Viewer {
-  return useSyncExternalStore(
-    (l) => {
-      listeners.add(l);
-      return () => listeners.delete(l);
-    },
-    read,
-  );
+  return useStore().role;
 }
+
+/**
+ * Logged in on a new device with the shared setup password: ask who it is, so the partner can make
+ * their own login. Once the main account has its own password, this never comes up.
+ */
+const ASK_KEY = "bloom-ask-viewer";
+export const askViewerNext = (on = true) => writeLocal(ASK_KEY, on);
+export const shouldAskViewer = () => readLocal(ASK_KEY, false);

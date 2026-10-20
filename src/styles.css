@@ -700,3 +700,13 @@ details.ref .tip-grid { margin-top: 0; }
 .partner-link > span:nth-child(2) { flex: 1; }
 .partner-link > span:last-child { color: var(--muted); font-size: 20px; }
 .partner-settings { border-top: 1px solid var(--line); padding-top: 12px; }
+
+/* partner answers, security */
+.their-answer { background: var(--preg-soft); border-radius: 14px; padding: 12px 14px; display: flex; flex-direction: column; gap: 4px; }
+.their-answer .tip-label { margin: 0; }
+.their-locked { background: var(--surface-2); border-radius: 12px; padding: 10px 12px; }
+.setup-nudge { display: block; text-decoration: none; color: var(--ink); margin-bottom: 12px; padding-right: 48px; }
+.device-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.device-list li { display: flex; justify-content: space-between; align-items: center; gap: 8px; background: var(--surface-2); border-radius: 12px; padding: 8px 10px 8px 12px; font-size: 14px; }
+.device-list .tag { font-size: 11px; font-weight: 700; margin-left: 6px; padding: 1px 7px; border-radius: 99px; background: var(--surface); color: var(--muted); }
+.device-list .tag.now { color: var(--follicular); }

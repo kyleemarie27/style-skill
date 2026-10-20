@@ -31,5 +31,5 @@ export { trimesterOf } from "./bites";
 
 export { CHANGES, changesAt, type Change, type ChangeNow, type ChangeStatus } from "./changes";
 export { HABITS, MILESTONES, dailyTodos, nextMilestone, type DailyTodo } from "./bites";
-export { MOMENTS, QUESTIONS, todaysPrompt, type Prompt } from "./journal";
+export { MOMENTS, PARTNER_MOMENTS, PARTNER_QUESTIONS, QUESTIONS, todaysPrompt, type Prompt } from "./journal";
 export { HOW_TO_HELP, PARTNER_DAILY, PARTNER_FEELINGS, fillName, moodsOf, partnerFeeling, partnerItems, partnerMove } from "./partner";

@@ -27,4 +27,4 @@ export default route(async (req: VercelRequest, res: VercelResponse) => {
   res.setHeader("Content-Type", "text/csv; charset=utf-8");
   res.setHeader("Content-Disposition", `attachment; filename="bloom-export.csv"`);
   return res.status(200).send(csv);
-});
+}, { roles: ["me"] });

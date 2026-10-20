@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { isISODate } from "../shared/dates.js";
-import { method, route } from "./_lib/auth.js";
+import { getSession, method, route } from "./_lib/auth.js";
 import { HttpError, q } from "./_lib/db.js";
 
 const MAX_PHOTO_BYTES = 1_500_000;
@@ -12,15 +12,18 @@ const week = (v: unknown) => {
 };
 
 /**
- * Keepsakes: answers to the daily question and weekly bump photos.
+ * Keepsakes: answers to the daily question (one each per day, for both of you) and weekly bump photos.
+ * Your partner's answer for a day only comes back once you've answered that day too; until then
+ * it's returned as {date, author, locked: true}, with no question or answer.
  * GET    /api/memories?preg=YYYY-MM-DD           → {entries, photos} (photos without image data)
  * GET    /api/memories?preg=…&week=12            → that week's bump photo (JPEG)
- * PUT    /api/memories {entry: {date, prompt, answer}}   save an answer (empty answer deletes it)
+ * PUT    /api/memories {entry: {date, prompt, answer}}   save your answer (empty answer deletes it)
  * POST   /api/memories {preg, week, date, photo}         save a bump photo (base64 JPEG, already resized)
  * DELETE /api/memories?preg=…&week=12            remove a bump photo
  */
 export default route(async (req: VercelRequest, res: VercelResponse) => {
   const m = method(req, "GET", "PUT", "POST", "DELETE");
+  const me = (await getSession(req))!.role;
   const preg = isISODate(req.query.preg) ? (req.query.preg as string) : null;
 
   if (m === "GET" && req.query.week !== undefined) {
@@ -35,10 +38,14 @@ export default route(async (req: VercelRequest, res: VercelResponse) => {
   }
   if (m === "GET") {
     const [entries, photos] = await Promise.all([
-      q("SELECT date, prompt, answer FROM journal ORDER BY date DESC"),
+      q<{ date: string; author: string; prompt: string; answer: string }>("SELECT date, author, prompt, answer FROM journal ORDER BY date DESC"),
       preg ? q("SELECT week, date FROM bump_photos WHERE preg=$1 ORDER BY week", [preg]) : Promise.resolve({ rows: [] }),
     ]);
-    return { entries: entries.rows, photos: photos.rows };
+    const answered = new Set(entries.rows.filter((e) => e.author === me).map((e) => e.date));
+    return {
+      entries: entries.rows.map((e) => (e.author === me || answered.has(e.date) ? e : { date: e.date, author: e.author, locked: true })),
+      photos: photos.rows,
+    };
   }
   if (m === "PUT") {
     const e = req.body?.entry;
@@ -46,14 +53,14 @@ export default route(async (req: VercelRequest, res: VercelResponse) => {
     const prompt = text(e.prompt, 500);
     const answer = text(e.answer, 10_000);
     if (!answer) {
-      await q("DELETE FROM journal WHERE date=$1", [e.date]);
+      await q("DELETE FROM journal WHERE date=$1 AND author=$2", [e.date, me]);
       return { entry: null };
     }
     if (!prompt) throw new HttpError(400, "Missing the question.");
     const { rows } = await q(
-      `INSERT INTO journal (date, prompt, answer, updated_at) VALUES ($1,$2,$3,now())
-       ON CONFLICT (date) DO UPDATE SET prompt=$2, answer=$3, updated_at=now() RETURNING date, prompt, answer`,
-      [e.date, prompt, answer],
+      `INSERT INTO journal (date, author, prompt, answer, updated_at) VALUES ($1,$4,$2,$3,now())
+       ON CONFLICT (date, author) DO UPDATE SET prompt=$2, answer=$3, updated_at=now() RETURNING date, author, prompt, answer`,
+      [e.date, prompt, answer, me],
     );
     return { entry: rows[0] };
   }

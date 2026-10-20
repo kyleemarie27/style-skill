@@ -62,4 +62,4 @@ export default route(async (req: VercelRequest) => {
   }
   const ratio = Math.max(0, Math.min(2, Math.round(r.ratio * 100) / 100));
   return { ...r, ratio, level: levelForRatio(ratio) };
-});
+}, { roles: ["me"] });
