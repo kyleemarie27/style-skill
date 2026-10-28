@@ -84,6 +84,14 @@ const FAKE: DeepDive = {
   tomorrow: "Tomorrow: why your sense of smell suddenly feels like a superpower.",
 };
 
+/** A complete read: a title, at least two real sections and takeaways. Anything less is never shown or cached. */
+export function isComplete(d: Partial<DeepDive> | null | undefined): d is DeepDive {
+  return !!d && typeof d.title === "string" && d.title.trim().length > 0
+    && Array.isArray(d.sections) && d.sections.length >= 2
+    && d.sections.every((s) => s?.heading?.trim() && s?.body?.trim().length > 80)
+    && Array.isArray(d.takeaways) && d.takeaways.length >= 1;
+}
+
 /**
  * POST /api/deep-dive {date, key, context} → DeepDive
  * One article per day, cached; regenerated only if the gestational-day key changes (or refresh=true).
@@ -95,21 +103,30 @@ export default route(async (req: VercelRequest) => {
 
   if (!refresh) {
     const cached = await q<{ key: string; content: DeepDive }>("SELECT key, content FROM deep_dives WHERE date=$1", [date]);
-    if (cached.rows[0] && cached.rows[0].key === String(key)) return { ...cached.rows[0].content, cached: true };
+    const hit = cached.rows[0];
+    if (hit && hit.key === String(key) && isComplete(hit.content)) return { ...hit.content, cached: true };
   }
 
   const dow = Math.abs(Number(context?.dayOfWeek) || 0);
   const angle = ANGLES[dow % ANGLES.length];
   const tomorrow = ANGLES[(dow + 1) % ANGLES.length];
-  const dive = fakeAi()
-    ? FAKE
-    : await askJson<DeepDive>({
-        system: SYSTEM + factsPrompt(await loadFacts()),
-        schema: SCHEMA,
-        effort: "medium",
-        maxTokens: 8000,
-        content: [{ type: "text", text: `Today's angle: ${angle}\nTomorrow's angle (for the teaser only): ${tomorrow}\n\nContext (JSON):\n${JSON.stringify(context ?? {}).slice(0, 8000)}` }],
-      });
+  const write = async () =>
+    fakeAi()
+      ? FAKE
+      : askJson<DeepDive>({
+          system: SYSTEM + factsPrompt(await loadFacts()),
+          schema: SCHEMA,
+          effort: "medium",
+          maxTokens: 12000,
+          content: [{ type: "text", text: `Today's angle: ${angle}\nTomorrow's angle (for the teaser only): ${tomorrow}\n\nContext (JSON):\n${JSON.stringify(context ?? {}).slice(0, 8000)}` }],
+        });
+  // The schema can't require a minimum number of sections, so check, and try once more if it came back thin.
+  let dive: DeepDive = await write();
+  if (!isComplete(dive)) {
+    console.error(`Deep dive for ${date} came back incomplete (${(dive as Partial<DeepDive>).sections?.length ?? 0} sections); retrying.`);
+    dive = await write();
+  }
+  if (!isComplete(dive)) throw new HttpError(502, "Today's read came out incomplete. Try again in a minute.");
 
   await q(
     `INSERT INTO deep_dives (date, key, content) VALUES ($1,$2,$3)

@@ -73,7 +73,7 @@ export const api = {
   saveLh: (test: LhTest, photo?: string) => call<{ test: LhTest }>("lh", { method: "POST", json: { test, photo } }),
   deleteLh: (id: number) => call("lh?id=" + id, { method: "DELETE" }),
   dailyNote: (date: string, phase: string, context: unknown, refresh = false) =>
-    call<{ line: string }>("daily-note", { method: "POST", json: { date, phase, context, refresh } }),
+    call<{ line: string; plan?: DayPlan | null }>("daily-note", { method: "POST", json: { date, phase, context, refresh } }),
   deepDive: (date: string, key: string, context: unknown, refresh = false) =>
     call<DeepDive>("deep-dive", { method: "POST", json: { date, key, context, refresh } }),
   memory: () => call<{ facts: Fact[] }>("ask"),
@@ -97,6 +97,13 @@ export const api = {
 
 /** Where a bump photo is served from. The date makes a replaced photo a new URL, so caching stays safe. */
 export const bumpUrl = (preg: string, p: BumpPhoto) => `/api/memories?preg=${preg}&week=${p.week}&v=${p.date}`;
+
+/** Today's plan in pregnancy mode, written by AI with the daily line. */
+export interface DayPlan {
+  todos: { t: string; why: string }[];
+  partner: { t: string; why: string } | null;
+  ask: string[];
+}
 
 export interface DeepDive {
   title: string;

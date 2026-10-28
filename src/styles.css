@@ -710,3 +710,6 @@ details.ref .tip-grid { margin-top: 0; }
 .device-list li { display: flex; justify-content: space-between; align-items: center; gap: 8px; background: var(--surface-2); border-radius: 12px; padding: 8px 10px 8px 12px; font-size: 14px; }
 .device-list .tag { font-size: 11px; font-weight: 700; margin-left: 6px; padding: 1px 7px; border-radius: 99px; background: var(--surface); color: var(--muted); }
 .device-list .tag.now { color: var(--follicular); }
+
+/* iPhone: content scrolled under the status bar showed through behind the clock. Cover that strip. */
+body::before { content: ""; position: fixed; top: 0; left: 0; right: 0; height: env(safe-area-inset-top); background: var(--bg); z-index: 30; pointer-events: none; }

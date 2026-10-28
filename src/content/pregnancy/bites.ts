@@ -1,3 +1,4 @@
+import { SYMPTOMS } from "./library";
 import type { Item, WeekContent } from "./types";
 
 export const trimesterOf = (week: number): 1 | 2 | 3 => (week < 14 ? 1 : week < 28 ? 2 : 3);
@@ -64,11 +65,20 @@ function take<T>(pool: T[], n: number, seed: number): T[] {
   return [...pool.slice(k), ...pool.slice(0, k)].slice(0, Math.min(n, pool.length));
 }
 
-/** Today's to-dos: one from this week's list (spread across the week) plus two small habits. */
-export function dailyTodos(week: WeekContent, day: number, totalDays: number): DailyTodo[] {
+/**
+ * Today's to-dos when AI isn't writing them: one from this week's list (spread across the week),
+ * one for a symptom logged lately (from its "what helps" list), and small habits to make three.
+ */
+export function dailyTodos(week: WeekContent, day: number, totalDays: number, symptoms: string[] = []): DailyTodo[] {
   const pool = HABITS[trimesterOf(week.week)].filter((h) => !h.minWeek || week.week >= h.minWeek);
   const weekly = week.todo.length ? [{ ...week.todo[day % week.todo.length], scope: "week" as const }] : [];
-  return [...weekly, ...take(pool, 2, totalDays * 2).map((h) => ({ t: h.t, why: h.why, scope: "day" as const }))];
+  const known = symptoms.filter((s) => SYMPTOMS[s]?.helps.length);
+  const symptom = known.length ? known[totalDays % known.length] : null;
+  const forSymptom: DailyTodo[] = symptom
+    ? [{ t: take(SYMPTOMS[symptom].helps, 1, totalDays)[0], why: `For the ${symptom.toLowerCase()} you've logged lately.`, scope: "day" }]
+    : [];
+  const habits = take(pool, 3 - weekly.length - forSymptom.length, totalDays * 2).map((h) => ({ t: h.t, why: h.why, scope: "day" as const }));
+  return [...weekly, ...forSymptom, ...habits];
 }
 
 /** Things to look forward to, so there's always a countdown to something. Week = the day that week starts. */

@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { addDays, prettyDate } from "../../shared/dates";
-import { standardSchedule } from "../../shared/pregnancy";
-import type { DayLog } from "../../shared/types";
-import { fillName, HOW_TO_HELP, moodsOf, partnerFeeling, partnerItems, partnerMove } from "../content/pregnancy";
+import { standardSchedule, type Gestation } from "../../shared/pregnancy";
+import type { DayLog, Pregnancy } from "../../shared/types";
+import { fillName, HOW_TO_HELP, moodsOf, partnerFeeling, partnerItems, partnerMove, type WeekContent } from "../content/pregnancy";
 import { readLocal, usePregnancy, writeLocal } from "../lib/pregnancy";
 import { useStore } from "../lib/store";
+import { useTodayPlan } from "../lib/todayPlan";
 import { TodaysQuestion } from "../components/TodaysQuestion";
 import { Alerts, PregnancyHero } from "./PregnancyToday";
 
@@ -23,7 +24,7 @@ export function PartnerToday() {
       <PregnancyHero g={g} preg={preg} />
       {flags.length > 0 && <Alerts flags={flags} preg={preg} />}
       <HowTheyreDoing name={name} log={byDate.get(today)} yesterday={byDate.get(addDays(today, -1))} />
-      <YourMove key={today} name={name} today={today} totalDays={g.totalDays} />
+      <YourMove key={today} name={name} today={today} g={g} preg={preg} week={week} />
 
       <section className="card stack">
         <div className="row between" style={{ alignItems: "baseline" }}>
@@ -87,8 +88,10 @@ function HowTheyreDoing({ name, log, yesterday }: { name: string; log?: DayLog; 
   );
 }
 
-function YourMove({ name, today, totalDays }: { name: string; today: string; totalDays: number }) {
-  const move = partnerMove(totalDays);
+/** Today's move: written by AI to match how she's doing, or from the trimester's list without AI. */
+function YourMove({ name, today, g, preg, week }: { name: string; today: string; g: Gestation; preg: Pregnancy; week: WeekContent }) {
+  const { plan, loading } = useTodayPlan(today, { g, preg, week });
+  const move = plan?.partner ?? partnerMove(g.totalDays);
   const key = `bloom-partner-move-${today}`;
   const [done, setDone] = useState(() => readLocal(key, false));
   const toggle = () => {
@@ -98,13 +101,13 @@ function YourMove({ name, today, totalDays }: { name: string; today: string; tot
   return (
     <section className="card stack your-move">
       <h3 className="card-h">Your move today</h3>
-      <label className="move">
+      {loading ? <p className="muted row small"><span className="spin" /> Picking today's move…</p> : <label className="move">
         <input type="checkbox" checked={done} onChange={toggle} />
         <span>
           <span className="move-text">{fillName(move.t, name)}</span>
           {move.why && <span className="why small muted"> {fillName(move.why, name)}</span>}
         </span>
-      </label>
+      </label>}
       {done && <p className="bites-done">Done. That counts for a lot. 💛</p>}
     </section>
   );
