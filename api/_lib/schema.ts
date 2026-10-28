@@ -51,6 +51,9 @@ CREATE TABLE IF NOT EXISTS daily_notes (
   created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- Added for pregnancy mode: today's plan (to-dos, the partner's move, questions to ask), next to the line.
+ALTER TABLE daily_notes ADD COLUMN IF NOT EXISTS extra JSONB;
+
 -- Added for pregnancy mode: the daily deep-dive article, written once per day.
 CREATE TABLE IF NOT EXISTS deep_dives (
   date        DATE PRIMARY KEY,

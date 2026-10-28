@@ -33,26 +33,40 @@ export function useDeepDive(g: Gestation, preg: Pregnancy, week: WeekContent) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [date, key]);
 
+  const [attempt, setAttempt] = useState(0);
   useEffect(() => {
     let live = true;
-    api.deepDive(date, key, context)
-      .then((d) => live && setDive(d))
+    setErr("");
+    api.deepDive(date, key, context, attempt > 0)
+      .then((d) => {
+        if (!live) return;
+        // Belt and braces: never show a read that's missing its body.
+        if (!d.sections?.length) setErr("Today's read came out incomplete.");
+        else setDive(d);
+      })
       .catch((e) => live && setErr((e as Error).message));
     return () => {
       live = false;
     };
-  }, [date, key, context]);
-  return { dive, err };
+  }, [date, key, context, attempt]);
+  return { dive, err, retry: () => { setDive(null); setAttempt((n) => n + 1); } };
 }
 
 /** Today's in-depth article: written once a day by AI for this exact gestational day. */
 export function DeepDive({ g, preg, week }: { g: Gestation; preg: Pregnancy; week: WeekContent }) {
   const save = useSavePregnancy();
-  const { dive, err } = useDeepDive(g, preg, week);
+  const { dive, err, retry } = useDeepDive(g, preg, week);
   const [added, setAdded] = useState<string[]>([]);
   const date = localToday();
 
-  if (err) return <p className="small muted">Couldn't write today's deep dive: {err}</p>;
+  if (err) {
+    return (
+      <div className="stack" style={{ gap: 8 }}>
+        <p className="small muted">Couldn't write today's read: {err}</p>
+        <button className="btn small" style={{ alignSelf: "flex-start" }} onClick={retry}>Try again</button>
+      </div>
+    );
+  }
   if (!dive) return <p className="muted row"><span className="spin" /> Writing today's deep dive…</p>;
 
   const ask = (t: string) => {

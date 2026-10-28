@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { addDays, localToday, prettyDate } from "../../shared/dates";
-import { gaLabel, gaLong, type Gestation, type PregFlag } from "../../shared/pregnancy";
+import { useState } from "react";
+import { localToday, prettyDate } from "../../shared/dates";
+import { gaLong, type Gestation, type PregFlag } from "../../shared/pregnancy";
 import type { Pregnancy } from "../../shared/types";
 import { nextMilestone, TRIMESTERS, type WeekContent } from "../content/pregnancy";
 import { BabySize } from "../components/BabySize";
@@ -8,9 +8,9 @@ import { LittleThings } from "../components/LittleThings";
 import { useDeepDive } from "../components/DeepDive";
 import { QuickCheckIn } from "../components/QuickCheckIn";
 import { TodaysQuestion } from "../components/TodaysQuestion";
-import { api } from "../lib/api";
 import { newId, usePregnancy, useSavePregnancy } from "../lib/pregnancy";
 import { useStore } from "../lib/store";
+import { useTodayPlan } from "../lib/todayPlan";
 
 /**
  * Today, in the order a day goes: see the baby, read what today means, check in, do the little
@@ -125,40 +125,10 @@ export function Alerts({ flags, preg }: { flags: PregFlag[]; preg: Pregnancy }) 
   );
 }
 
-/** The AI's personal line for today, cached once per gestational day. */
+/** The AI's personal line for today, written once per gestational day along with today's plan. */
 function PregLine({ g, preg, week }: { g: Gestation; preg: Pregnancy; week: WeekContent }) {
-  const { byDate } = useStore();
-  const [line, setLine] = useState<string | null>(null);
-  const [err, setErr] = useState("");
+  const { line, err } = useTodayPlan(localToday(), { g, preg, week });
   const [more, setMore] = useState(false);
-  const date = localToday();
-  const key = `preg-${gaLabel(g).replace(" ", "")}`;
-  const ctx = useRef<unknown>(null);
-  ctx.current = useMemo(() => {
-    const days = [1, 2, 3].map((n) => addDays(date, -n + 1)).map((d) => ({ date: d, log: byDate.get(d) ?? null }));
-    return {
-      pregnant: true,
-      today: date,
-      gestationalAge: gaLong(g),
-      trimester: g.trimester,
-      dueDate: preg.dueDate,
-      thisWeek: week.headline,
-      babyThisWeek: week.baby.map((b) => b.t),
-      recentLogs: days.map(({ date: d, log }) => ({ date: d, symptoms: log?.symptoms, mood: log?.mood, pregnancy: log?.preg })),
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [date, key]);
-
-  useEffect(() => {
-    let live = true;
-    api.dailyNote(date, key, ctx.current)
-      .then((r) => live && setLine(r.line))
-      .catch((e) => live && setErr((e as Error).message));
-    return () => {
-      live = false;
-    };
-  }, [date, key]);
-
   if (err) return <p className="small muted">Couldn't write today's note: {err}</p>;
   if (!line) return <p className="muted row small"><span className="spin" /> Writing your note…</p>;
   return (

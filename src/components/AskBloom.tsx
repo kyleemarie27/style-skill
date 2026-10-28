@@ -7,6 +7,8 @@ import { newId, usePregnancy, useSavePregnancy } from "../lib/pregnancy";
 import { buildAskContext } from "../lib/askContext";
 import { useStore } from "../lib/store";
 import { useViewer } from "../lib/viewer";
+import { useTodayPlan } from "../lib/todayPlan";
+import { weekDeep } from "../content/pregnancy";
 
 /** A chat message as kept on this device: which suggested saves were tapped. */
 type Msg = ChatMsg & { saved?: number[] };
@@ -68,13 +70,28 @@ function partnerSuggestions(weeks: number): string[] {
   return ["How will I know it's real labor?", "What should I pack for the hospital?", "How do I support during labor?", "What can I do in the first weeks home?"];
 }
 
+/**
+ * Questions to start with in pregnancy mode: today's AI ideas (about what she's logged and this exact
+ * stage) plus one of this week's common questions, so they change every day. Null means use the defaults.
+ */
+function useAskIdeas(p: ReturnType<typeof usePregnancy>, partner: boolean): string[] | null {
+  const { plan } = useTodayPlan(localToday(), p);
+  if (!p) return null;
+  const faq = weekDeep(p.g.weeks).faq;
+  const fromWeek = faq.length ? [faq[p.g.days % faq.length].q] : [];
+  if (partner) return fromWeek.length ? [...partnerSuggestions(p.g.weeks).slice(0, 3), ...fromWeek] : null;
+  if (!plan?.ask.length) return fromWeek.length ? [...fromWeek, ...pregnancySuggestions(p.g.weeks).slice(0, 3)] : null;
+  return [...plan.ask.slice(0, 3), ...fromWeek];
+}
+
 /** The Ask tab: a full-page chat. `first` (from #/ask/<question>) is sent straight away in a new chat. */
 export function AskPage({ first }: { first: string | null }) {
   const { model, dayLogs, lhTests, settings, aiEnabled } = useStore();
   const pregnant = !!activePregnancy(settings);
   const p = usePregnancy();
   const partner = useViewer() === "partner" && !!p;
-  const suggestions = p ? (partner ? partnerSuggestions(p.g.weeks) : pregnancySuggestions(p.g.weeks)) : CYCLE_SUGGESTIONS;
+  const ideas = useAskIdeas(p, partner);
+  const suggestions = p ? (ideas ?? (partner ? partnerSuggestions(p.g.weeks) : pregnancySuggestions(p.g.weeks))) : CYCLE_SUGGESTIONS;
   const [msgs, setMsgs] = useState<Msg[]>(() => (first ? [] : load()));
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);

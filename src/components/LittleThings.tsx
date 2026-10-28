@@ -3,7 +3,9 @@ import { addDays } from "../../shared/dates";
 import type { Gestation } from "../../shared/pregnancy";
 import type { Pregnancy } from "../../shared/types";
 import { dailyTodos, type WeekContent } from "../content/pregnancy";
-import { readLocal, writeLocal } from "../lib/pregnancy";
+import { readLocal, recentSymptoms, writeLocal } from "../lib/pregnancy";
+import { useStore } from "../lib/store";
+import { useTodayPlan } from "../lib/todayPlan";
 
 const dayKey = (date: string) => `bloom-bites-${date}`;
 
@@ -18,9 +20,17 @@ function streak(today: string): number {
   return n;
 }
 
-/** Three small things to do today: one from this week's to-do list and two habits. New every day. */
+/**
+ * Three small things to do today, new every day. Written by AI for her exact day and what she's
+ * logged (never repeating the last ten days); without AI, picked from the week's list, a symptom
+ * she's logged and small habits.
+ */
 export function LittleThings({ g, preg, week, today }: { g: Gestation; preg: Pregnancy; week: WeekContent; today: string }) {
-  const todos = dailyTodos(week, g.days, g.totalDays);
+  const { dayLogs } = useStore();
+  const { plan, loading } = useTodayPlan(today, { g, preg, week });
+  const todos = plan?.todos.length
+    ? plan.todos.map((t) => ({ ...t, scope: "day" as const }))
+    : dailyTodos(week, g.days, g.totalDays, recentSymptoms(dayLogs, today, 3));
   const weekKey = `bloom-todo-${preg.positiveTestDate}-w${week.week}`;
   const [done, setDone] = useState<string[]>(() => readLocal(dayKey(today), []));
   const [weekDone, setWeekDone] = useState<string[]>(() => readLocal(weekKey, []));
@@ -47,7 +57,7 @@ export function LittleThings({ g, preg, week, today }: { g: Gestation; preg: Pre
         <h3 className="card-h">Little things for today</h3>
         <span className={`bite-count${count === todos.length ? " all" : ""}`}>{count}/{todos.length}</span>
       </div>
-      <ul className="checklist">
+      {loading ? <p className="muted row small"><span className="spin" /> Picking today's little things…</p> : <ul className="checklist">
         {todos.map((i) => (
           <li key={i.t}>
             <label>
@@ -60,7 +70,7 @@ export function LittleThings({ g, preg, week, today }: { g: Gestation; preg: Pre
             </label>
           </li>
         ))}
-      </ul>
+      </ul>}
       {count === todos.length ? (
         <p className="bites-done">All done for today. That's real care for you and the baby. 🎉</p>
       ) : days >= 2 ? (
