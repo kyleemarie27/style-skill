@@ -92,8 +92,8 @@ export const api = {
     call<{ photo: BumpPhoto }>("memories", { method: "POST", json: { preg, week, date, photo } }),
   deleteBump: (preg: string, week: number) => call(`memories?preg=${preg}&week=${week}`, { method: "DELETE" }),
   /** Read an ultrasound report (pasted text, a screenshot or a PDF) into a scan. Nothing is saved. */
-  readScan: (body: { fileName: string; mediaType: string; data?: string; text?: string; date?: string }) =>
-    call<{ scan: Scan | null; warnings: string[] }>("import-extract", { method: "POST", json: { ...body, source: "scan" } }),
+  readScan: (body: { fileName: string; mediaType: string; data?: string; text?: string; date?: string }, signal?: AbortSignal) =>
+    call<{ scan: Scan | null; warnings: string[] }>("import-extract", { method: "POST", json: { ...body, source: "scan" }, signal }),
   extract: (body: { fileName: string; mediaType: string; data?: string; text?: string; source: string }) =>
     call<ImportBundle>("import-extract", { method: "POST", json: body }),
 };
