@@ -78,3 +78,34 @@ export async function askJson<T>(opts: {
     throw err;
   }
 }
+
+/**
+ * One plain-text call to Claude (no output schema). Used as a fallback where structured output
+ * isn't essential, e.g. transcribing a scan report that the app then parses itself.
+ */
+export async function askText(opts: { system: string; content: BetaContentBlockParam[]; maxTokens?: number }): Promise<string> {
+  requireClaude();
+  const client = new Anthropic({ apiKey: apiKey() });
+  try {
+    const stream = client.beta.messages.stream({
+      model: MODEL,
+      max_tokens: opts.maxTokens ?? 4000,
+      betas: ["server-side-fallback-2026-07-01"],
+      fallbacks: "default",
+      system: opts.system,
+      output_config: { effort: "low" },
+      messages: [{ role: "user", content: opts.content }],
+    });
+    const msg = await stream.finalMessage();
+    if (msg.stop_reason === "refusal") throw new HttpError(422, "The AI couldn't read this one.");
+    return msg.content.flatMap((b) => (b.type === "text" ? [b.text] : [])).join("");
+  } catch (err) {
+    if (err instanceof HttpError) throw err;
+    if (err instanceof Anthropic.APIError) console.error(`Anthropic API error ${err.status ?? "network"}: ${err.message}`);
+    if (err instanceof Anthropic.AuthenticationError) throw new HttpError(503, "The Anthropic API key was rejected. Check ANTHROPIC_API_KEY.");
+    if (err instanceof Anthropic.RateLimitError) throw new HttpError(429, "The AI is busy right now. Try again in a minute.");
+    if (err instanceof Anthropic.APIError) throw new HttpError(502, `AI request failed (${err.status ?? "network"}): ${err.message}`);
+    throw err;
+  }
+}
+

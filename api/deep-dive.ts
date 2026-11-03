@@ -48,7 +48,7 @@ Format:
 - "tomorrow": one sentence teasing tomorrow's topic (given in the context), to give her something to look forward to.
 - Don't repeat the app's weekly summary; go deeper than it.`;
 
-const SCHEMA = {
+export const SCHEMA = {
   type: "object",
   additionalProperties: false,
   required: ["title", "minutes", "opener", "sections", "takeaways", "signoff", "tomorrow"],

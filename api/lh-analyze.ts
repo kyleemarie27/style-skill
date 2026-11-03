@@ -26,7 +26,7 @@ How to read:
 - If no strip is visible, there's no control line (an invalid test), or the photo is too blurry to judge, set readable=false and ratio=0, and explain in the note.
 - Keep the note to one friendly sentence, e.g. "Test line is a little lighter than control. Rising, so keep testing."`;
 
-const SCHEMA = {
+export const SCHEMA = {
   type: "object",
   additionalProperties: false,
   required: ["readable", "ratio", "confidence", "note"],

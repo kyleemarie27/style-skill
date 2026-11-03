@@ -1,10 +1,10 @@
 import type { VercelRequest } from "@vercel/node";
 import type { BetaContentBlockParam } from "@anthropic-ai/sdk/resources/beta/messages/messages";
 import { levelForRatio, normalizeRatio } from "../shared/lh.js";
-import { cleanScan } from "../shared/scans.js";
-import type { ImportBundle } from "../shared/types.js";
+import { cleanScan, parseScanText } from "../shared/scans.js";
+import type { ImportBundle, Scan } from "../shared/types.js";
 import { method, route } from "./_lib/auth.js";
-import { askJson, fakeAi } from "./_lib/claude.js";
+import { askJson, askText, fakeAi } from "./_lib/claude.js";
 import { HttpError } from "./_lib/db.js";
 
 const SYSTEM = `You convert exports, reports and screenshots from period and fertility apps (Clue, Premom, Flo, Natural Cycles, Ovia, spreadsheets) into structured daily records.
@@ -17,7 +17,7 @@ Rules:
 - cervical_mucus is one of dry, sticky, creamy, watery, egg_white.
 - Only include what's actually in the source. Don't invent days. Put anything you weren't sure about in warnings.`;
 
-const SCHEMA = {
+export const SCHEMA = {
   type: "object",
   additionalProperties: false,
   required: ["dayLogs", "lhTests", "warnings"],
@@ -66,26 +66,36 @@ Rules:
 - Lengths in millimetres (convert cm × 10). Heart rate in bpm. Weight in grams.
 - msd is the mean gestational sac diameter. If only three sac dimensions are given (e.g. "10.0 mm x 12.0 mm x 8.0 mm"), put them in sacDims and leave msd empty. If one "GS" size is given, that's msd.
 - crl is crown-rump length. fhr is fetal heart rate / cardiac activity rate.
-- intrauterine: true if the report says the location is intrauterine. yolkSacSeen / embryoSeen / heartbeatSeen: true if visualized, false if the report says not visualized, omitted if not mentioned.
+- intrauterine: "yes" if the report says the location is intrauterine.
 - reportedDays: the gestational age the report gives for the scan, in total days (5w 5d = 40). reportedDue: an EDD printed on the report.
 - followUp: the plan in a few words, e.g. "Recheck in 12 days for an embryo".
-- date: the exam date in YYYY-MM-DD if shown, otherwise null.
+- date: the exam date in YYYY-MM-DD if shown, otherwise "".
 - Ignore the uterus, ovary and cervix sizes; mention anything unusual about them in notes, briefly and in the report's own words.
-- Use null for anything the report doesn't give, and [] for sacDims when there are no three sac dimensions.
+- Fill every field. For anything the report doesn't give, use 0 for numbers, "" for text, "unknown" for the yes/no findings, and [] for sacDims when there are no three sac dimensions.
+- The yes/no findings are "yes" if the report says visualized/seen/present, "no" if it says not visualized/absent.
 - Put anything you weren't sure about in warnings.`;
 
-// Every field is required and nullable: a schema with many optional fields is very slow for the
-// API to compile (reads were timing out), while required-or-null compiles quickly.
-const n = { type: ["number", "null"] };
-const b = { type: ["boolean", "null"] };
-const t = { type: ["string", "null"] };
-const SCAN_FIELDS = {
+// Every field is required and none is a union type. The API rejects schemas with more than 16
+// nullable/union fields, and many optional fields compile too slowly, so "not given" is spelled
+// out instead: 0 for numbers, "" for text, "unknown" for findings. fromAi() turns those into nulls.
+const n = { type: "number" };
+const t = { type: "string" };
+const seenEnum = { type: "string", enum: ["yes", "no", "unknown"] };
+export const SCAN_FIELDS = {
   date: t, msd: n, sacDims: { type: "array", items: { type: "number" } },
   yolkSac: n, crl: n, fhr: n, nt: n, bpd: n, hc: n, ac: n, fl: n, efw: n, efwPercentile: n,
-  intrauterine: b, yolkSacSeen: b, embryoSeen: b, heartbeatSeen: b,
+  intrauterine: seenEnum, yolkSacSeen: seenEnum, embryoSeen: seenEnum, heartbeatSeen: seenEnum,
   babies: n, reportedDays: n, reportedDue: t, followUp: t, notes: t,
 };
-const SCAN_SCHEMA = {
+
+/** The AI's "nothing here" values (0, "", "unknown") back to nulls, and yes/no to booleans. */
+export function fromAi(scan: Record<string, unknown>): Record<string, unknown> {
+  return Object.fromEntries(Object.entries(scan).map(([k, v]) => [
+    k,
+    v === "yes" ? true : v === "no" ? false : v === "unknown" || v === "" || v === 0 ? null : v,
+  ]));
+}
+export const SCAN_SCHEMA = {
   type: "object",
   additionalProperties: false,
   required: ["scan", "warnings"],
@@ -94,6 +104,32 @@ const SCAN_SCHEMA = {
     warnings: { type: "array", items: { type: "string" } },
   },
 };
+
+const TRANSCRIBE_SYSTEM = `Transcribe the text of an ultrasound report exactly as written, line by line, keeping labels, numbers and units. Output only the report text: no commentary, no formatting.`;
+
+/**
+ * Read a report two independent ways. First structured extraction; if that fails for any reason
+ * (an API error, a timeout, nothing usable), a plain transcription parsed by the app's own reader.
+ */
+export async function readScanReport(
+  date: string,
+  structured: () => Promise<{ scan: Record<string, unknown>; warnings: string[] }>,
+  transcribe: () => Promise<string>,
+): Promise<{ scan: Scan | null; warnings: string[] }> {
+  try {
+    const out = await structured();
+    const fields = fromAi(out.scan);
+    const scan = cleanScan({ ...fields, date: (fields.date as string) || date });
+    if (scan) return { scan, warnings: out.warnings };
+    console.error("Structured scan read found nothing usable; transcribing instead.");
+  } catch (e) {
+    console.error(`Structured scan read failed (${(e as Error).message}); transcribing instead.`);
+  }
+  const text = await transcribe();
+  const { raw, found } = parseScanText(text, date);
+  const scan = found >= 2 ? cleanScan(raw) : null;
+  return { scan, warnings: scan ? ["Double-check every number against your report."] : [] };
+}
 
 /** Vercel stops functions at 60 s; give up a little earlier with a message the app can show. */
 function within<T>(ms: number, p: Promise<T>): Promise<T> {
@@ -104,7 +140,12 @@ function within<T>(ms: number, p: Promise<T>): Promise<T> {
 }
 
 const FAKE_SCAN = {
-  scan: { sacDims: [10, 12, 8], yolkSacSeen: true, embryoSeen: false, intrauterine: true, reportedDays: 40, followUp: "Recheck in 12 days for an embryo" },
+  // Shaped like a real answer: every field filled, with 0 / "" / "unknown" for what isn't there.
+  scan: {
+    date: "", msd: 0, sacDims: [10, 12, 8], yolkSac: 0, crl: 0, fhr: 0, nt: 0, bpd: 0, hc: 0, ac: 0, fl: 0, efw: 0, efwPercentile: 0,
+    intrauterine: "yes", yolkSacSeen: "yes", embryoSeen: "no", heartbeatSeen: "unknown",
+    babies: 0, reportedDays: 40, reportedDue: "", followUp: "Recheck in 12 days for an embryo", notes: "",
+  },
   warnings: ["(demo mode)"],
 };
 
@@ -130,12 +171,17 @@ export default route(async (req: VercelRequest) => {
   if (source === "scan") {
     // An ultrasound report: return one scan for the form to show before anything is saved.
     const date = typeof req.body?.date === "string" ? req.body.date : "";
-    content.push({ type: "text", text: `This is an ultrasound report.${date ? ` If no exam date is shown, the scan was on ${date}.` : ""} Copy the results.` });
-    const out: { scan: Record<string, unknown>; warnings: string[] } = fakeAi()
-      ? FAKE_SCAN
-      : await within(50_000, askJson<{ scan: Record<string, unknown>; warnings: string[] }>({ system: SCAN_SYSTEM, schema: SCAN_SCHEMA, content, effort: "low", maxTokens: 8000 }));
-    const raw = { ...out.scan, date: (out.scan.date as string) || date };
-    return { scan: cleanScan(raw), warnings: out.warnings };
+    const ask = (text: string) => [...content, { type: "text" as const, text }];
+    return readScanReport(
+      date,
+      () => fakeAi()
+        ? Promise.resolve(FAKE_SCAN)
+        : within(28_000, askJson<{ scan: Record<string, unknown>; warnings: string[] }>({
+            system: SCAN_SYSTEM, schema: SCAN_SCHEMA, effort: "low", maxTokens: 8000,
+            content: ask(`This is an ultrasound report.${date ? ` If no exam date is shown, the scan was on ${date}.` : ""} Copy the results.`),
+          })),
+      () => within(25_000, askText({ system: TRANSCRIBE_SYSTEM, content: ask("Transcribe this ultrasound report."), maxTokens: 3000 })),
+    );
   }
   content.push({ type: "text", text: `This came from ${source || "a fertility app"}. Extract every dated record.` });
 

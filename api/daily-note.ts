@@ -23,7 +23,7 @@ Write 2–3 warm, specific sentences, like a knowledgeable friend:
 - If a scan was in the last few days, it's the biggest news: mention it warmly and plainly.
 - Plain text only, no emoji, no greeting like "Good morning".`;
 
-const SCHEMA = {
+export const SCHEMA = {
   type: "object",
   additionalProperties: false,
   required: ["line"],
@@ -50,7 +50,7 @@ const PLAN_ITEM = {
   properties: { t: { type: "string" }, why: { type: "string" } },
 };
 
-const PREGNANT_SCHEMA = {
+export const PREGNANT_SCHEMA = {
   type: "object",
   additionalProperties: false,
   required: ["line", "todos", "partner", "ask"],

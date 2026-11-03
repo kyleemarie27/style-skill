@@ -69,7 +69,7 @@ Remember durable, personal things she says about herself: her history (first pre
 
 Don't remember: anything only the assistant said, general facts, one-off daily symptoms (the app logs those), or anything already in memory. Write each fact as one short third-person line ("First pregnancy", "Vegetarian; eats eggs and dairy", "Partner is Sam", "Nervous about the glucose test"). If she corrects or contradicts a remembered fact, put its id in "forget" and add the corrected version. Usually there is nothing new: return empty lists.`;
 
-const LEARN_SCHEMA = {
+export const LEARN_SCHEMA = {
   type: "object",
   additionalProperties: false,
   required: ["add", "forget"],
