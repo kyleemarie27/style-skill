@@ -23,7 +23,7 @@ Write 2–3 warm, specific sentences, like a knowledgeable friend:
 - If a scan was in the last few days, it's the biggest news: mention it warmly and plainly.
 - Plain text only, no emoji, no greeting like "Good morning".`;
 
-const SCHEMA = {
+export const SCHEMA = {
   type: "object",
   additionalProperties: false,
   required: ["line"],
