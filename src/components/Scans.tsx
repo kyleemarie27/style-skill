@@ -152,6 +152,8 @@ export function ScanEditor({ preg, initial, onDone }: { preg: Pregnancy; initial
   const abort = useRef<AbortController | null>(null);
   const [msg, setMsg] = useState("");
   const [allFields, setAllFields] = useState(false);
+  const [showFields, setShowFields] = useState(!!initial);
+  const [paste, setPaste] = useState(false);
   const file = useRef<HTMLInputElement>(null);
   const later = draft.date && gestation(draft.date, preg).weeks >= 14;
   const set = (k: string, v: string) => setDraft((d) => ({ ...d, [k]: v }));
@@ -163,7 +165,8 @@ export function ScanEditor({ preg, initial, onDone }: { preg: Pregnancy; initial
 
   const fill = (scan: Scan, note: string) => {
     setDraft(toDraft({ ...scan, date: scan.date || draft.date }));
-    setMsg(`${note} Check the numbers below, then save.`);
+    setShowFields(true);
+    setMsg(`${note} Check the date and numbers below, then save.`);
   };
 
   const read = async (f?: File) => {
@@ -199,7 +202,7 @@ export function ScanEditor({ preg, initial, onDone }: { preg: Pregnancy; initial
       fill(r.scan, `Read your report.${warn.length ? ` Note: ${warn.join(" ")}` : ""}`);
     } catch (e) {
       setMsg((e as Error).name === "AbortError"
-        ? "Stopped. Tip: on iPhone, press and hold the text in your screenshot, tap Select All, then Copy, and paste it above. That reads instantly."
+        ? "That took too long, so it stopped. Try the photo again, or tap “Paste the text instead”: on iPhone, press and hold the text in your screenshot, tap Select All, then Copy."
         : (e as Error).message);
     } finally {
       window.clearInterval(tick);
@@ -219,26 +222,34 @@ export function ScanEditor({ preg, initial, onDone }: { preg: Pregnancy; initial
 
   return (
     <div className="stack add-box scan-editor">
-      <label><div className="field-label">Scan date</div><input type="date" value={draft.date} max={localToday()} onChange={(e) => set("date", e.target.value)} /></label>
-
-      <div className="stack" style={{ gap: 6 }}>
-        <div className="field-label" style={{ marginBottom: 0 }}>Read it from your report</div>
-        <textarea rows={3} placeholder="Paste the report text from your patient portal…" value={report} onChange={(e) => setReport(e.target.value)} />
-        <p className="tiny muted">Fastest: paste the text. On iPhone you can copy text right out of a screenshot: press and hold it, then Select All and Copy.</p>
-        <div className="row wrap" style={{ gap: 6 }}>
-          <button className="btn small" onClick={() => read()} disabled={reading || !report.trim()}>{reading ? <span className="spin" /> : "Read pasted text"}</button>
-          <button className="btn small" onClick={() => file.current?.click()} disabled={reading}>📷 Photo or PDF of the report</button>
-          <input ref={file} type="file" accept="image/*,application/pdf" hidden onChange={(e) => read(e.target.files?.[0])} />
-        </div>
-      </div>
+      <button className="btn primary block upload-report" onClick={() => file.current?.click()} disabled={reading}>
+        📷 Upload a photo of your report
+      </button>
+      <input ref={file} type="file" accept="image/*,application/pdf" hidden onChange={(e) => read(e.target.files?.[0])} />
+      <p className="tiny muted" style={{ marginTop: -4 }}>A screenshot from your patient portal, a photo of the printout, or a PDF. Bloom fills everything in for you to check.</p>
       {reading && (
         <div className="row between small reading-row">
-          <span className="row" style={{ gap: 8 }}><span className="spin" /> Reading your report… {elapsed}s{elapsed >= 15 ? " (screenshots can take up to half a minute)" : ""}</span>
+          <span className="row" style={{ gap: 8 }}><span className="spin" /> Reading your report… {elapsed}s</span>
           <button type="button" className="btn ghost small" onClick={() => abort.current?.abort()}>Cancel</button>
         </div>
       )}
       {msg && <p className="small">{msg}</p>}
 
+      {!showFields && (
+        <div className="row wrap" style={{ gap: 4 }}>
+          <button type="button" className="btn ghost small" onClick={() => setPaste(!paste)}>{paste ? "Hide" : "Paste the text instead"}</button>
+          <button type="button" className="btn ghost small" onClick={() => setShowFields(true)}>Type the numbers</button>
+        </div>
+      )}
+      {paste && (
+        <div className="stack" style={{ gap: 6 }}>
+          <textarea rows={3} placeholder="Paste the report text from your patient portal…" value={report} onChange={(e) => setReport(e.target.value)} />
+          <button className="btn small" style={{ alignSelf: "flex-start" }} onClick={() => read()} disabled={reading || !report.trim()}>Read pasted text</button>
+        </div>
+      )}
+
+      {showFields && <>
+      <label><div className="field-label">Scan date</div><input type="date" value={draft.date} max={localToday()} onChange={(e) => set("date", e.target.value)} /></label>
       <div className="field-label" style={{ marginBottom: 0 }}>What they saw</div>
       <div className="stack" style={{ gap: 6 }}>
         {SEEN.map(([k, label]) => (
@@ -271,14 +282,15 @@ export function ScanEditor({ preg, initial, onDone }: { preg: Pregnancy; initial
       {!allFields && <button type="button" className="btn ghost small" style={{ alignSelf: "flex-start" }} onClick={() => setAllFields(true)}>Show all fields</button>}
       <label><div className="field-label">Next step they gave you</div><input type="text" placeholder="e.g. Recheck in 12 days" value={draft.followUp ?? ""} onChange={(e) => set("followUp", e.target.value)} /></label>
       <label><div className="field-label">Notes</div><input type="text" value={draft.notes ?? ""} onChange={(e) => set("notes", e.target.value)} /></label>
+      </>}
 
-      {parsed && (
+      {showFields && parsed && (
         <div className="scan-preview stack" style={{ gap: 6 }}>
           <div className="tip-label">What this means</div>
           <ScanResultPreview scan={parsed} preg={preg} />
         </div>
       )}
-      <button className="btn primary" onClick={submit} disabled={!parsed}>Save scan</button>
+      {showFields && <button className="btn primary" onClick={submit} disabled={!parsed}>Save scan</button>}
     </div>
   );
 }
