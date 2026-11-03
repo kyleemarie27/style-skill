@@ -41,6 +41,7 @@ function cleanPregnancy(p: any): Pregnancy | null {
     scans: (Array.isArray(p.scans) ? p.scans : []).slice(0, 60).map((x: unknown) => cleanScan(x)).filter((x: Scan | null): x is Scan => !!x)
       .sort((a: Scan, b: Scan) => a.date.localeCompare(b.date)),
     datedBy: source === "scan" ? text(p.datedBy, 40) : null,
+    timeline: p.timeline === "body" ? "body" : "dates",
   };
 }
 

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { localToday, prettyDate } from "../../shared/dates";
-import { gaLong, type Gestation, type PregFlag } from "../../shared/pregnancy";
+import { gaLabel, gaLong, type Gestation, type PregFlag } from "../../shared/pregnancy";
+import { offsetPhrase } from "../../shared/scans";
 import type { Pregnancy } from "../../shared/types";
 import { nextMilestone, TRIMESTERS, type WeekContent } from "../content/pregnancy";
 import { BabySize } from "../components/BabySize";
@@ -9,7 +10,7 @@ import { LittleThings } from "../components/LittleThings";
 import { useDeepDive } from "../components/DeepDive";
 import { QuickCheckIn } from "../components/QuickCheckIn";
 import { TodaysQuestion } from "../components/TodaysQuestion";
-import { newId, usePregnancy, useSavePregnancy } from "../lib/pregnancy";
+import { newId, usePregnancy, useSavePregnancy, type Timeline } from "../lib/pregnancy";
 import { useStore } from "../lib/store";
 import { useTodayPlan } from "../lib/todayPlan";
 
@@ -20,24 +21,24 @@ import { useTodayPlan } from "../lib/todayPlan";
 export function PregnancyToday() {
   const p = usePregnancy()!;
   const { aiEnabled } = useStore();
-  const { preg, g, week, flags, today } = p;
+  const { preg, g, week, flags, today, timeline } = p;
 
   return (
     <div className="stack preg today-stack">
-      <PregnancyHero g={g} preg={preg} />
+      <PregnancyHero g={g} preg={preg} timeline={timeline} canSwitch />
       {flags.length > 0 && <Alerts flags={flags} preg={preg} />}
       <TodayCard g={g} preg={preg} week={week} ai={aiEnabled} />
       <LatestScanCard preg={preg} today={today} />
       <QuickCheckIn today={today} preg={preg} />
       <LittleThings key={today} g={g} preg={preg} week={week} today={today} />
-      <TodaysQuestion g={g} preg={preg} today={today} />
+      <TodaysQuestion g={timeline.dates} preg={preg} today={today} />
       <p className="tiny muted center">Bloom gives general information, not medical advice. Your doctor or midwife knows your situation best.</p>
     </div>
   );
 }
 
 /** The hero on both partners' Today: baby next to a fruit, how far along, and the next thing to look forward to. */
-export function PregnancyHero({ g, preg }: { g: Gestation; preg: Pregnancy }) {
+export function PregnancyHero({ g, preg, timeline, canSwitch = false }: { g: Gestation; preg: Pregnancy; timeline: Timeline; canSwitch?: boolean }) {
   return (
     <BabySize
       g={g}
@@ -47,15 +48,43 @@ export function PregnancyHero({ g, preg }: { g: Gestation; preg: Pregnancy }) {
         <div className="stack" style={{ gap: 2 }}>
           <div className="muted small">{prettyDate(localToday(), true)}</div>
           <h1>{gaLong(g)}</h1>
+          <TimelineSwitch timeline={timeline} canSwitch={canSwitch} />
         </div>
       }
-      footer={<Progress g={g} preg={preg} />}
+      footer={<Progress g={g} preg={preg} daysToGo={timeline.dates.daysToGo} />}
     />
   );
 }
 
+/**
+ * Two timelines, side by side: the medical one (always shown) and where your body measured on
+ * your scans. The toggle picks which one Today's day-by-day follows; it's saved for both devices.
+ */
+function TimelineSwitch({ timeline, canSwitch }: { timeline: Timeline; canSwitch: boolean }) {
+  const save = useSavePregnancy();
+  const { body, dates, view } = timeline;
+  if (!body) return null;
+  const scan = `your ${prettyDate(body.scan.date)} scan`;
+  const line = body.offset === 0
+    ? `${scan[0].toUpperCase()}${scan.slice(1)} matches your dates, so both timelines are the same.`
+    : view === "body"
+      ? <>By your dates: <b>{gaLabel(dates)}</b>, what your doctor goes by. Day by day follows {scan}, {offsetPhrase(body.offset)}.</>
+      : <>By your body: <b>{gaLabel(body.g)}</b>. {scan[0].toUpperCase()}{scan.slice(1)} measured {offsetPhrase(body.offset)}.</>;
+  return (
+    <div className="stack timeline-switch" style={{ gap: 6 }}>
+      {canSwitch && body.offset !== 0 && (
+        <div className="tabs timeline-tabs" role="tablist" aria-label="Which timeline to follow">
+          <button role="tab" aria-selected={view === "dates"} onClick={() => save({ timeline: "dates" })}>By my dates</button>
+          <button role="tab" aria-selected={view === "body"} onClick={() => save({ timeline: "body" })}>By my body</button>
+        </div>
+      )}
+      <p className="tiny muted timeline-line">{line}</p>
+    </div>
+  );
+}
+
 /** A thin trimester progress bar with the due date, days to go and the next milestone. */
-function Progress({ g, preg }: { g: Gestation; preg: Pregnancy }) {
+function Progress({ g, preg, daysToGo }: { g: Gestation; preg: Pregnancy; daysToGo: number }) {
   const tri = TRIMESTERS[g.trimester];
   const next = nextMilestone(g.totalDays);
   return (
@@ -67,7 +96,7 @@ function Progress({ g, preg }: { g: Gestation; preg: Pregnancy }) {
       </div>
       <div className="row between small muted">
         <span>{tri.name}</span>
-        <span>Due {prettyDate(preg.dueDate)} · {g.daysToGo} days to go</span>
+        <span>Due {prettyDate(preg.dueDate)} · {daysToGo} days to go</span>
       </div>
       <DatingNote preg={preg} />
       {next && (

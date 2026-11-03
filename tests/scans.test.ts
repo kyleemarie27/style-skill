@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { cleanScan, daysFromCrl, readDating, scanChecks } from "../shared/scans";
+import { bodyTimeline, cleanScan, daysFromCrl, offsetPhrase, personalGestation, readDating, scanChecks, timelineForAi } from "../shared/scans";
+import { gestation } from "../shared/pregnancy";
 import type { Pregnancy, Scan } from "../shared/types";
 
 // Period-based dates: LMP Sep 14, due Jun 21.
@@ -118,5 +119,48 @@ describe("text copied from a screenshot on one line", () => {
     const { raw, found } = parseScanText(flat, "2026-10-30");
     expect(found).toBeGreaterThanOrEqual(5);
     expect(cleanScan(raw)).toMatchObject({ msd: 10, yolkSacSeen: true, embryoSeen: false, intrauterine: true, reportedDays: 40, followUp: "Recheck in 12 days" });
+  });
+});
+
+describe("the body timeline", () => {
+  const sac = cleanScan({ id: "a", date: "2026-10-30", sacDims: [10, 12, 8], yolkSacSeen: true, embryoSeen: false })!;
+
+  it("is empty without a scan that gives an age", () => {
+    expect(bodyTimeline(preg())).toBeNull();
+    expect(bodyTimeline(preg({ scans: [{ id: "x", date: "2026-10-30", yolkSacSeen: true }] }))).toBeNull();
+  });
+
+  it("follows the sac when that's all there is, without touching the due date", () => {
+    const p = preg({ scans: [sac] });
+    const b = bodyTimeline(p)!;
+    expect(b.offset).toBe(-6);
+    expect(b.dueDate).toBe("2027-06-27");
+    expect(p.dueDate).toBe("2027-06-21");
+    // Nov 3: 7w1d by period dates, 6w2d by the body.
+    expect(gestation("2026-11-03", p).totalDays).toBe(50);
+    expect(personalGestation("2026-11-03", p).totalDays).toBe(44);
+  });
+
+  it("updates when a newer scan is added, and baby's length beats the sac", () => {
+    const crl = cleanScan({ id: "b", date: "2026-11-11", crl: 4 })!; // about 6w0d by Robinson
+    const b = bodyTimeline(preg({ scans: [sac, crl] }))!;
+    expect(b.scan.id).toBe("b");
+    expect(b.method).toBe("crl");
+    expect(b.offset).toBe(daysFromCrl(4) - 58);
+    // A later sac-only scan doesn't override a length measurement.
+    const sac2 = cleanScan({ id: "c", date: "2026-11-20", msd: 30 })!;
+    expect(bodyTimeline(preg({ scans: [sac, crl, sac2] }))!.scan.id).toBe("b");
+  });
+
+  it("ignores scans from 14 weeks on (those are about growth)", () => {
+    const late = cleanScan({ id: "d", date: "2027-01-10", reportedDays: 120 })!;
+    expect(bodyTimeline(preg({ scans: [late] }))).toBeNull();
+  });
+
+  it("tells the AI both ages when they differ", () => {
+    const t = timelineForAi("2026-11-03", preg({ scans: [sac] }))!;
+    expect(t.gestationalAgeByDates).toBe("7w 1d");
+    expect(t.gestationalAgeByBody).toBe("6w 2d");
+    expect(offsetPhrase(-6)).toBe("6 days behind your dates");
   });
 });

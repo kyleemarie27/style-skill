@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import { addDays } from "../../shared/dates";
 import { gaLabel, gaLong, standardSchedule, type Gestation } from "../../shared/pregnancy";
-import { scansForAi } from "../../shared/scans";
+import { personalGestation, scansForAi, timelineForAi } from "../../shared/scans";
 import type { DayLog, Pregnancy } from "../../shared/types";
-import type { WeekContent } from "../content/pregnancy";
+import { weekContent, type WeekContent } from "../content/pregnancy";
 import { api, type DayPlan } from "./api";
 import { useStore } from "./store";
 
@@ -22,6 +22,7 @@ function context(date: string, g: Gestation, preg: Pregnancy, week: WeekContent,
     dueDate: preg.dueDate,
     dueDateFrom: preg.dueDateSource,
     scans: scansForAi(preg),
+    timelines: timelineForAi(date, preg),
     names: { pregnant: preg.momName ?? null, partner: preg.partnerName ?? null },
     thisWeek: week.headline,
     todaysLine: week.days[Math.max(0, Math.min(6, g.days))],
@@ -39,17 +40,21 @@ function context(date: string, g: Gestation, preg: Pregnancy, week: WeekContent,
 /**
  * Today's personal line and plan for a pregnancy (`p` is null outside pregnancy mode).
  * `plan` stays null when AI is off or the plan couldn't be written.
+ * It's always written for the body timeline when a scan gives one (whichever timeline Today shows),
+ * so flipping the toggle doesn't rewrite it; the context tells the AI both ages.
  */
 export function useTodayPlan(date: string, p: { g: Gestation; preg: Pregnancy; week: WeekContent } | null) {
   const { byDate, aiEnabled: ai } = useStore();
   const aiEnabled = ai && !!p;
   const [res, setRes] = useState<Result | null>(null);
   const [err, setErr] = useState("");
-  const key = p ? `preg-${gaLabel(p.g).replace(" ", "")}` : "";
+  const g = p ? personalGestation(date, p.preg) : null;
+  const key = g ? `preg-${gaLabel(g).replace(" ", "")}` : "";
 
   useEffect(() => {
-    if (!p || !aiEnabled) return;
-    const { g, preg, week } = p;
+    if (!p || !g || !aiEnabled) return;
+    const { preg } = p;
+    const week = weekContent(g.weeks);
     let live = true;
     const id = `${date}|${key}`;
     if (!pending.has(id)) {

@@ -326,3 +326,66 @@ export function parseScanText(text: string, date: string): { raw: Record<string,
 
   return { raw, found: Object.keys(raw).length - 1 };
 }
+
+// ---- the body timeline: where development actually is, from the scans ----
+
+export interface BodyTimeline {
+  /** Days the body is ahead (+) or behind (−) the medical dates. */
+  offset: number;
+  /** The due date this timeline implies (for counting days only; the medical due date doesn't change). */
+  dueDate: string;
+  /** The scan it's based on, and how that scan measured age. */
+  scan: Scan;
+  method: AgeMethod;
+}
+
+const METHOD_RANK: Record<AgeMethod, number> = { crl: 3, report: 2, msd: 1 };
+
+/**
+ * A personal timeline for day-by-day content, separate from the medical dates. It follows the
+ * most reliable first-trimester scan (baby's length beats the report's estimate beats the sac;
+ * among equals, the newest), so every scan you add can move it. Scans from 14 weeks on are about
+ * growth rather than age and are left out. Returns null when no scan gives an age.
+ *
+ * This never changes the due date: that still follows the ACOG rules in readDating.
+ */
+export function bodyTimeline(preg: Pregnancy): BodyTimeline | null {
+  let best: { scan: Scan; method: AgeMethod; offset: number } | null = null;
+  for (const s of preg.scans ?? []) {
+    const age = scanAge(s);
+    if (!age) continue;
+    const expected = gestation(s.date, preg).totalDays;
+    if (expected >= 14 * 7) continue;
+    const better = !best || METHOD_RANK[age.method] > METHOD_RANK[best.method]
+      || (METHOD_RANK[age.method] === METHOD_RANK[best.method] && s.date >= best.scan.date);
+    if (better) best = { scan: s, method: age.method, offset: age.days - expected };
+  }
+  if (!best) return null;
+  return { ...best, dueDate: addDays(preg.dueDate, -best.offset) };
+}
+
+/** The gestational age to write personal content for: the body timeline when there is one. */
+export function personalGestation(date: string, preg: Pregnancy) {
+  const body = bodyTimeline(preg);
+  return gestation(date, body ? { dueDate: body.dueDate } : preg);
+}
+
+/** "6 days behind" / "2 days ahead of" / "in step with", for the timeline note. */
+export function offsetPhrase(offset: number) {
+  const n = Math.abs(offset);
+  if (n === 0) return "in step with your dates";
+  return `${n} day${n === 1 ? "" : "s"} ${offset < 0 ? "behind" : "ahead of"} your dates`;
+}
+
+/** What the AI needs to know about the two timelines. */
+export function timelineForAi(date: string, preg: Pregnancy) {
+  const body = bodyTimeline(preg);
+  if (!body || body.offset === 0) return null;
+  const g = gestation(date, { dueDate: body.dueDate });
+  return {
+    gestationalAgeByDates: fmtDays(gestation(date, preg).totalDays),
+    gestationalAgeByBody: fmtDays(g.totalDays),
+    basedOn: `${body.scan.date} scan (${body.method === "crl" ? "baby's length" : body.method === "msd" ? "sac size" : "the report's estimate"}), ${offsetPhrase(body.offset)}`,
+    note: "Day-by-day personal content follows gestationalAgeByBody (where development measured). The due date, appointments and screening windows still follow gestationalAgeByDates. Measuring a few days off period dates is common (often later ovulation), not a problem.",
+  };
+}
