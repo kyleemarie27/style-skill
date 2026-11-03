@@ -110,3 +110,13 @@ recheck for the presence of an embryo.`;
     expect(cleanScan(raw)).toMatchObject({ crl: 18, heartbeatSeen: true, fhr: 165, reportedDays: 60, reportedDue: "2027-06-25" });
   });
 });
+
+describe("text copied from a screenshot on one line", () => {
+  it("still finds the sac, not the uterus", async () => {
+    const { parseScanText } = await import("../shared/scans");
+    const flat = "ASSESSMENT Gestational sac: visualized and amniotic fluid volume appears within normal limits. Location: intrauterine. Size 10.0 mm x 12.0 mm x 8.0 mm Yolk sac: visualized Embryo: not visualized GS 10.0 mm 5w 5d 7% Rempen MATERNAL STRUCTURES Uterus Size 67 mm x 40 mm x 39 mm Appearance: anteverted IMPRESSION Intrauterine pregnancy with yolk sac/other echoes visualized. Patient is scheduled to return in 12 days (or sooner if clinically indicated) to recheck for the presence of an embryo.";
+    const { raw, found } = parseScanText(flat, "2026-10-30");
+    expect(found).toBeGreaterThanOrEqual(5);
+    expect(cleanScan(raw)).toMatchObject({ msd: 10, yolkSacSeen: true, embryoSeen: false, intrauterine: true, reportedDays: 40, followUp: "Recheck in 12 days" });
+  });
+});

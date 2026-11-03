@@ -271,7 +271,11 @@ const mm = (n: string, unit?: string) => Number(n) * (unit && /cm/i.test(unit) ?
  * Returns raw fields for cleanScan, and how many it found; the app falls back to AI when few match.
  */
 export function parseScanText(text: string, date: string): { raw: Record<string, unknown>; found: number } {
-  const t = text.replace(/\r/g, "");
+  // Text copied out of a screenshot can arrive as one long line: start a new line at each heading.
+  const t = text.replace(/\r/g, "").replace(
+    /\s+(?=(?:Gestational sac|Yolk sac|Embryo|Fetal pole|\bGS\b|\bCRL\b|\bFHR\b|Cardiac activity|Uterus|Right ovary|Left ovary|Cervix|Cul de sac|IMPRESSION|MATERNAL STRUCTURES|ASSESSMENT)\b)/gi,
+    "\n",
+  );
   const raw: Record<string, unknown> = { date };
   const pick = (re: RegExp) => t.match(re);
   const seen = (subject: string): boolean | undefined => {
