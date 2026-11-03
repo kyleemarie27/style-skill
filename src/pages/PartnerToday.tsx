@@ -17,12 +17,12 @@ import { Alerts, PregnancyHero } from "./PregnancyToday";
 export function PartnerToday() {
   const p = usePregnancy()!;
   const { byDate } = useStore();
-  const { preg, g, week, flags, today } = p;
+  const { preg, g, week, flags, today, timeline } = p;
   const name = preg.momName?.trim() || "";
 
   return (
     <div className="stack preg today-stack">
-      <PregnancyHero g={g} preg={preg} />
+      <PregnancyHero g={g} preg={preg} timeline={timeline} />
       {flags.length > 0 && <Alerts flags={flags} preg={preg} />}
       <HowTheyreDoing name={name} log={byDate.get(today)} yesterday={byDate.get(addDays(today, -1))} />
       <LatestScanCard preg={preg} today={today} />
@@ -45,7 +45,7 @@ export function PartnerToday() {
         <ComingUp />
       </section>
 
-      <TodaysQuestion g={g} preg={preg} today={today} />
+      <TodaysQuestion g={timeline.dates} preg={preg} today={today} />
 
       <p className="tiny muted center">Bloom gives general information, not medical advice.</p>
     </div>

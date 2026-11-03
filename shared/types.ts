@@ -75,6 +75,11 @@ export interface Pregnancy {
   appointments: Appointment[];
   /** Ultrasound results, oldest first. See shared/scans.ts. */
   scans?: Scan[];
+  /**
+   * Which timeline Today follows: "dates" (the medical one, from the last period or the due date)
+   * or "body" (where development measured on the scans). See bodyTimeline in shared/scans.ts.
+   */
+  timeline?: "dates" | "body" | null;
   /** First names, so the partner view can say "How Kylee is doing" instead of guessing pronouns. */
   momName?: string | null;
   partnerName?: string | null;

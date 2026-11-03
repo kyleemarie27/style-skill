@@ -1,20 +1,25 @@
 import { useEffect, useMemo, useState } from "react";
 import { addDays, localToday } from "../../shared/dates";
 import { gaLabel, gaLong, type Gestation } from "../../shared/pregnancy";
-import { scansForAi } from "../../shared/scans";
+import { personalGestation, scansForAi, timelineForAi } from "../../shared/scans";
 import type { Pregnancy } from "../../shared/types";
-import type { WeekContent } from "../content/pregnancy";
+import { weekContent, type WeekContent } from "../content/pregnancy";
 import { api, type DeepDive as Dive } from "../lib/api";
 import { newId, useSavePregnancy } from "../lib/pregnancy";
 import { useStore } from "../lib/store";
 import { Prose } from "./WeekGuide";
 
-/** Today's deep dive for this gestational day: written once a day by AI, cached on the server. */
-export function useDeepDive(g: Gestation, preg: Pregnancy, week: WeekContent) {
+/**
+ * Today's deep dive for this gestational day: written once a day by AI, cached on the server.
+ * Like the daily note, it follows the body timeline when a scan gives one, whichever view is shown.
+ */
+export function useDeepDive(_g: Gestation, preg: Pregnancy, _week: WeekContent) {
   const { byDate } = useStore();
   const [dive, setDive] = useState<Dive | null>(null);
   const [err, setErr] = useState("");
   const date = localToday();
+  const g = personalGestation(date, preg);
+  const week = weekContent(g.weeks);
   const key = `dive2-${gaLabel(g).replace(" ", "")}`;
 
   const context = useMemo(() => ({
@@ -25,6 +30,7 @@ export function useDeepDive(g: Gestation, preg: Pregnancy, week: WeekContent) {
     dayOfWeek: g.days,
     dueDate: preg.dueDate,
     scans: scansForAi(preg),
+    timelines: timelineForAi(date, preg),
     thisWeekSummary: week.headline,
     babyThisWeek: week.baby.map((b) => b.t),
     todaysLine: week.days[Math.max(0, Math.min(6, g.days))],

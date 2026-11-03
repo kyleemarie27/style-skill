@@ -13,7 +13,7 @@ export function WeeksPage() {
   const p = usePregnancy();
   if (!p) return <NotPregnant />;
   const theme = "fruit" as const;
-  const lmp = lmpForDueDate(p.preg.dueDate);
+  const lmp = lmpForDueDate(p.timeline.countFrom);
   return (
     <div className="stack">
       <div className="row between wrap">
@@ -54,9 +54,10 @@ export function WeekPage({ week, tab }: { week: number; tab?: string }) {
   if (!p) return <NotPregnant />;
   const w = Math.max(FIRST_WEEK, Math.min(LAST_WEEK, week || p.g.weeks));
   const content = weekContent(w);
-  const lmp = lmpForDueDate(p.preg.dueDate);
+  // Week start dates follow the timeline Today shows (dates or body).
+  const lmp = lmpForDueDate(p.timeline.countFrom);
   const start = addDays(lmp, w * 7);
-  const g = w === p.g.weeks ? p.g : gestation(start, p.preg);
+  const g = w === p.g.weeks ? p.g : gestation(start, { dueDate: p.timeline.countFrom });
   const go = (n: number) => (window.location.hash = `#/week/${n}`);
   return (
     <div className="stack">
