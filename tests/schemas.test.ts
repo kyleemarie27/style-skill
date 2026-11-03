@@ -57,3 +57,50 @@ describe("reading the AI's scan answer", () => {
     expect(scan.crl).toBeUndefined();
   });
 });
+
+describe("reading a report when structured output fails", () => {
+  const transcript = `ASSESSMENT
+Gestational sac: visualized and amniotic fluid volume appears within
+normal limits. Location: intrauterine. Size 10.0 mm x 12.0 mm x 8.0 mm
+Yolk sac: visualized
+Embryo: not visualized
+GS 10.0 mm 5w 5d 7% Rempen
+MATERNAL STRUCTURES
+Uterus Size 67 mm x 40 mm x 39 mm
+Appearance: anteverted
+IMPRESSION
+Intrauterine pregnancy with yolk sac/other echoes visualized. Patient is
+scheduled to return in 12 days (or sooner if clinically indicated ) to
+recheck for the presence of an embryo.`;
+  const expected = { date: "2026-10-30", msd: 10, intrauterine: true, yolkSacSeen: true, embryoSeen: false, reportedDays: 40, followUp: "Recheck in 12 days" };
+
+  it("falls back to a transcript after an API error like the one seen in production", async () => {
+    const { readScanReport } = await import("../api/import-extract");
+    const r = await readScanReport(
+      "2026-10-30",
+      () => Promise.reject(new Error("AI request failed (400): Schemas contains too many parameters with union types")),
+      () => Promise.resolve(transcript),
+    );
+    expect(r.scan).toMatchObject(expected);
+  });
+
+  it("falls back when structured output times out or comes back empty", async () => {
+    const { readScanReport } = await import("../api/import-extract");
+    const slow = () => new Promise<never>((_, rej) => setTimeout(() => rej(new Error("took too long")), 5));
+    expect((await readScanReport("2026-10-30", slow, () => Promise.resolve(transcript))).scan).toMatchObject(expected);
+    const empty = () => Promise.resolve({ scan: { date: "", msd: 0, sacDims: [], intrauterine: "unknown" }, warnings: [] });
+    expect((await readScanReport("2026-10-30", empty, () => Promise.resolve(transcript))).scan).toMatchObject(expected);
+  });
+
+  it("uses the structured answer when it works, without transcribing", async () => {
+    const { readScanReport } = await import("../api/import-extract");
+    let transcribed = false;
+    const r = await readScanReport(
+      "2026-10-30",
+      () => Promise.resolve({ scan: { date: "", msd: 0, sacDims: [10, 12, 8], intrauterine: "yes", yolkSacSeen: "yes", embryoSeen: "no", heartbeatSeen: "unknown", reportedDays: 40, followUp: "Recheck in 12 days" }, warnings: [] }),
+      () => { transcribed = true; return Promise.resolve(""); },
+    );
+    expect(r.scan).toMatchObject(expected);
+    expect(transcribed).toBe(false);
+  });
+});

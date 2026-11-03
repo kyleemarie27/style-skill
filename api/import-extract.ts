@@ -1,10 +1,10 @@
 import type { VercelRequest } from "@vercel/node";
 import type { BetaContentBlockParam } from "@anthropic-ai/sdk/resources/beta/messages/messages";
 import { levelForRatio, normalizeRatio } from "../shared/lh.js";
-import { cleanScan } from "../shared/scans.js";
-import type { ImportBundle } from "../shared/types.js";
+import { cleanScan, parseScanText } from "../shared/scans.js";
+import type { ImportBundle, Scan } from "../shared/types.js";
 import { method, route } from "./_lib/auth.js";
-import { askJson, fakeAi } from "./_lib/claude.js";
+import { askJson, askText, fakeAi } from "./_lib/claude.js";
 import { HttpError } from "./_lib/db.js";
 
 const SYSTEM = `You convert exports, reports and screenshots from period and fertility apps (Clue, Premom, Flo, Natural Cycles, Ovia, spreadsheets) into structured daily records.
@@ -105,6 +105,32 @@ export const SCAN_SCHEMA = {
   },
 };
 
+const TRANSCRIBE_SYSTEM = `Transcribe the text of an ultrasound report exactly as written, line by line, keeping labels, numbers and units. Output only the report text: no commentary, no formatting.`;
+
+/**
+ * Read a report two independent ways. First structured extraction; if that fails for any reason
+ * (an API error, a timeout, nothing usable), a plain transcription parsed by the app's own reader.
+ */
+export async function readScanReport(
+  date: string,
+  structured: () => Promise<{ scan: Record<string, unknown>; warnings: string[] }>,
+  transcribe: () => Promise<string>,
+): Promise<{ scan: Scan | null; warnings: string[] }> {
+  try {
+    const out = await structured();
+    const fields = fromAi(out.scan);
+    const scan = cleanScan({ ...fields, date: (fields.date as string) || date });
+    if (scan) return { scan, warnings: out.warnings };
+    console.error("Structured scan read found nothing usable; transcribing instead.");
+  } catch (e) {
+    console.error(`Structured scan read failed (${(e as Error).message}); transcribing instead.`);
+  }
+  const text = await transcribe();
+  const { raw, found } = parseScanText(text, date);
+  const scan = found >= 2 ? cleanScan(raw) : null;
+  return { scan, warnings: scan ? ["Double-check every number against your report."] : [] };
+}
+
 /** Vercel stops functions at 60 s; give up a little earlier with a message the app can show. */
 function within<T>(ms: number, p: Promise<T>): Promise<T> {
   return Promise.race([
@@ -145,13 +171,17 @@ export default route(async (req: VercelRequest) => {
   if (source === "scan") {
     // An ultrasound report: return one scan for the form to show before anything is saved.
     const date = typeof req.body?.date === "string" ? req.body.date : "";
-    content.push({ type: "text", text: `This is an ultrasound report.${date ? ` If no exam date is shown, the scan was on ${date}.` : ""} Copy the results.` });
-    const out: { scan: Record<string, unknown>; warnings: string[] } = fakeAi()
-      ? FAKE_SCAN
-      : await within(50_000, askJson<{ scan: Record<string, unknown>; warnings: string[] }>({ system: SCAN_SYSTEM, schema: SCAN_SCHEMA, content, effort: "low", maxTokens: 8000 }));
-    const scan = fromAi(out.scan);
-    const raw = { ...scan, date: (scan.date as string) || date };
-    return { scan: cleanScan(raw), warnings: out.warnings };
+    const ask = (text: string) => [...content, { type: "text" as const, text }];
+    return readScanReport(
+      date,
+      () => fakeAi()
+        ? Promise.resolve(FAKE_SCAN)
+        : within(28_000, askJson<{ scan: Record<string, unknown>; warnings: string[] }>({
+            system: SCAN_SYSTEM, schema: SCAN_SCHEMA, effort: "low", maxTokens: 8000,
+            content: ask(`This is an ultrasound report.${date ? ` If no exam date is shown, the scan was on ${date}.` : ""} Copy the results.`),
+          })),
+      () => within(25_000, askText({ system: TRANSCRIBE_SYSTEM, content: ask("Transcribe this ultrasound report."), maxTokens: 3000 })),
+    );
   }
   content.push({ type: "text", text: `This came from ${source || "a fertility app"}. Extract every dated record.` });
 
