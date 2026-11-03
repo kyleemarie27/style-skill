@@ -69,32 +69,39 @@ Rules:
 - intrauterine: true if the report says the location is intrauterine. yolkSacSeen / embryoSeen / heartbeatSeen: true if visualized, false if the report says not visualized, omitted if not mentioned.
 - reportedDays: the gestational age the report gives for the scan, in total days (5w 5d = 40). reportedDue: an EDD printed on the report.
 - followUp: the plan in a few words, e.g. "Recheck in 12 days for an embryo".
-- date: the exam date in YYYY-MM-DD if shown, otherwise leave it empty.
+- date: the exam date in YYYY-MM-DD if shown, otherwise null.
 - Ignore the uterus, ovary and cervix sizes; mention anything unusual about them in notes, briefly and in the report's own words.
+- Use null for anything the report doesn't give, and [] for sacDims when there are no three sac dimensions.
 - Put anything you weren't sure about in warnings.`;
 
+// Every field is required and nullable: a schema with many optional fields is very slow for the
+// API to compile (reads were timing out), while required-or-null compiles quickly.
+const n = { type: ["number", "null"] };
+const b = { type: ["boolean", "null"] };
+const t = { type: ["string", "null"] };
+const SCAN_FIELDS = {
+  date: t, msd: n, sacDims: { type: "array", items: { type: "number" } },
+  yolkSac: n, crl: n, fhr: n, nt: n, bpd: n, hc: n, ac: n, fl: n, efw: n, efwPercentile: n,
+  intrauterine: b, yolkSacSeen: b, embryoSeen: b, heartbeatSeen: b,
+  babies: n, reportedDays: n, reportedDue: t, followUp: t, notes: t,
+};
 const SCAN_SCHEMA = {
   type: "object",
   additionalProperties: false,
   required: ["scan", "warnings"],
   properties: {
-    scan: {
-      type: "object",
-      additionalProperties: false,
-      properties: {
-        date: { type: "string" },
-        msd: { type: "number" }, sacDims: { type: "array", items: { type: "number" } },
-        yolkSac: { type: "number" }, crl: { type: "number" }, fhr: { type: "number" }, nt: { type: "number" },
-        bpd: { type: "number" }, hc: { type: "number" }, ac: { type: "number" }, fl: { type: "number" },
-        efw: { type: "number" }, efwPercentile: { type: "number" },
-        intrauterine: { type: "boolean" }, yolkSacSeen: { type: "boolean" }, embryoSeen: { type: "boolean" }, heartbeatSeen: { type: "boolean" },
-        babies: { type: "integer" }, reportedDays: { type: "integer" }, reportedDue: { type: "string" },
-        followUp: { type: "string" }, notes: { type: "string" },
-      },
-    },
+    scan: { type: "object", additionalProperties: false, required: Object.keys(SCAN_FIELDS), properties: SCAN_FIELDS },
     warnings: { type: "array", items: { type: "string" } },
   },
 };
+
+/** Vercel stops functions at 60 s; give up a little earlier with a message the app can show. */
+function within<T>(ms: number, p: Promise<T>): Promise<T> {
+  return Promise.race([
+    p,
+    new Promise<T>((_, reject) => setTimeout(() => reject(new HttpError(504, "Reading the report took too long. Paste the report's text instead: it reads instantly.")), ms)),
+  ]);
+}
 
 const FAKE_SCAN = {
   scan: { sacDims: [10, 12, 8], yolkSacSeen: true, embryoSeen: false, intrauterine: true, reportedDays: 40, followUp: "Recheck in 12 days for an embryo" },
@@ -126,7 +133,7 @@ export default route(async (req: VercelRequest) => {
     content.push({ type: "text", text: `This is an ultrasound report.${date ? ` If no exam date is shown, the scan was on ${date}.` : ""} Copy the results.` });
     const out: { scan: Record<string, unknown>; warnings: string[] } = fakeAi()
       ? FAKE_SCAN
-      : await askJson<{ scan: Record<string, unknown>; warnings: string[] }>({ system: SCAN_SYSTEM, schema: SCAN_SCHEMA, content, effort: "low", maxTokens: 4000 });
+      : await within(50_000, askJson<{ scan: Record<string, unknown>; warnings: string[] }>({ system: SCAN_SYSTEM, schema: SCAN_SCHEMA, content, effort: "low", maxTokens: 8000 }));
     const raw = { ...out.scan, date: (out.scan.date as string) || date };
     return { scan: cleanScan(raw), warnings: out.warnings };
   }
