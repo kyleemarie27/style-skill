@@ -222,7 +222,7 @@ export function AskPage({ first }: { first: string | null }) {
   );
 }
 
-const ICON: Record<ChatAction["type"], string> = { log: "📝", question: "🩺", appointment: "📅" };
+const ICON: Record<ChatAction["type"], string> = { log: "📝", question: "🩺", appointment: "📅", scan: "🩻" };
 
 /** One suggested save. Nothing happens until she taps it. */
 function ActionButton({ action, saved, onSaved }: { action: ChatAction; saved: boolean; onSaved: () => void }) {
@@ -231,13 +231,14 @@ function ActionButton({ action, saved, onSaved }: { action: ChatAction; saved: b
   const preg = activePregnancy(settings);
   const [err, setErr] = useState("");
   // Logging is the main account's; the partner can still save doctor questions and appointments.
-  if (action.type === "log" && role === "partner") return null;
+  if ((action.type === "log" || action.type === "scan") && role === "partner") return null;
   const apply = async () => {
     setErr("");
     try {
       if (action.type === "log") await saveDay(mergeLog(byDate.get(action.date), action, !!preg));
       else if (!preg) return;
       else if (action.type === "question") await savePreg({ questions: [...preg.questions, { id: newId(), text: action.text, created: localToday(), done: null }] });
+      else if (action.type === "scan") await savePreg({ scans: [...(preg.scans ?? []), { ...action.scan, id: newId() }].sort((a, b) => a.date.localeCompare(b.date)) });
       else await savePreg({ appointments: [...preg.appointments, { id: newId(), date: action.date, title: action.title, notes: null }] });
       onSaved();
     } catch (e) {
@@ -249,7 +250,7 @@ function ActionButton({ action, saved, onSaved }: { action: ChatAction; saved: b
   return (
     <div className="chat-action">
       {saved ? (
-        <a className="btn ghost small done" href={where}>✓ {actionLabel(action).replace(/^Add to doctor questions/, "Added to doctor questions").replace(/^Add appointment/, "Added appointment").replace(/^Log for/, "Logged for")} ›</a>
+        <a className="btn ghost small done" href={where}>✓ {actionLabel(action).replace(/^Add to doctor questions/, "Added to doctor questions").replace(/^Add appointment/, "Added appointment").replace(/^Log for/, "Logged for").replace(/^Save scan results/, "Saved scan results")} ›</a>
       ) : (
         <button className="btn small" onClick={apply}><span aria-hidden>{ICON[action.type]}</span> {actionLabel(action)}</button>
       )}

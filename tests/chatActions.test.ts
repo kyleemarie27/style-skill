@@ -35,3 +35,12 @@ describe("chat actions", () => {
     expect(actionLabel({ type: "log", date: "2026-10-15", nausea: "moderate", symptoms: ["Fatigue"] })).toMatch(/nausea moderate, fatigue/);
   });
 });
+
+describe("scan actions", () => {
+  it("turns a shared ultrasound into a save-scan button", () => {
+    const { actions } = parseAnswer('That all looks typical.\n[[bloom:{"type":"scan","date":"2026-10-30","sacDims":[10,12,8],"yolkSacSeen":true,"embryoSeen":false,"intrauterine":true}]]');
+    expect(actions).toHaveLength(1);
+    expect(actions[0].type).toBe("scan");
+    expect(actionLabel(actions[0])).toMatch(/Save scan results.*sac 10 mm.*no embryo yet/);
+  });
+});

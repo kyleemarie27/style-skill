@@ -4,6 +4,7 @@ import { gaLong, type Gestation, type PregFlag } from "../../shared/pregnancy";
 import type { Pregnancy } from "../../shared/types";
 import { nextMilestone, TRIMESTERS, type WeekContent } from "../content/pregnancy";
 import { BabySize } from "../components/BabySize";
+import { LatestScanCard } from "../components/Scans";
 import { LittleThings } from "../components/LittleThings";
 import { useDeepDive } from "../components/DeepDive";
 import { QuickCheckIn } from "../components/QuickCheckIn";
@@ -26,6 +27,7 @@ export function PregnancyToday() {
       <PregnancyHero g={g} preg={preg} />
       {flags.length > 0 && <Alerts flags={flags} preg={preg} />}
       <TodayCard g={g} preg={preg} week={week} ai={aiEnabled} />
+      <LatestScanCard preg={preg} today={today} />
       <QuickCheckIn today={today} preg={preg} />
       <LittleThings key={today} g={g} preg={preg} week={week} today={today} />
       <TodaysQuestion g={g} preg={preg} today={today} />
@@ -67,6 +69,7 @@ function Progress({ g, preg }: { g: Gestation; preg: Pregnancy }) {
         <span>{tri.name}</span>
         <span>Due {prettyDate(preg.dueDate)} · {g.daysToGo} days to go</span>
       </div>
+      <DatingNote preg={preg} />
       {next && (
         <p className="milestone-line">
           <b>In {next.inDays} {next.inDays === 1 ? "day" : "days"}:</b> {next.t} <span aria-hidden>{next.icon}</span>
@@ -74,6 +77,16 @@ function Progress({ g, preg }: { g: Gestation; preg: Pregnancy }) {
       )}
     </div>
   );
+}
+
+/** Where the due date comes from, so it's clear what the weeks and baby's size are based on. */
+function DatingNote({ preg }: { preg: Pregnancy }) {
+  const scan = preg.dueDateSource === "scan" ? (preg.scans ?? []).find((s) => s.id === preg.datedBy) : null;
+  const text = scan ? `Dated by your ${prettyDate(scan.date)} ultrasound`
+    : preg.dueDateSource === "doctor" ? "Due date from your doctor"
+    : preg.dueDateSource === "ovulation" ? "Dated from your confirmed ovulation"
+    : "Dated from your last period until a scan confirms it";
+  return <p className="tiny muted dating-note">{text}</p>;
 }
 
 /** Today's line, the personal note and today's read: everything to know about today, in one card. */

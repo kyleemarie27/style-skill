@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { addDays, localToday } from "../../shared/dates";
 import { gaLabel, gaLong, type Gestation } from "../../shared/pregnancy";
+import { scansForAi } from "../../shared/scans";
 import type { Pregnancy } from "../../shared/types";
 import type { WeekContent } from "../content/pregnancy";
 import { api, type DeepDive as Dive } from "../lib/api";
@@ -23,6 +24,7 @@ export function useDeepDive(g: Gestation, preg: Pregnancy, week: WeekContent) {
     trimester: g.trimester,
     dayOfWeek: g.days,
     dueDate: preg.dueDate,
+    scans: scansForAi(preg),
     thisWeekSummary: week.headline,
     babyThisWeek: week.baby.map((b) => b.t),
     todaysLine: week.days[Math.max(0, Math.min(6, g.days))],

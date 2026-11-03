@@ -1,4 +1,4 @@
-import type { BumpPhoto, DayLog, ImportBundle, JournalEntry, LhLevel, LhTest, Settings } from "../../shared/types";
+import type { BumpPhoto, DayLog, ImportBundle, JournalEntry, LhLevel, LhTest, Scan, Settings } from "../../shared/types";
 
 export class AuthError extends Error {}
 
@@ -91,6 +91,9 @@ export const api = {
   saveBump: (preg: string, week: number, date: string, photo: string) =>
     call<{ photo: BumpPhoto }>("memories", { method: "POST", json: { preg, week, date, photo } }),
   deleteBump: (preg: string, week: number) => call(`memories?preg=${preg}&week=${week}`, { method: "DELETE" }),
+  /** Read an ultrasound report (pasted text, a screenshot or a PDF) into a scan. Nothing is saved. */
+  readScan: (body: { fileName: string; mediaType: string; data?: string; text?: string; date?: string }) =>
+    call<{ scan: Scan | null; warnings: string[] }>("import-extract", { method: "POST", json: { ...body, source: "scan" } }),
   extract: (body: { fileName: string; mediaType: string; data?: string; text?: string; source: string }) =>
     call<ImportBundle>("import-extract", { method: "POST", json: body }),
 };
