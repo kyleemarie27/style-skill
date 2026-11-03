@@ -6,6 +6,7 @@ import { fillName, HOW_TO_HELP, moodsOf, partnerFeeling, partnerItems, partnerMo
 import { readLocal, usePregnancy, writeLocal } from "../lib/pregnancy";
 import { useStore } from "../lib/store";
 import { useTodayPlan } from "../lib/todayPlan";
+import { LatestScanCard } from "../components/Scans";
 import { TodaysQuestion } from "../components/TodaysQuestion";
 import { Alerts, PregnancyHero } from "./PregnancyToday";
 
@@ -24,6 +25,7 @@ export function PartnerToday() {
       <PregnancyHero g={g} preg={preg} />
       {flags.length > 0 && <Alerts flags={flags} preg={preg} />}
       <HowTheyreDoing name={name} log={byDate.get(today)} yesterday={byDate.get(addDays(today, -1))} />
+      <LatestScanCard preg={preg} today={today} />
       <YourMove key={today} name={name} today={today} g={g} preg={preg} week={week} />
 
       <section className="card stack">

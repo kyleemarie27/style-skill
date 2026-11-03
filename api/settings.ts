@@ -1,6 +1,7 @@
 import type { VercelRequest } from "@vercel/node";
 import { isISODate } from "../shared/dates.js";
-import { DEFAULT_SETTINGS, type Pregnancy, type Settings } from "../shared/types.js";
+import { cleanScan } from "../shared/scans.js";
+import { DEFAULT_SETTINGS, type Pregnancy, type Scan, type Settings } from "../shared/types.js";
 import { getSession, method, route } from "./_lib/auth.js";
 import { HttpError, q } from "./_lib/db.js";
 
@@ -16,7 +17,7 @@ const id = (v: unknown) => text(v, 40) ?? Math.random().toString(36).slice(2, 10
 function cleanPregnancy(p: any): Pregnancy | null {
   if (!p || typeof p !== "object") return null;
   if (!isISODate(p.lmp) || !isISODate(p.dueDate) || !isISODate(p.positiveTestDate)) return null;
-  const source = ["lmp", "ovulation", "doctor"].includes(p.dueDateSource) ? p.dueDateSource : "lmp";
+  const source = ["lmp", "ovulation", "doctor", "scan"].includes(p.dueDateSource) ? p.dueDateSource : "lmp";
   const ended =
     p.ended && isISODate(p.ended.date) && ["birth", "loss", "other"].includes(p.ended.reason)
       ? { date: p.ended.date, reason: p.ended.reason }
@@ -37,6 +38,9 @@ function cleanPregnancy(p: any): Pregnancy | null {
   return {
     positiveTestDate: p.positiveTestDate, lmp: p.lmp, dueDate: p.dueDate, dueDateSource: source, ended, questions, appointments,
     momName: text(p.momName, 40), partnerName: text(p.partnerName, 40),
+    scans: (Array.isArray(p.scans) ? p.scans : []).slice(0, 60).map((x: unknown) => cleanScan(x)).filter((x: Scan | null): x is Scan => !!x)
+      .sort((a: Scan, b: Scan) => a.date.localeCompare(b.date)),
+    datedBy: source === "scan" ? text(p.datedBy, 40) : null,
   };
 }
 

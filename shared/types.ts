@@ -67,13 +67,52 @@ export interface Pregnancy {
   /** First day of the last period. */
   lmp: string;
   dueDate: string;
-  dueDateSource: "lmp" | "ovulation" | "doctor";
+  dueDateSource: "lmp" | "ovulation" | "doctor" | "scan";
+  /** The scan that set the due date, when dueDateSource is "scan". */
+  datedBy?: string | null;
   ended?: { date: string; reason: "birth" | "loss" | "other" } | null;
   questions: PregQuestion[];
   appointments: Appointment[];
+  /** Ultrasound results, oldest first. See shared/scans.ts. */
+  scans?: Scan[];
   /** First names, so the partner view can say "How Kylee is doing" instead of guessing pronouns. */
   momName?: string | null;
   partnerName?: string | null;
+}
+
+/**
+ * One ultrasound, as reported. Every field is optional: early scans have a sac, yolk sac and
+ * crown-to-rump length; later ones have head, belly and thigh measurements and an estimated weight.
+ * Lengths in mm, heart rate in bpm, weight in grams.
+ */
+export interface Scan {
+  id: string;
+  date: string;
+  /** Mean gestational sac diameter (the average of its three dimensions). */
+  msd?: number | null;
+  yolkSac?: number | null;
+  crl?: number | null;
+  fhr?: number | null;
+  /** Nuchal translucency (11–14 weeks). */
+  nt?: number | null;
+  bpd?: number | null;
+  hc?: number | null;
+  ac?: number | null;
+  fl?: number | null;
+  efw?: number | null;
+  efwPercentile?: number | null;
+  /** What was seen. null = not mentioned. */
+  intrauterine?: boolean | null;
+  yolkSacSeen?: boolean | null;
+  embryoSeen?: boolean | null;
+  heartbeatSeen?: boolean | null;
+  babies?: number | null;
+  /** Gestational age and due date as printed on the report, if any (total days / YYYY-MM-DD). */
+  reportedDays?: number | null;
+  reportedDue?: string | null;
+  /** The plan the report gives, e.g. "Recheck in 12 days". */
+  followUp?: string | null;
+  notes?: string | null;
 }
 
 /** An answer to the daily question, kept as a keepsake. Each of you has one per day. */

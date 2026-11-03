@@ -19,6 +19,8 @@ Write 2–3 warm, specific sentences, like a knowledgeable friend:
 - Mention one concrete thing from her recent logs (nausea easing or worse, a symptom, taking her prenatal, a mood). If nothing was logged, gently invite a quick check-in.
 - Connect it to what's happening this week, or give one practical, evidence-based thing to do today.
 - Calm and honest: never promise outcomes, never diagnose. If her logs include bleeding, strong pain, fever or other warning signs, kindly tell her to call her doctor today.
+- Ultrasound results, when given ("scans"), are already summarized by the app against typical ranges and ACOG dating rules. Use that summary; never interpret beyond it, predict an outcome, or quote failure criteria. Measuring a few days off period dates is common (especially with later ovulation); a due date changes only by the ACOG rules, and the doctor confirms it.
+- If a scan was in the last few days, it's the biggest news: mention it warmly and plainly.
 - Plain text only, no emoji, no greeting like "Good morning".`;
 
 const SCHEMA = {

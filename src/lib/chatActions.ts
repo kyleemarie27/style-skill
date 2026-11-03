@@ -1,5 +1,6 @@
 import { isISODate, prettyDate } from "../../shared/dates";
-import type { DayLog, Nausea, PregBleeding, PregLog, PregPain } from "../../shared/types";
+import { cleanScan } from "../../shared/scans";
+import type { DayLog, Nausea, PregBleeding, PregLog, PregPain, Scan } from "../../shared/types";
 
 /**
  * Ask Bloom can suggest things to save from a conversation. The model ends its answer with lines like
@@ -9,6 +10,7 @@ import type { DayLog, Nausea, PregBleeding, PregLog, PregPain } from "../../shar
 export type ChatAction =
   | { type: "question"; text: string }
   | { type: "appointment"; date: string; title: string }
+  | { type: "scan"; scan: Scan }
   | {
       type: "log";
       date: string;
@@ -38,6 +40,10 @@ function clean(raw: unknown): ChatAction | null {
   if (a.type === "appointment") {
     const title = str(a.title, 120);
     return title && isISODate(a.date) ? { type: "appointment", date: a.date as string, title } : null;
+  }
+  if (a.type === "scan") {
+    const scan = cleanScan(a);
+    return scan ? { type: "scan", scan } : null;
   }
   if (a.type === "log" && isISODate(a.date)) {
     const out: ChatAction = { type: "log", date: a.date as string };
@@ -75,6 +81,14 @@ export function parseAnswer(text: string): { text: string; actions: ChatAction[]
 export function actionLabel(a: ChatAction): string {
   if (a.type === "question") return `Add to doctor questions: "${a.text}"`;
   if (a.type === "appointment") return `Add appointment: ${a.title}, ${prettyDate(a.date)}`;
+  if (a.type === "scan") {
+    const s = a.scan;
+    const bits = [
+      s.msd && `sac ${s.msd} mm`, s.crl && `baby ${s.crl} mm`, s.fhr && `heart rate ${s.fhr}`, s.yolkSac && `yolk sac ${s.yolkSac} mm`,
+      s.efw && `weight ${s.efw} g`, s.embryoSeen === false && "no embryo yet", s.heartbeatSeen && "heartbeat seen",
+    ].filter(Boolean);
+    return `Save scan results (${prettyDate(s.date)})${bits.length ? `: ${bits.join(", ")}` : ""}`;
+  }
   const bits = [
     a.nausea && `nausea ${a.nausea}`,
     a.bleeding && (a.bleeding === "none" ? "no bleeding" : `bleeding: ${a.bleeding}`),

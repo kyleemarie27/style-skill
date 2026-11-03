@@ -5,6 +5,7 @@ import type { Appointment, DayLog, Pregnancy } from "../../shared/types";
 import { FIRST_VISIT } from "../content/pregnancy";
 import { newId, usePregnancy, useSavePregnancy } from "../lib/pregnancy";
 import { useStore } from "../lib/store";
+import { ScansSection } from "../components/Scans";
 
 /** #/doctor: appointments, questions, and a visit summary to print or show. */
 export function DoctorPage() {
@@ -22,6 +23,7 @@ export function DoctorPage() {
     <div className="stack">
       <h1>Doctor</h1>
       <Appointments preg={preg} />
+      <ScansSection preg={preg} />
       <Questions preg={preg} />
       <VisitSummary preg={preg} />
       {p.g.weeks < 13 && (

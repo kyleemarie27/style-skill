@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { addDays } from "../../shared/dates";
 import { gaLabel, gaLong, standardSchedule, type Gestation } from "../../shared/pregnancy";
+import { scansForAi } from "../../shared/scans";
 import type { DayLog, Pregnancy } from "../../shared/types";
 import type { WeekContent } from "../content/pregnancy";
 import { api, type DayPlan } from "./api";
@@ -19,6 +20,8 @@ function context(date: string, g: Gestation, preg: Pregnancy, week: WeekContent,
     gestationalAge: gaLong(g),
     trimester: g.trimester,
     dueDate: preg.dueDate,
+    dueDateFrom: preg.dueDateSource,
+    scans: scansForAi(preg),
     names: { pregnant: preg.momName ?? null, partner: preg.partnerName ?? null },
     thisWeek: week.headline,
     todaysLine: week.days[Math.max(0, Math.min(6, g.days))],

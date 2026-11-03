@@ -3,6 +3,7 @@ import { addDays, diffDays } from "../../shared/dates";
 import { healthChecks } from "../../shared/health";
 import { patternFor } from "../../shared/patterns";
 import { activePregnancy, gaLong, gestation, pregnancyFlags, standardSchedule } from "../../shared/pregnancy";
+import { scansForAi } from "../../shared/scans";
 import type { DayLog, LhTest, Settings } from "../../shared/types";
 
 /** A compact snapshot of the user's data for Ask Bloom (sent with each question). */
@@ -18,6 +19,7 @@ export function buildAskContext(model: CycleModel, logs: DayLog[], lhTests: LhTe
       trimester: g.trimester,
       dueDate: preg.dueDate,
       dueDateFrom: preg.dueDateSource,
+      scans: scansForAi(preg),
       lastPeriod: preg.lmp,
       positiveTest: preg.positiveTestDate,
       recentDays: logs
