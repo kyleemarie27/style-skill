@@ -203,7 +203,9 @@ export function ScanEditor({ preg, initial, onDone }: { preg: Pregnancy; initial
     } catch (e) {
       setMsg((e as Error).name === "AbortError"
         ? "That took too long, so it stopped. Try the photo again, or tap “Paste the text instead”: on iPhone, press and hold the text in your screenshot, tap Select All, then Copy."
-        : (e as Error).message);
+        : /^AI request failed|^The AI/.test((e as Error).message)
+          ? "Couldn't read that photo just now. Try once more, or tap “Paste the text instead”."
+          : (e as Error).message);
     } finally {
       window.clearInterval(tick);
       window.clearTimeout(limit);

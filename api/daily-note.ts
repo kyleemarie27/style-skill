@@ -50,7 +50,7 @@ const PLAN_ITEM = {
   properties: { t: { type: "string" }, why: { type: "string" } },
 };
 
-const PREGNANT_SCHEMA = {
+export const PREGNANT_SCHEMA = {
   type: "object",
   additionalProperties: false,
   required: ["line", "todos", "partner", "ask"],
