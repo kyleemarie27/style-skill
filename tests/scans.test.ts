@@ -81,3 +81,32 @@ describe("cleaning", () => {
     expect(cleanScan({ date: "2026-11-01", crl: "6.2", fhr: 999 })?.fhr).toBeUndefined();
   });
 });
+
+describe("reading pasted report text without AI", () => {
+  it("reads the real early-scan report", async () => {
+    const { parseScanText } = await import("../shared/scans");
+    const report = `ASSESSMENT
+Gestational sac: visualized and amniotic fluid volume appears within
+normal limits. Location: intrauterine. Size 10.0 mm x 12.0 mm x 8.0 mm
+Yolk sac: visualized
+Embryo: not visualized
+GS 10.0 mm 5w 5d 7% Rempen
+MATERNAL STRUCTURES
+Uterus Size 67 mm x 40 mm x 39 mm
+IMPRESSION
+Intrauterine pregnancy with yolk sac/other echoes visualized. Patient is
+scheduled to return in 12 days (or sooner if clinically indicated ) to
+recheck for the presence of an embryo.`;
+    const { raw, found } = parseScanText(report, "2026-10-30");
+    const s = cleanScan(raw)!;
+    expect(found).toBeGreaterThanOrEqual(5);
+    expect(s).toMatchObject({ msd: 10, intrauterine: true, yolkSacSeen: true, embryoSeen: false, reportedDays: 40, followUp: "Recheck in 12 days" });
+    expect(s.yolkSac).toBeUndefined();
+  });
+
+  it("reads a later dating scan", async () => {
+    const { parseScanText } = await import("../shared/scans");
+    const { raw } = parseScanText("CRL 1.8 cm 8w 4d. Cardiac activity: present. FHR 165 bpm. EDD 06/25/2027", "2026-11-11");
+    expect(cleanScan(raw)).toMatchObject({ crl: 18, heartbeatSeen: true, fhr: 165, reportedDays: 60, reportedDue: "2027-06-25" });
+  });
+});

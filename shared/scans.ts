@@ -259,3 +259,66 @@ export function cleanScan(raw: any, id?: string): Scan | null {
   const kept = Object.fromEntries(Object.entries(s).filter(([, v]) => v !== null && v !== undefined)) as unknown as Scan;
   return Object.keys(kept).length > 2 ? kept : null;
 }
+
+// ---- reading pasted report text, instantly and without AI ----
+
+const NUM = String.raw`(\d+(?:\.\d+)?)`;
+const mm = (n: string, unit?: string) => Number(n) * (unit && /cm/i.test(unit) ? 10 : 1);
+
+/**
+ * Pull scan results out of the text of an ultrasound report, the way patient portals print them
+ * ("Size 10.0 mm x 12.0 mm x 8.0 mm", "CRL 6.1 mm", "FHR 118 bpm", "Embryo: not visualized").
+ * Returns raw fields for cleanScan, and how many it found; the app falls back to AI when few match.
+ */
+export function parseScanText(text: string, date: string): { raw: Record<string, unknown>; found: number } {
+  const t = text.replace(/\r/g, "");
+  const raw: Record<string, unknown> = { date };
+  const pick = (re: RegExp) => t.match(re);
+  const seen = (subject: string): boolean | undefined => {
+    const m = t.match(new RegExp(`${subject}[^\\n:]*:?\\s*(not\\s+(?:visuali[sz]ed|seen|identified|present)|absent|visuali[sz]ed|seen|identified|present)`, "i"));
+    return m ? !/^not|absent/i.test(m[1]) : undefined;
+  };
+
+  // Three dimensions on a line about the sac (or the line after its heading), never the uterus or an ovary.
+  const lines = t.split("\n");
+  for (let i = 0; i < lines.length && !raw.sacDims; i++) {
+    const m = lines[i].match(new RegExp(`${NUM}\\s*(mm|cm)\\s*x\\s*${NUM}\\s*(?:mm|cm)?\\s*x\\s*${NUM}`, "i"));
+    if (!m || /uterus|ovary|cervix/i.test(lines[i])) continue;
+    if (/sac|\\bGS\\b/i.test(lines[i]) || /sac|\\bGS\\b/i.test(lines[i - 1] ?? "")) raw.sacDims = [mm(m[1], m[2]), mm(m[3], m[2]), mm(m[4], m[2])];
+  }
+  const dims = raw.sacDims;
+  const msd = pick(new RegExp(`(?:\\bMSD\\b|mean sac diameter|\\bGS\\b)[:\\s]*${NUM}\\s*(mm|cm)`, "i"));
+  if (msd && !dims) raw.msd = mm(msd[1], msd[2]);
+  const crl = pick(new RegExp(`(?:\\bCRL\\b|crown[- ]rump(?: length)?)[:\\s]*${NUM}\\s*(mm|cm)`, "i"));
+  if (crl) raw.crl = mm(crl[1], crl[2]);
+  const ys = pick(new RegExp(`yolk sac[^\\n]{0,40}?${NUM}\\s*(mm|cm)`, "i"));
+  if (ys) raw.yolkSac = mm(ys[1], ys[2]);
+  const fhr = pick(/(?:\bFHR\b|fetal heart(?: rate| tones)?|heart rate|cardiac activity)[^\d\n]{0,25}(\d{2,3})\s*(?:bpm|beats)/i);
+  if (fhr) raw.fhr = Number(fhr[1]);
+  for (const [k, re] of [["nt", "\\bNT\\b|nuchal translucency"], ["bpd", "\\bBPD\\b"], ["hc", "\\bHC\\b|head circumference"], ["ac", "\\bAC\\b|abdominal circumference"], ["fl", "\\bFL\\b|femur length"]] as const) {
+    const m = pick(new RegExp(`(?:${re})[:\\s]*${NUM}\\s*(mm|cm)`, "i"));
+    if (m) raw[k] = mm(m[1], m[2]);
+  }
+  const efw = pick(/\bEFW\b[:\s]*(\d{2,4})\s*g/i);
+  if (efw) raw.efw = Number(efw[1]);
+  const pct = pick(/(\d{1,2})(?:st|nd|rd|th)?\s*(?:%ile|percentile)/i);
+  if (pct && efw) raw.efwPercentile = Number(pct[1]);
+
+  const ga = pick(/\b(\d{1,2})\s*w(?:ee)?k?s?\s*,?\s*(\d)\s*d(?:ays?)?\b/i);
+  if (ga) raw.reportedDays = Number(ga[1]) * 7 + Number(ga[2]);
+  const edd = pick(/\b(?:EDD|due date)[:\s]*(\d{1,2})\/(\d{1,2})\/(\d{4})/i);
+  if (edd) raw.reportedDue = `${edd[3]}-${edd[1].padStart(2, "0")}-${edd[2].padStart(2, "0")}`;
+
+  if (/\bintrauterine\b/i.test(t) && !/\bno\s+intrauterine\b/i.test(t)) raw.intrauterine = true;
+  const yolk = seen("yolk sac");
+  if (yolk !== undefined) raw.yolkSacSeen = yolk;
+  const embryo = seen("(?:embryo|fetal pole)");
+  if (embryo !== undefined) raw.embryoSeen = embryo;
+  const heart = seen("(?:cardiac activity|heart(?:beat| motion)|fetal heart)");
+  if (heart !== undefined) raw.heartbeatSeen = heart;
+
+  const fu = pick(/\b(?:return|recheck|repeat|follow[- ]?up)\b[^.\n]*?\bin\s+(\d+)\s*(days?|weeks?)/i);
+  if (fu) raw.followUp = `Recheck in ${fu[1]} ${fu[2].toLowerCase()}`;
+
+  return { raw, found: Object.keys(raw).length - 1 };
+}

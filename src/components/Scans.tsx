@@ -1,9 +1,9 @@
 import { useRef, useState } from "react";
 import { addDays, localToday, prettyDate } from "../../shared/dates";
 import { gaLabel, gestation, lmpForDueDate } from "../../shared/pregnancy";
-import { cleanScan, fmtDays, readDating, scanChecks, scanHeadline, type Check } from "../../shared/scans";
+import { cleanScan, fmtDays, parseScanText, readDating, scanChecks, scanHeadline, type Check } from "../../shared/scans";
 import type { Pregnancy, Scan } from "../../shared/types";
-import { api, fileToBase64 } from "../lib/api";
+import { api, fileToBase64, resizeImage } from "../lib/api";
 import { newId, useSavePregnancy } from "../lib/pregnancy";
 import { useViewer } from "../lib/viewer";
 
@@ -148,6 +148,8 @@ export function ScanEditor({ preg, initial, onDone }: { preg: Pregnancy; initial
   const [draft, setDraft] = useState<Draft>(() => toDraft({ date: localToday(), ...initial }));
   const [report, setReport] = useState("");
   const [reading, setReading] = useState(false);
+  const [elapsed, setElapsed] = useState(0);
+  const abort = useRef<AbortController | null>(null);
   const [msg, setMsg] = useState("");
   const [allFields, setAllFields] = useState(false);
   const file = useRef<HTMLInputElement>(null);
@@ -159,21 +161,50 @@ export function ScanEditor({ preg, initial, onDone }: { preg: Pregnancy; initial
 
   const parsed = cleanScan({ ...Object.fromEntries(Object.entries(draft).map(([k, v]) => [k, v === "true" ? true : v === "false" ? false : v])), id: "draft" });
 
+  const fill = (scan: Scan, note: string) => {
+    setDraft(toDraft({ ...scan, date: scan.date || draft.date }));
+    setMsg(`${note} Check the numbers below, then save.`);
+  };
+
   const read = async (f?: File) => {
     if (!f && !report.trim()) return;
-    setReading(true);
     setMsg("");
+    // Pasted text: read it right here when it looks like a standard report. No waiting, no AI.
+    if (!f) {
+      const local = parseScanText(report, draft.date);
+      const scan = local.found >= 3 ? cleanScan(local.raw) : null;
+      if (scan) return fill(scan, "Read your report.");
+    }
+    setReading(true);
+    setElapsed(0);
+    const started = Date.now();
+    const tick = window.setInterval(() => setElapsed(Math.round((Date.now() - started) / 1000)), 1000);
+    const ctrl = new AbortController();
+    abort.current = ctrl;
+    const limit = window.setTimeout(() => ctrl.abort(), 60_000);
     try {
-      const body = f
-        ? { fileName: f.name, mediaType: f.type || "image/jpeg", data: await fileToBase64(f), date: draft.date }
-        : { fileName: "report.txt", mediaType: "text/plain", text: report, date: draft.date };
-      const r = await api.readScan(body);
+      let body;
+      if (f && f.type === "application/pdf") {
+        body = { fileName: f.name, mediaType: f.type, data: await fileToBase64(f), date: draft.date };
+      } else if (f) {
+        // Phone screenshots are big; a smaller copy uploads in seconds and reads just as well.
+        const small = await resizeImage(f, 1600, 0.85);
+        body = { fileName: f.name, mediaType: "image/jpeg", data: small.split(",")[1] ?? "", date: draft.date };
+      } else {
+        body = { fileName: "report.txt", mediaType: "text/plain", text: report, date: draft.date };
+      }
+      const r = await api.readScan(body, ctrl.signal);
       if (!r.scan) throw new Error("Couldn't find scan results in that. Try typing the numbers below.");
-      setDraft(toDraft({ ...r.scan, date: r.scan.date || draft.date }));
-      setMsg(`Read your report. Check the numbers below, then save.${r.warnings.filter((w) => !/demo/.test(w)).length ? ` Note: ${r.warnings.join(" ")}` : ""}`);
+      const warn = r.warnings.filter((w) => !/demo/.test(w));
+      fill(r.scan, `Read your report.${warn.length ? ` Note: ${warn.join(" ")}` : ""}`);
     } catch (e) {
-      setMsg((e as Error).message);
+      setMsg((e as Error).name === "AbortError"
+        ? "Stopped. Tip: on iPhone, press and hold the text in your screenshot, tap Select All, then Copy, and paste it above. That reads instantly."
+        : (e as Error).message);
     } finally {
+      window.clearInterval(tick);
+      window.clearTimeout(limit);
+      abort.current = null;
       setReading(false);
       if (file.current) file.current.value = "";
     }
@@ -193,12 +224,19 @@ export function ScanEditor({ preg, initial, onDone }: { preg: Pregnancy; initial
       <div className="stack" style={{ gap: 6 }}>
         <div className="field-label" style={{ marginBottom: 0 }}>Read it from your report</div>
         <textarea rows={3} placeholder="Paste the report text from your patient portal…" value={report} onChange={(e) => setReport(e.target.value)} />
+        <p className="tiny muted">Fastest: paste the text. On iPhone you can copy text right out of a screenshot: press and hold it, then Select All and Copy.</p>
         <div className="row wrap" style={{ gap: 6 }}>
           <button className="btn small" onClick={() => read()} disabled={reading || !report.trim()}>{reading ? <span className="spin" /> : "Read pasted text"}</button>
           <button className="btn small" onClick={() => file.current?.click()} disabled={reading}>📷 Photo or PDF of the report</button>
           <input ref={file} type="file" accept="image/*,application/pdf" hidden onChange={(e) => read(e.target.files?.[0])} />
         </div>
       </div>
+      {reading && (
+        <div className="row between small reading-row">
+          <span className="row" style={{ gap: 8 }}><span className="spin" /> Reading your report… {elapsed}s{elapsed >= 15 ? " (screenshots can take up to half a minute)" : ""}</span>
+          <button type="button" className="btn ghost small" onClick={() => abort.current?.abort()}>Cancel</button>
+        </div>
+      )}
       {msg && <p className="small">{msg}</p>}
 
       <div className="field-label" style={{ marginBottom: 0 }}>What they saw</div>
