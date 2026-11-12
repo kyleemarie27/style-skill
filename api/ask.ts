@@ -43,6 +43,18 @@ How to answer:
 - Urgent warning signs are the same as for the pregnant person (heavy bleeding, severe or one-sided pain, fever ≥ 100.4°F, after 20 weeks a severe headache, vision changes, sudden swelling; fluid leaking; regular contractions before 37 weeks; reduced movement after 28 weeks): say plainly to call the provider or go to labor & delivery now.
 - Plain text with simple markdown (**bold**, "- " bullets). No headings, no tables.`;
 
+const PARTNER_CYCLE_SYSTEM = `You are Bloom, the assistant inside a private cycle and fertility tracker. You're talking with the PARTNER of the person tracking (the data below is theirs). The two of them are trying to conceive, and the partner wants to understand the cycle, help with timing, and be a good support.
+
+How to answer:
+- Talk to the partner directly. Refer to the person tracking by first name when you have it (momName), otherwise "your partner". Don't guess pronouns for either of them; use names.
+- Lead with what they can do: concrete, specific actions for today or this phase, then a short "why". Usually 80–180 words.
+- Timing: use the snapshot (fertile window, LH readings, ovulation estimate or confirmation, temperature shift). The best days are the 2 days before ovulation and ovulation day; sex every 1–2 days through the window is the evidence-based advice (ASRM). Never imply the partner should pressure or schedule the other person; keep it about teamwork and making it feel good.
+- Sperm health questions: heat (hot tubs, saunas, laptops on lap), smoking, heavy alcohol, cannabis and some supplements or testosterone products lower sperm quality; ejaculating every 2–3 days keeps it fresh; changes take about 3 months to show. Suggest a semen analysis after 12 months of trying (6 months if the person tracking is 35+), or sooner if there's a known concern.
+- "waitList" is a list the person tracking keeps for the time between ovulation and the period; suggest joining in where it makes sense (e.g. not drinking together).
+- If "firstCycleAfterPregnancyLoss" is set, they recently lost a pregnancy. Be gentle; acknowledge that partners grieve too, without dwelling on it.
+- Two-week wait: don't encourage reading symptoms as signs, and don't encourage testing before the test date.
+- Plain text with simple markdown (**bold**, "- " bullets). No headings, no tables.`;
+
 const PREG_SYMPTOMS = "Fatigue, Tender breasts, Frequent peeing, Food aversions, Cravings, Bloating, Constipation, Heartburn, Headache, Dizziness, Discharge change, Insomnia, Back pain, Leg cramps, Round ligament pain, Braxton Hicks, Swollen feet, Itching, Severe headache, Vision changes, Sudden swelling";
 const MOODS = "Happy, Calm, Energetic, Anxious, Irritable, Sad, Sensitive";
 
@@ -127,7 +139,9 @@ export default route(async (req: VercelRequest, res: VercelResponse) => {
   const context = JSON.stringify(req.body?.context ?? {}).slice(0, 20_000);
   const memory = factsPrompt(await loadFacts());
   const pregnant = !!req.body?.context?.pregnant;
-  const partner = pregnant && req.body?.context?.viewer === "partner";
+  const viewerPartner = req.body?.context?.viewer === "partner";
+  const partner = pregnant && viewerPartner;
+  const partnerCycle = !pregnant && viewerPartner;
   const today = typeof req.body?.context?.today === "string" ? req.body.context.today.slice(0, 10) : new Date().toISOString().slice(0, 10);
 
   res.setHeader("Content-Type", "text/plain; charset=utf-8");
@@ -155,7 +169,7 @@ export default route(async (req: VercelRequest, res: VercelResponse) => {
       betas: ["server-side-fallback-2026-07-01"],
       fallbacks: "default",
       output_config: { effort: "medium" },
-      system: `${partner ? PARTNER_SYSTEM : pregnant ? PREGNANT_SYSTEM : SYSTEM}${actionsPrompt(pregnant, today)}${partner ? "\nThe person chatting is the partner: only offer a \"log\" line when they explicitly ask to log something for the pregnant person, and write doctor questions in the pregnant person's voice." : ""}\n\n${partner ? "The pregnant person's" : "Her"} data (JSON, as of today):\n${context}${memory}`,
+      system: `${partner ? PARTNER_SYSTEM : partnerCycle ? PARTNER_CYCLE_SYSTEM : pregnant ? PREGNANT_SYSTEM : SYSTEM}${partnerCycle ? "" : actionsPrompt(pregnant, today)}${partner ? "\nThe person chatting is the partner: only offer a \"log\" line when they explicitly ask to log something for the pregnant person, and write doctor questions in the pregnant person's voice." : ""}\n\n${partner ? "The pregnant person's" : partnerCycle ? "The person tracking's" : "Her"} data (JSON, as of today):\n${context}${memory}`,
       messages,
     });
     res.status(200);

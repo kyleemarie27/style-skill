@@ -14,7 +14,7 @@ import { PregnancyToday } from "./PregnancyToday";
 import { api } from "../lib/api";
 import { focusFor, lhStartDay, waitListActive } from "../lib/cycleToday";
 import { invitationFor } from "../content/invitations";
-import { DEFAULT_WAIT_LIST } from "../../shared/types";
+import { DEFAULT_WAIT_LIST, namesOf } from "../../shared/types";
 import { useStore } from "../lib/store";
 
 export function TodayPage() {
@@ -22,7 +22,7 @@ export function TodayPage() {
 }
 
 function CycleToday() {
-  const { model, byDate, lhTests, aiEnabled, dayLogs, syncOura, oura } = useStore();
+  const { model, byDate, lhTests, aiEnabled, dayLogs, syncOura, oura, settings } = useStore();
   const today = localToday();
   // Pull last night from Oura when the app opens (at most every few hours).
   useEffect(() => {
@@ -95,6 +95,12 @@ function CycleToday() {
           <p className="muted">Import your Clue and Premom data so Bloom knows your cycles from day one.</p>
           <a className="btn primary" href="#/import">Import history</a>
         </div>
+      )}
+
+      {info.phase !== "unknown" && (
+        <a className="btn ghost" href="#/partner" style={{ alignSelf: "center" }}>
+          See what {namesOf(settings).partner || "your partner"} sees →
+        </a>
       )}
 
       <p className="tiny muted center">Bloom gives general information, not medical advice. Talk to your doctor about anything that worries you.</p>

@@ -2,7 +2,7 @@ import type { Today } from "../../shared/cycle";
 import { addDays, prettyDate } from "../../shared/dates";
 import { DEFAULT_WAIT_LIST } from "../../shared/types";
 import { invitationFor } from "../content/invitations";
-import { lhStartDate, signalsFor, waitListActive, windowDays } from "../lib/cycleToday";
+import { lhStartDate, signalsFor, waitListActive, windowDays, type WindowDay } from "../lib/cycleToday";
 import { useStore } from "../lib/store";
 import { TempSpark } from "./TempChart";
 
@@ -106,23 +106,7 @@ export function SignalsCard({ info }: { info: Today }) {
           <div className="tiny muted" style={{ marginBottom: 6 }}>
             Fertile window{info.ovulationConfirmed ? "" : " (estimated)"} · ★ best days
           </div>
-          <div className="window-strip" role="list">
-            {days.map((d) => (
-              <div
-                key={d.date}
-                role="listitem"
-                className={`wday${d.best ? " best" : ""}${d.today ? " today" : ""}${d.future ? " future" : ""}`}
-                aria-label={`${prettyDate(d.date, true)}${d.love ? ", sex logged" : ""}${d.lh ? `, LH ${d.lh}` : ""}${d.best ? ", best day" : ""}`}
-              >
-                <span className="tiny">{prettyDate(d.date, true).split(",")[0].slice(0, 2)}</span>
-                <span className="wnum">{Number(d.date.slice(8))}</span>
-                <span className="wmarks">
-                  {d.love ? "♥" : d.best ? "★" : "·"}
-                  {d.lh && <i className={`wlh lh-${d.lh}`} />}
-                </span>
-              </div>
-            ))}
-          </div>
+          <WindowStrip days={days} />
         </div>
       )}
     </div>
@@ -179,5 +163,28 @@ export function PlanCard({ info }: { info: Today }) {
         </div>
       </div>
     </details>
+  );
+}
+
+/** The fertile window as seven day cells: ♥ when sex was logged, ★ on the best days, an LH dot. */
+export function WindowStrip({ days }: { days: WindowDay[] }) {
+  return (
+    <div className="window-strip" role="list">
+      {days.map((d) => (
+        <div
+          key={d.date}
+          role="listitem"
+          className={`wday${d.best ? " best" : ""}${d.today ? " today" : ""}${d.future ? " future" : ""}`}
+          aria-label={`${prettyDate(d.date, true)}${d.love ? ", sex logged" : ""}${d.lh ? `, LH ${d.lh}` : ""}${d.best ? ", best day" : ""}`}
+        >
+          <span className="tiny">{prettyDate(d.date, true).split(",")[0].slice(0, 2)}</span>
+          <span className="wnum">{Number(d.date.slice(8))}</span>
+          <span className="wmarks">
+            {d.love ? "♥" : d.best ? "★" : "·"}
+            {d.lh && <i className={`wlh lh-${d.lh}`} />}
+          </span>
+        </div>
+      ))}
+    </div>
   );
 }

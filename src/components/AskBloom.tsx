@@ -6,6 +6,7 @@ import { actionLabel, mergeLog, parseAnswer, type ChatAction } from "../lib/chat
 import { newId, usePregnancy, useSavePregnancy } from "../lib/pregnancy";
 import { buildAskContext } from "../lib/askContext";
 import { useStore } from "../lib/store";
+import { namesOf } from "../../shared/types";
 import { useViewer } from "../lib/viewer";
 import { useTodayPlan } from "../lib/todayPlan";
 import { weekDeep } from "../content/pregnancy";
@@ -31,7 +32,7 @@ const save = (m: Msg[]) => {
 
 /** A small "Ask Bloom" launcher for pages outside the chat tab: asking opens the Ask tab. */
 export function AskBloomCard({ suggestions }: { suggestions: string[] }) {
-  const { aiEnabled, settings } = useStore();
+  const { aiEnabled, settings, role } = useStore();
   const pregnant = !!activePregnancy(settings);
   const [draft, setDraft] = useState("");
   if (!aiEnabled) return null;
@@ -42,7 +43,7 @@ export function AskBloomCard({ suggestions }: { suggestions: string[] }) {
     <div className="card stack ask-card">
       <div>
         <h2>Ask Bloom</h2>
-        <p className="muted small">{pregnant ? "Questions about your pregnancy, symptoms, food and medicine safety, or what's coming next." : "Questions about your cycle, your data or trying to conceive. Answers use your history."}</p>
+        <p className="muted small">{role === "partner" && !pregnant ? "Ask about timing, the cycle, or how to help. Bloom knows what's been logged lately." : pregnant ? "Questions about your pregnancy, symptoms, food and medicine safety, or what's coming next." : "Questions about your cycle, your data or trying to conceive. Answers use your history."}</p>
       </div>
       <form className="row" onSubmit={(e) => { e.preventDefault(); start(draft); }}>
         <input type="text" placeholder="Ask anything…" value={draft} onChange={(e) => setDraft(e.target.value)} aria-label="Your question" />
@@ -63,6 +64,8 @@ export function pregnancySuggestions(weeks: number): string[] {
   if (weeks < 28) return ["When will I feel kicks?", "What's checked at the anatomy scan?", "How much weight should I gain?", "My back has been aching"];
   return ["How do I do kick counts?", "How do I know it's real labor?", "What should go in my hospital bag?", "I've had some tightening today"];
 }
+
+const PARTNER_CYCLE_SUGGESTIONS = ["When is our next window?", "How can I help this week?", "What can I do for sperm health?", "How do we keep timing from feeling like a chore?"];
 
 function partnerSuggestions(weeks: number): string[] {
   if (weeks < 14) return ["How can I help with the nausea?", "What's happening with the baby this week?", "Should I go to the first appointment?", "How do I support the exhaustion?"];
@@ -89,9 +92,9 @@ export function AskPage({ first }: { first: string | null }) {
   const { model, dayLogs, lhTests, settings, aiEnabled } = useStore();
   const pregnant = !!activePregnancy(settings);
   const p = usePregnancy();
-  const partner = useViewer() === "partner" && !!p;
+  const partner = useViewer() === "partner";
   const ideas = useAskIdeas(p, partner);
-  const suggestions = p ? (ideas ?? (partner ? partnerSuggestions(p.g.weeks) : pregnancySuggestions(p.g.weeks))) : CYCLE_SUGGESTIONS;
+  const suggestions = p ? (ideas ?? (partner ? partnerSuggestions(p.g.weeks) : pregnancySuggestions(p.g.weeks))) : partner ? PARTNER_CYCLE_SUGGESTIONS : CYCLE_SUGGESTIONS;
   const [msgs, setMsgs] = useState<Msg[]>(() => (first ? [] : load()));
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
@@ -116,7 +119,8 @@ export function AskPage({ first }: { first: string | null }) {
     abortRef.current = new AbortController();
     try {
       const base = buildAskContext(model, dayLogs, lhTests, settings, localToday());
-      const context = partner ? { ...base, viewer: "partner", momName: p!.preg.momName, partnerName: p!.preg.partnerName } : base;
+      const names = namesOf(settings);
+      const context = partner ? { ...base, viewer: "partner", momName: names.me || null, partnerName: names.partner || null } : base;
       const plain = next.map(({ role, content }) => ({ role, content }));
       const answer = await askBloom(plain, context, (text) => setMsgs([...next, { role: "assistant", content: text }]), abortRef.current.signal);
       const done: Msg[] = [...next, { role: "assistant", content: answer }];

@@ -8,9 +8,10 @@ import { usePregnancy } from "../lib/pregnancy";
 import { LhUploadButton } from "../components/LhUpload";
 import { api } from "../lib/api";
 import { useStore } from "../lib/store";
+import type { DayLog, LhTest } from "../../shared/types";
 
 export function DayPage({ date }: { date: string }) {
-  const { model, lhTests, reload } = useStore();
+  const { model, lhTests, reload, role, byDate } = useStore();
   const p = usePregnancy();
   if (!isISODate(date)) return <p>That date doesn't look right.</p>;
   const pregDay = p && date >= p.preg.lmp;
@@ -30,6 +31,7 @@ export function DayPage({ date }: { date: string }) {
         <button className="btn ghost" onClick={() => go(addDays(date, 1))} disabled={date >= localToday()} aria-label="Next day">›</button>
       </div>
 
+      {role === "partner" && !pregDay ? <DaySummary log={byDate.get(date)} tests={tests} /> : <>
       <div className="card">
         {pregDay ? <PregnancyEditor date={date} preg={p.preg} /> : <DayEditor date={date} />}
       </div>
@@ -59,6 +61,26 @@ export function DayPage({ date }: { date: string }) {
         ))}
         <div className="row wrap"><LhUploadButton date={date} /></div>
       </div>}
+      </>}
+    </div>
+  );
+}
+
+/** What was logged that day, for the partner (who can read but not change logs). */
+function DaySummary({ log, tests }: { log?: DayLog; tests: LhTest[] }) {
+  const rows: [string, string][] = [];
+  if (log?.flow && log.flow !== "none") rows.push(["Flow", log.flow[0].toUpperCase() + log.flow.slice(1)]);
+  if (log?.intercourse) rows.push(["♥", "Yes"]);
+  if (log?.cervical_mucus) rows.push(["Mucus", log.cervical_mucus === "egg_white" ? "Egg white" : log.cervical_mucus[0].toUpperCase() + log.cervical_mucus.slice(1)]);
+  for (const t of tests) rows.push(["LH", `${t.ratio !== null ? Number(t.ratio).toFixed(2) + " " : ""}${LH_LABEL[t.level]}`]);
+  if (log?.mood) rows.push(["Mood", log.mood]);
+  if (log?.symptoms?.length) rows.push(["Symptoms", log.symptoms.join(", ")]);
+  if (log?.pregnancy_test) rows.push(["Pregnancy test", log.pregnancy_test[0].toUpperCase() + log.pregnancy_test.slice(1)]);
+  return (
+    <div className="card stack">
+      {rows.length ? rows.map(([k, v]) => (
+        <div key={k + v} className="row between small"><span className="muted">{k}</span><b>{v}</b></div>
+      )) : <p className="muted small">Nothing logged this day.</p>}
     </div>
   );
 }
