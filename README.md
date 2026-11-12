@@ -2,11 +2,32 @@
 
 No ads, no pop-ups, no notifications. You log in on your phone or computer and see:
 
-- **A daily note** for where you are in your cycle: what to expect, your superpowers, watch-outs, self-care, how to make the most of the phase, and a trying-to-conceive focus. There's also a short personal line written by AI from yesterday's log.
+- **What to do today**, in one line at the top: "Nothing to time yet", "LH is rising. Today counts.", "One of your best days", "Your part is done." It follows your LH strips and mucus first, then the predicted window.
+- **Today's invitation**: every cycle day has a part of yourself it's good for (The Hermit, The Beginner, The Flirt, The Nester, The Observer…) with one small ritual, so the wait has something in it too. All the wording is in `src/content/invitations.ts`.
+- **Protect the wait**: your own list of things to skip from ovulation until your period (no alcohol, no hot yoga or sauna, acetaminophen in place of ibuprofen…). It shows on Today from ovulation day, gives you a heads-up a few days before, and Ask and the daily line know it. Edit it in Settings → Trying to conceive.
+- **Your signals** at a glance: mucus, LH (with the trend), Oura temperature, and timing (♥ days in the window and how many of the 3 best days you covered), plus the fertile window as seven little cells.
+- **Your plan this cycle**: the three signs to watch (mucus, LH, temperature), the timing rule, LH start date and test date, all in one card. Open early in the cycle, folded later.
+- **A quiet two-week wait** (on by default): no days-past-ovulation countdown, just "your part is done" and your test date. Turn it off in Settings.
+- **A daily note** for where you are in your cycle: what to expect, superpowers, watch-outs, self-care, and a trying-to-conceive focus. There's also a short personal line written by AI from yesterday's log, your signals and today's invitation.
 - **A quick check-in** for yesterday or today: flow, ♥ intercourse, cervical mucus, symptoms and mood. Every tap saves.
 - **LH strip reading:** snap a photo, AI suggests a reading on **Premom's scale** (T/C ratio; Low < 0.5, High 0.5–0.99, Peak ≥ 1.0), and you confirm or adjust it.
-- **Calendar, insights and an LH curve:** period, fertile window, ovulation (LH-confirmed or estimated), ♥ days, and cycle history.
+- **Calendar, insights and an LH curve:** period, fertile window, ovulation (LH-confirmed, temperature-confirmed or estimated), ♥ days, and cycle history.
 - **A step-by-step import of your Clue and Premom history**, so predictions are smart from day one. You can undo it at any time.
+
+## Oura
+
+Settings → Oura connects your ring. Bloom pulls three numbers per night (skin temperature deviation, lowest resting heart rate, average HRV) when you open the app and once a day on a schedule. A temperature rise of at least 0.2 °C over the 6 nights before, held for 3 nights in a row, confirms ovulation (the day before the first high night). An LH peak still sets the ovulation date when there is one; the temperature then confirms it. Oura only has last night once the ring has synced to the Oura app.
+
+Setup, once: register an app at cloud.ouraring.com/oauth/applications with the redirect URI `https://<your Bloom address>/api/oura/callback` and the *daily* and *personal* scopes, then add `OURA_CLIENT_ID`, `OURA_CLIENT_SECRET` and `CRON_SECRET` in Vercel and redeploy. The Settings card walks you through it and shows the exact redirect URI.
+
+## After a pregnancy loss
+
+When a pregnancy ends with a loss (Settings → Pregnancy → *My pregnancy has ended*), the day it ended becomes day 1 of a new cycle, unless you logged a period within 10 days of it. For that first cycle:
+
+- **LH strips wait for a negative pregnancy test.** Leftover hCG can make LH strips read positive, so peaks before you log a *Negative* test are set aside (and the LH signal says "On hold").
+- **Temperature counts most.** An Oura temperature rise confirms ovulation even without a trusted LH peak.
+- **Averages skip it.** Neither the cycle the pregnancy was in nor the first one after counts toward your average cycle, luteal or period length.
+- Today's invitations are gentler for the first week.
 
 ## Pregnancy mode
 
@@ -37,10 +58,11 @@ If a pregnancy ends, Settings → Pregnancy → *My pregnancy has ended* switche
 ## What's in this folder
 
 ```
-api/            Vercel serverless functions (login, logs, LH, AI, import, export, memories)
+api/            Vercel serverless functions (login, logs + Oura, LH, AI, import, export, memories)
 shared/         Cycle engine + LH scale (used by both the app and the API)
 src/            The web app (React). Installs like an app on phone and desktop
   content/phases.ts   ← all the daily-note wording. Edit freely
+  content/invitations.ts ← today's invitation for every cycle day
   content/pregnancy/  ← the week-by-week pregnancy guide (weeks 4–42), deep*.ts explainers, library.ts,
                         journal.ts (daily questions and moments), partner.ts (the partner view)
   components/art/     ← the baby and size-comparison illustrations
@@ -59,6 +81,8 @@ tests/          Unit tests (npm test)
    | `APP_PASSWORD` | the password you'll log in with |
    | `SESSION_SECRET` | any long random string (no longer used by new versions; harmless to keep) |
    | `ANTHROPIC_API_KEY` | `sk-ant-…` (optional; turns on strip reading, the personal daily line and smart import) |
+   | `OURA_CLIENT_ID`, `OURA_CLIENT_SECRET` | optional; from your Oura app (see *Oura* above) |
+   | `CRON_SECRET` | optional; any long random string. Lets the daily Oura sync run on its own |
 
 4. **Redeploy.** Go to Deployments → ⋯ on the latest → **Redeploy**.
 5. **Open your site and log in.** The import wizard walks you through getting your Clue and Premom files.

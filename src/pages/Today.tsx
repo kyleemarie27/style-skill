@@ -3,6 +3,7 @@ import { PHASE_NAME, phaseFor, type Today as TodayInfo } from "../../shared/cycl
 import { addDays, diffDays, localToday, prettyDate } from "../../shared/dates";
 import { LH_LABEL } from "../../shared/lh";
 import { AskBloomCard } from "../components/AskBloom";
+import { AfterLossCard, InvitationCard, PlanCard, SignalsCard, WaitListCard } from "../components/CycleCards";
 import { DailyNote } from "../components/DailyNote";
 import { DayEditor } from "../components/DayEditor";
 import { HealthSummaryLink } from "../components/HealthChecks";
@@ -11,24 +12,23 @@ import { PositiveTestSheet } from "../components/PositiveTestSheet";
 import { usePregnancy } from "../lib/pregnancy";
 import { PregnancyToday } from "./PregnancyToday";
 import { api } from "../lib/api";
+import { focusFor, lhStartDay, waitListActive } from "../lib/cycleToday";
+import { invitationFor } from "../content/invitations";
+import { DEFAULT_WAIT_LIST } from "../../shared/types";
 import { useStore } from "../lib/store";
-
-const SECTIONS: { key: "expect" | "superpowers" | "watchouts" | "care" | "makeTheMost" | "ttc"; title: string; icon: string }[] = [
-  { key: "expect", title: "What to expect", icon: "🌙" },
-  { key: "superpowers", title: "Your superpowers", icon: "✨" },
-  { key: "watchouts", title: "Watch-outs", icon: "⚠️" },
-  { key: "care", title: "Take care of yourself", icon: "🫖" },
-  { key: "makeTheMost", title: "Make the most of it", icon: "🎯" },
-  { key: "ttc", title: "Trying to conceive", icon: "🌱" },
-];
 
 export function TodayPage() {
   return usePregnancy() ? <PregnancyToday /> : <CycleToday />;
 }
 
 function CycleToday() {
-  const { model, byDate, lhTests, aiEnabled, dayLogs } = useStore();
+  const { model, byDate, lhTests, aiEnabled, dayLogs, syncOura, oura } = useStore();
   const today = localToday();
+  // Pull last night from Oura when the app opens (at most every few hours).
+  useEffect(() => {
+    syncOura().catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [oura?.connected]);
   const yesterday = addDays(today, -1);
   const info = useMemo(() => phaseFor(today, model), [today, model]);
   const [checkDay, setCheckDay] = useState<"yesterday" | "today">(byDate.has(yesterday) ? "today" : "yesterday");
@@ -39,7 +39,7 @@ function CycleToday() {
     fertileDay: info.fertileDay,
     fertileLength: info.fertileLength,
     daysToFertile: info.fertileStart ? Math.max(0, diffDays(info.fertileStart, today)) : null,
-    lhStart: info.cycle ? Math.max(6, diffDays(info.fertileStart!, info.cycle.start) - 1) : 10,
+    lhStart: lhStartDay(info),
   };
   const todaysLh = lhTests.filter((t) => t.date === today);
 
@@ -47,7 +47,13 @@ function CycleToday() {
     <div className="stack">
       <Hero info={info} />
 
-      {aiEnabled && info.phase !== "unknown" && <PersonalLine info={info} />}
+      {info.phase !== "unknown" && <>
+        <InvitationCard info={info} />
+        <WaitListCard info={info} />
+        <AfterLossCard info={info} />
+        <SignalsCard info={info} />
+        {aiEnabled && <PersonalLine info={info} />}
+      </>}
 
       <div className="card stack">
         <div className="row between wrap">
@@ -75,6 +81,8 @@ function CycleToday() {
         )}
       </div>
 
+      {info.phase !== "unknown" && <PlanCard info={info} />}
+
       {info.phase !== "unknown" && <DailyNote info={info} vars={vars} />}
 
       <HealthSummaryLink />
@@ -95,7 +103,7 @@ function CycleToday() {
 }
 
 function Hero({ info }: { info: TodayInfo }) {
-  const { model } = useStore();
+  const { model, lhTests, byDate, settings } = useStore();
   const [positive, setPositive] = useState(false);
   if (info.phase === "unknown") {
     return (
@@ -110,20 +118,15 @@ function Hero({ info }: { info: TodayInfo }) {
       </div>
     );
   }
-  let status = "";
-  if (info.phase === "menstrual") status = `Period day ${info.cycleDay}`;
-  else if (info.fertileDay) status = `Fertile window: day ${info.fertileDay} of ${info.fertileLength}`;
-  else if (info.phase === "follicular" && info.fertileStart) status = `Fertile window opens in ${diffDays(info.fertileStart, info.date)} days`;
-  else if (info.phase === "late") status = `Period was due ${prettyDate(info.nextPeriod!)}. Time to test.`;
-  else if (info.dpo) status = `${info.dpo} days past ovulation`;
-
+  const focus = focusFor(info, model, lhTests, byDate, settings.quietWait !== false);
   return (
-    <div className={`card hero ph-${info.phase}`}>
+    <div className={`card hero ph-${info.phase}${focus.counts ? " counts" : ""}`}>
       <div className="row between" style={{ alignItems: "flex-start" }}>
         <div className="stack" style={{ gap: 6 }}>
           <div className="muted small">{prettyDate(info.date, true)}</div>
           <span className="phase-pill"><span className="dot" />{PHASE_NAME[info.phase]}</span>
-          <h1 style={{ marginTop: 4 }}>{status}</h1>
+          <h1 style={{ marginTop: 4 }}>{focus.headline}</h1>
+          {focus.sub && <p className="small">{focus.sub}</p>}
         </div>
         <div className="center">
           <div className="big-day">{info.cycleDay}</div>
@@ -133,7 +136,9 @@ function Hero({ info }: { info: TodayInfo }) {
       <div className="facts">
         {info.ovulation && (
           <div className="fact">
-            {info.ovulationConfirmed ? (info.daysUntilOvulation ? "Ovulation" : "Ovulated (confirmed)") : info.daysUntilOvulation ? "Ovulation (est.)" : "Ovulated (est.)"}
+            {info.ovulationConfirmed
+              ? info.daysUntilOvulation ? "Ovulation" : `Ovulated (${info.cycle?.ovulationSource === "temp" ? "by temp" : info.cycle?.tempShift ? "LH + temp" : "confirmed"})`
+              : info.daysUntilOvulation ? "Ovulation (est.)" : "Ovulated (est.)"}
             <b>{prettyDate(info.ovulation)}</b>
           </div>
         )}
@@ -154,7 +159,7 @@ function Hero({ info }: { info: TodayInfo }) {
 }
 
 function PersonalLine({ info }: { info: TodayInfo }) {
-  const { byDate, lhTests, dayLogs } = useStore();
+  const { byDate, lhTests, dayLogs, model, settings } = useStore();
   const [line, setLine] = useState<string | null>(null);
   const [err, setErr] = useState("");
   const yesterday = addDays(info.date, -1);
@@ -178,6 +183,19 @@ function PersonalLine({ info }: { info: TodayInfo }) {
       yesterday: y ? { flow: y.flow, intercourse: y.intercourse, symptoms: y.symptoms, mood: y.mood, cervical_mucus: y.cervical_mucus } : "nothing logged",
       recentLhReadings: recentLh,
       intercourseInFertileWindowSoFar: loveDays,
+      todaysFocus: focusFor(info, model, lhTests, byDate, settings.quietWait !== false).headline,
+      todaysInvitation: (() => {
+        const inv = invitationFor(info, model.afterLoss?.start === info.cycle?.start ? model.afterLoss?.start ?? null : null);
+        return inv ? `${inv.name}: ${inv.line} Ritual: ${inv.ritual}` : null;
+      })(),
+      waitListToday: waitListActive(info) ? (settings.waitList ?? DEFAULT_WAIT_LIST) : null,
+      quietWait: settings.quietWait !== false,
+      ovulationConfirmedBy: info.cycle?.ovulationConfirmed ? info.cycle.ovulationSource : null,
+      temperatureShift: info.cycle?.tempShift ? { since: info.cycle.tempShift.firstHigh, riseC: info.cycle.tempShift.rise } : null,
+      ouraLastNights: model.wearable.filter((w) => w.date >= addDays(info.date, -4)),
+      firstCycleAfterLoss: model.afterLoss && model.afterLoss.start === info.cycle?.start
+        ? { day1: model.afterLoss.start, negativePregnancyTest: model.afterLoss.negativeTest }
+        : null,
     };
     // Only rebuild once per day/phase so we don't hammer the cache.
     // eslint-disable-next-line react-hooks/exhaustive-deps

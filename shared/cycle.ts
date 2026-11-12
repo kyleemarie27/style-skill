@@ -1,5 +1,6 @@
 import { addDays, diffDays } from "./dates.js";
 import type { DayLog, LhTest, Settings } from "./types.js";
+import { thermalShift, type ThermalShift, type WearableDay } from "./wearable.js";
 
 /**
  * The cycle engine. Pure functions only, so the browser and the API share them.
@@ -8,8 +9,12 @@ import type { DayLog, LhTest, Settings } from "./types.js";
  * - A period day is a day with light/medium/heavy flow. Spotting counts as bleeding for
  *   period *length*, but never starts a new cycle on its own.
  * - A new cycle starts on a period day when there was no period day in the previous 10 days.
- * - Ovulation = first LH Peak in the cycle + 1 day. Without a Peak it's predicted as
- *   (next period − luteal length).
+ * - Ovulation = first LH Peak in the cycle + 1 day. Without a Peak, a day marked as ovulation,
+ *   then a sustained temperature rise from the wearable (the day before the first high night),
+ *   then a prediction: (next period − luteal length).
+ * - After a pregnancy loss, the day it ended starts a new cycle (unless a period was logged
+ *   around then), and LH peaks in that first cycle only count after a negative pregnancy test:
+ *   leftover hCG can turn LH strips positive.
  * - Fertile window = ovulation − 5 … ovulation + 1.
  */
 
@@ -45,10 +50,22 @@ export interface Cycle {
   periodEnd: string;
   /** First LH Peak date in this cycle, if any. */
   lhPeak: string | null;
-  /** Ovulation date: from an LH peak, else a day marked as ovulation (e.g. by Premom), else estimated. */
+  /** Ovulation date: from an LH peak, a day marked as ovulation (e.g. by Premom), a temperature shift, else estimated. */
   ovulation: string;
   ovulationConfirmed: boolean;
-  ovulationSource: "lh" | "marked" | "estimate";
+  ovulationSource: "lh" | "marked" | "temp" | "estimate";
+  /** Sustained temperature rise from the wearable in this cycle, if any. Confirms ovulation happened. */
+  tempShift: ThermalShift | null;
+}
+
+/** The first cycle after a pregnancy loss, while it's the current one. */
+export interface AfterLoss {
+  /** Day 1 of this cycle (the day the pregnancy ended, or the period logged around it). */
+  start: string;
+  /** First negative pregnancy test since, if any. LH strips are trusted from then on. */
+  negativeTest: string | null;
+  /** LH peaks Bloom set aside because they came before a negative test. */
+  ignoredPeaks: string[];
 }
 
 export interface CycleModel {
@@ -60,6 +77,9 @@ export interface CycleModel {
   typicalOvulationDay: number | null;
   cycleLengthSamples: number;
   settings: Settings;
+  afterLoss: AfterLoss | null;
+  /** Nightly wearable data, oldest first (empty without a connected wearable). */
+  wearable: WearableDay[];
 }
 
 export interface Today {
@@ -121,13 +141,39 @@ function periodEndFrom(start: string, bleedSet: Set<string>, limit: string | nul
   return end;
 }
 
-export function buildModel(logs: DayLog[], lhTests: LhTest[], settings: Settings): CycleModel {
+export function buildModel(logs: DayLog[], lhTests: LhTest[], settings: Settings, wearable: WearableDay[] = []): CycleModel {
   const starts = findPeriodStarts(logs);
   const bleedSet = new Set(logs.filter((l) => l.flow && ANY_BLEED.has(l.flow)).map((l) => l.date));
-  const peaks = lhTests
+  let peaks = lhTests
     .filter((t) => t.level === "peak")
     .map((t) => t.date)
     .sort();
+
+  // After a loss: the day it ended is day 1, unless a period start was logged close to it.
+  const ended = settings.pregnancy?.ended;
+  const loss = ended && ended.reason !== "birth" ? ended : null;
+  let lossStart: string | null = null;
+  if (loss) {
+    const near = starts.find((d) => Math.abs(diffDays(d, loss.date)) <= 10);
+    lossStart = near ?? loss.date;
+    if (!near) {
+      starts.push(loss.date);
+      starts.sort();
+      bleedSet.add(loss.date);
+    }
+  }
+  // The cycle the pregnancy happened in isn't a normal cycle; leave it out of the averages.
+  const pregCycleStart = loss && settings.pregnancy ? settings.pregnancy.lmp : null;
+  const isPregCycle = (start: string) => !!pregCycleStart && Math.abs(diffDays(start, pregCycleStart)) <= 5;
+
+  let afterLoss: AfterLoss | null = null;
+  if (lossStart && starts.at(-1) === lossStart) {
+    const negativeTest = logs.filter((l) => l.date >= lossStart! && l.pregnancy_test === "negative").map((l) => l.date).sort()[0] ?? null;
+    const ignoredPeaks = peaks.filter((d) => d >= lossStart! && (!negativeTest || d < negativeTest));
+    peaks = peaks.filter((d) => !ignoredPeaks.includes(d));
+    afterLoss = { start: lossStart, negativeTest, ignoredPeaks };
+  }
+  const nights = [...wearable].sort((a, b) => a.date.localeCompare(b.date));
   const marked = logs
     .filter((l) => l.ovulation)
     .map((l) => l.date)
@@ -141,17 +187,22 @@ export function buildModel(logs: DayLog[], lhTests: LhTest[], settings: Settings
     const periodEnd = periodEndFrom(start, bleedSet, end);
     const inCycle = (d: string) => d > periodEnd && (end === null || d <= end);
     const lhPeak = peaks.find(inCycle) ?? null;
-    const knownOv = lhPeak ? addDays(lhPeak, 1) : (marked.find(inCycle) ?? null);
-    return { start, end, length, periodEnd, lhPeak, knownOv };
+    const markedOv = marked.find(inCycle) ?? null;
+    const tempShift = nights.length ? thermalShift(nights, addDays(periodEnd, 3), end ?? "9999-12-31") : null;
+    const knownOv = lhPeak ? addDays(lhPeak, 1) : (markedOv ?? tempShift?.ovulation ?? null);
+    const source = lhPeak ? ("lh" as const) : markedOv ? ("marked" as const) : tempShift ? ("temp" as const) : null;
+    return { start, end, length, periodEnd, lhPeak, knownOv, source, tempShift };
   });
+  // Neither the cycle the pregnancy was in nor the first one after a loss counts toward your averages.
+  const normal = raw.filter((c) => !isPregCycle(c.start) && c.start !== lossStart);
 
-  const plausible = raw
+  const plausible = normal
     .map((c) => c.length)
     .filter((l): l is number => l !== null && l >= 18 && l <= 50);
   const recent = plausible.slice(-6);
   const avgCycleLength = recent.length ? Math.round(mean(recent)) : settings.cycleLength;
 
-  const lutealSamples = raw
+  const lutealSamples = normal
     .filter((c) => c.knownOv && c.length)
     .map((c) => diffDays(addDays(c.start, c.length!), c.knownOv!))
     .filter((l) => l >= 7 && l <= 18)
@@ -159,14 +210,14 @@ export function buildModel(logs: DayLog[], lhTests: LhTest[], settings: Settings
   const avgLutealLength =
     lutealSamples.length >= 2 ? Math.round(mean(lutealSamples)) : settings.lutealLength;
 
-  const periodLens = raw
+  const periodLens = normal
     .filter((c) => c.end !== null)
     .map((c) => diffDays(c.periodEnd, c.start) + 1)
     .filter((l) => l >= 2 && l <= 10)
     .slice(-6);
   const avgPeriodLength = periodLens.length ? Math.round(mean(periodLens)) : settings.periodLength;
 
-  const ovDays = raw
+  const ovDays = normal
     .filter((c) => c.knownOv)
     .map((c) => diffDays(c.knownOv!, c.start) + 1)
     .slice(-6);
@@ -178,12 +229,12 @@ export function buildModel(logs: DayLog[], lhTests: LhTest[], settings: Settings
     // uses the ovulation day learned from past LH peaks when there is one.
     const estDay = c.length === null && typicalOvulationDay ? typicalOvulationDay - 1 : len - avgLutealLength;
     const ovulation = c.knownOv ?? addDays(c.start, Math.max(estDay, diffDays(c.periodEnd, c.start) + 2));
-    const { knownOv, ...rest } = c;
+    const { knownOv, source, ...rest } = c;
     return {
       ...rest,
       ovulation,
       ovulationConfirmed: !!knownOv,
-      ovulationSource: c.lhPeak ? ("lh" as const) : knownOv ? ("marked" as const) : ("estimate" as const),
+      ovulationSource: source ?? ("estimate" as const),
     };
   });
 
@@ -195,6 +246,8 @@ export function buildModel(logs: DayLog[], lhTests: LhTest[], settings: Settings
     typicalOvulationDay,
     cycleLengthSamples: recent.length,
     settings,
+    afterLoss,
+    wearable: nights,
   };
 }
 

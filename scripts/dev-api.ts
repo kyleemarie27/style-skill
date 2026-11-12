@@ -48,6 +48,12 @@ function decorate(res: ServerResponse) {
 
 createServer(async (req, res) => {
   const url = new URL(req.url ?? "/", `http://localhost:${PORT}`);
+  // Same rewrite as vercel.json: /api/oura/<step> → /api/logs?oura=<step>.
+  const ouraStep = url.pathname.match(/^\/api\/oura\/([a-z]+)$/);
+  if (ouraStep) {
+    url.pathname = "/api/logs";
+    url.searchParams.set("oura", ouraStep[1]);
+  }
   const name = url.pathname.replace(/^\/api\//, "").replace(/[^a-z-]/g, "");
   const file = new URL(`../api/${name}.ts`, import.meta.url);
   if (!name || name.startsWith("_") || !existsSync(file)) {

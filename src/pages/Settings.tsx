@@ -3,6 +3,8 @@ import { prettyDate } from "../../shared/dates";
 import { api, type ImportBatch } from "../lib/api";
 import { activePregnancy } from "../../shared/pregnancy";
 import { MemoryCard } from "../components/MemoryCard";
+import { OuraSettings } from "../components/OuraSettings";
+import { DEFAULT_WAIT_LIST } from "../../shared/types";
 import { PregnancySettings } from "../components/PregnancySettings";
 import { SecuritySettings } from "../components/SecuritySettings";
 import { useStore } from "../lib/store";
@@ -64,8 +66,23 @@ export function SettingsPage() {
           <input type="checkbox" checked={!!form.over35} onChange={(e) => setForm({ ...form, over35: e.target.checked })} style={{ width: 20, height: 20 }} />
           <span>I'm 35 or older</span>
         </label>
+        <label className="row" style={{ gap: 10 }}>
+          <input type="checkbox" checked={form.quietWait !== false} onChange={(e) => setForm({ ...form, quietWait: e.target.checked })} style={{ width: 20, height: 20 }} />
+          <span>Keep the two-week wait quiet <span className="muted small">(no days-past-ovulation countdown, just your test date)</span></span>
+        </label>
+        <label>
+          <div className="field-label">Protect the wait: things to skip from ovulation until your period</div>
+          <textarea
+            rows={5}
+            value={(form.waitList ?? DEFAULT_WAIT_LIST).join("\n")}
+            onChange={(e) => setForm({ ...form, waitList: e.target.value.split("\n") })}
+          />
+          <div className="tiny muted">One per line. Shows on Today from ovulation day, and Ask knows it too.</div>
+        </label>
         <button className="btn primary" onClick={save}>{saved ? "Saved ✓" : "Save"}</button>
       </div>}
+
+      {!activePregnancy(settings) && <OuraSettings />}
 
       <div className="card stack">
         <h2>Your data</h2>

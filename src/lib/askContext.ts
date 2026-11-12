@@ -4,7 +4,8 @@ import { healthChecks } from "../../shared/health";
 import { patternFor } from "../../shared/patterns";
 import { activePregnancy, gaLong, gestation, pregnancyFlags, standardSchedule } from "../../shared/pregnancy";
 import { scansForAi, timelineForAi } from "../../shared/scans";
-import type { DayLog, LhTest, Settings } from "../../shared/types";
+import { DEFAULT_WAIT_LIST, type DayLog, type LhTest, type Settings } from "../../shared/types";
+import { waitListActive } from "./cycleToday";
 
 /** A compact snapshot of the user's data for Ask Bloom (sent with each question). */
 export function buildAskContext(model: CycleModel, logs: DayLog[], lhTests: LhTest[], settings: Settings, today: string) {
@@ -69,5 +70,12 @@ export function buildAskContext(model: CycleModel, logs: DayLog[], lhTests: LhTe
     recentLhTests: lhTests.filter((t) => t.date >= recentSince).map((t) => ({ date: t.date, time: t.taken_at, ratio: t.ratio, level: t.level })),
     tryingSince: settings.ttcSince ?? null,
     over35: !!settings.over35,
+    // Her own list of things to skip from ovulation until her period (from her and her doctor).
+    waitList: { items: settings.waitList ?? DEFAULT_WAIT_LIST, activeToday: waitListActive(info) },
+    temperatureShiftThisCycle: info.cycle?.tempShift ?? null,
+    ouraRecentNights: model.wearable.filter((w) => w.date >= addDays(today, -14)),
+    firstCycleAfterPregnancyLoss: model.afterLoss && model.afterLoss.start === info.cycle?.start
+      ? { day1: model.afterLoss.start, negativePregnancyTestSince: model.afterLoss.negativeTest, lhPeaksSetAsideBeforeNegativeTest: model.afterLoss.ignoredPeaks }
+      : null,
   };
 }

@@ -159,7 +159,22 @@ export interface Settings {
   over35?: boolean;
   /** Set once a positive test is confirmed. Bloom switches to pregnancy mode while it's active. */
   pregnancy?: Pregnancy | null;
+  /**
+   * Things to skip from ovulation until the next period ("protect the wait"). Shown on Today
+   * from ovulation day on, and known to Ask and the daily line.
+   */
+  waitList?: string[];
+  /** Hide the day-by-day DPO countdown during the two-week wait (on by default). */
+  quietWait?: boolean;
 }
+
+export const DEFAULT_WAIT_LIST = [
+  "No alcohol",
+  "No hot yoga or sauna",
+  "Acetaminophen (Tylenol) in place of ibuprofen",
+  "No Beam Dream",
+  "No pimecrolimus",
+];
 
 export const DEFAULT_SETTINGS: Settings = {
   cycleLength: 28,
@@ -169,6 +184,8 @@ export const DEFAULT_SETTINGS: Settings = {
   ttcSince: null,
   over35: false,
   pregnancy: null,
+  waitList: DEFAULT_WAIT_LIST,
+  quietWait: true,
 };
 
 /** What an importer (or the AI extractor) produces before anything is saved. */

@@ -1,3 +1,4 @@
+import type { WearableDay } from "../../shared/wearable";
 import type { BumpPhoto, DayLog, ImportBundle, JournalEntry, LhLevel, LhTest, Scan, Settings } from "../../shared/types";
 
 export class AuthError extends Error {}
@@ -39,6 +40,14 @@ async function call<T>(path: string, init: RequestInit & { json?: unknown } = {}
   return data as T;
 }
 
+export interface OuraStatus {
+  configured: boolean;
+  connected: boolean;
+  lastSync: string | null;
+  lastError: string | null;
+  redirectUri: string;
+}
+
 export interface LhReading {
   readable: boolean;
   ratio: number;
@@ -65,7 +74,9 @@ export const api = {
   sessions: () => call<{ sessions: SignedIn[] }>("auth?sessions=1"),
   endSession: (id: string) => call(`auth?session=${encodeURIComponent(id)}`, { method: "DELETE" }),
   logoutOthers: () => call("auth?others=1", { method: "DELETE" }),
-  data: () => call<{ dayLogs: DayLog[]; lhTests: LhTest[] }>("logs"),
+  data: () => call<{ dayLogs: DayLog[]; lhTests: LhTest[]; wearable?: WearableDay[]; oura?: OuraStatus }>("logs"),
+  ouraSync: () => call<{ saved: number | null; oura: OuraStatus }>("oura/sync", { method: "POST" }),
+  ouraDisconnect: () => call<{ oura: OuraStatus }>("oura/disconnect", { method: "DELETE" }),
   saveDay: (log: DayLog) => call<{ log: DayLog }>("logs", { method: "PUT", json: { log } }),
   settings: () => call<{ settings: Settings }>("settings"),
   saveSettings: (settings: Settings) => call<{ settings: Settings }>("settings", { method: "PUT", json: { settings } }),

@@ -9,10 +9,10 @@ type Group = { label?: string; items: Item[] };
 
 /** The phase note: day-specific notes, your own pattern, then the expandable sections. */
 export function DailyNote({ info, vars }: { info: Today; vars: Vars }) {
-  const { model, dayLogs } = useStore();
+  const { model, dayLogs, settings } = useStore();
   const c = PHASES[info.phase];
   const seed = info.cycleDay ?? 0;
-  const special = dayNotes(info);
+  const special = dayNotes(info, settings.quietWait !== false);
   const pattern = useMemo(() => patternFor(info, model, dayLogs), [info, model, dayLogs]);
 
   const sections: { id: string; title: string; icon: string; groups: Group[]; collapsedPerGroup: number }[] = [

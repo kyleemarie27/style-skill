@@ -1,6 +1,8 @@
 {
   "framework": "vite",
   "functions": { "api/**/*.ts": { "maxDuration": 60 } },
+  "rewrites": [{ "source": "/api/oura/:step", "destination": "/api/logs?oura=:step" }],
+  "crons": [{ "path": "/api/oura/cron", "schedule": "15 15 * * *" }],
   "headers": [
     {
       "source": "/(.*)",
