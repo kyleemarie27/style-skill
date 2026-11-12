@@ -69,6 +69,7 @@ export default route(async (req: VercelRequest) => {
         ? b.waitList.map((x: unknown) => text(x, 120)).filter((x: string | null): x is string => !!x).slice(0, 20)
         : DEFAULT_SETTINGS.waitList,
       quietWait: b.quietWait !== false,
+      names: b.names && typeof b.names === "object" ? { me: text(b.names.me, 40), partner: text(b.names.partner, 40) } : null,
     };
     await q(
       "INSERT INTO settings (key, value) VALUES ('main', $1) ON CONFLICT (key) DO UPDATE SET value=$1",

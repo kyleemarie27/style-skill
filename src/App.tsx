@@ -11,6 +11,7 @@ import { InsightsPage } from "./pages/Insights";
 import { LoginPage } from "./pages/Login";
 import { MemoriesPage } from "./pages/MemoriesPage";
 import { PartnerToday } from "./pages/PartnerToday";
+import { PartnerCycleToday } from "./pages/PartnerCycleToday";
 import { SettingsPage } from "./pages/Settings";
 import { TodayPage } from "./pages/Today";
 import { WeekPage, WeeksPage } from "./pages/WeeksPage";
@@ -29,8 +30,8 @@ export function App() {
   const [page, arg] = route;
   const today = localToday();
   const pregnant = !!activePregnancy(settings);
-  // The partner's phone: a Today written for them, and no Log tab (logging is the pregnant partner's).
-  const partner = pregnant && role === "partner";
+  // The partner's phone: a Today written for them, and no Log tab (logging is the main account's).
+  const partner = role === "partner";
   if (pregnant && auth?.setup && shouldAskViewer()) return <div className="app pregnant"><main className="main"><WhoPage /></main></div>;
   const link = (href: string, label: string, Icon: () => React.JSX.Element, active: boolean) => (
     <a href={`#/${href}`} className={active ? "active" : ""} aria-current={active ? "page" : undefined}>
@@ -69,8 +70,8 @@ export function App() {
           : page === "doctor" ? <DoctorPage />
           : page === "ask" ? <AskPage key={arg ?? ""} first={arg ? decodeURIComponent(arg) : null} />
           : page === "memories" ? <MemoriesPage />
-          : page === "partner" && pregnant ? <PartnerToday />
-          : partner ? <PartnerToday />
+          : page === "partner" ? (pregnant ? <PartnerToday /> : <PartnerCycleToday />)
+          : partner ? (pregnant ? <PartnerToday /> : <PartnerCycleToday />)
           : <TodayPage />}
       </main>
     </div>

@@ -12,6 +12,8 @@ export interface Focus {
   sub: string;
   /** Today is one to have sex if you can. */
   counts: boolean;
+  /** Why, so the partner's view can say it in its own words. */
+  kind: "late" | "last" | "wait" | "period" | "lh-peak" | "lh-high" | "mucus" | "best" | "open" | "before" | "none";
 }
 
 /** The cycle day to start LH strips: a day or so before the fertile window opens (never before day 6). */
@@ -45,10 +47,10 @@ export function focusFor(info: Today, model: CycleModel, lhTests: LhTest[], byDa
   const unsureLh = !!model.afterLoss && !model.afterLoss.negativeTest;
 
   if (info.phase === "late") {
-    return { headline: "Your period is late. Time to test.", sub: "First-morning urine gives the clearest answer.", counts: false };
+    return { headline: "Your period is late. Time to test.", sub: "First-morning urine gives the clearest answer.", counts: false, kind: "late" };
   }
   if (info.dpo === 1 && info.fertileDay) {
-    return { headline: "Last day of the window.", sub: "One more try today if you'd like. Then your part is done.", counts: true };
+    return { headline: "Last day of the window.", sub: "One more try today if you'd like. Then your part is done.", counts: true, kind: "last" };
   }
   if (info.dpo && info.phase.startsWith("tww")) {
     return {
@@ -57,6 +59,7 @@ export function focusFor(info: Today, model: CycleModel, lhTests: LhTest[], byDa
         ? `Test on ${testOn}, not before. Waiting saves you a hard morning.`
         : `${info.dpo} days past ovulation. Test on ${testOn}.`,
       counts: false,
+      kind: "wait",
     };
   }
   if (info.phase === "menstrual") {
@@ -64,6 +67,7 @@ export function focusFor(info: Today, model: CycleModel, lhTests: LhTest[], byDa
       headline: "Nothing to time today.",
       sub: info.fertileStart ? `Rest. Your window opens around ${prettyDate(info.fertileStart)}.` : "Rest.",
       counts: false,
+      kind: "period",
     };
   }
 
@@ -75,10 +79,11 @@ export function focusFor(info: Today, model: CycleModel, lhTests: LhTest[], byDa
       headline: recentPeak.date === info.date ? "LH peak. Today and tomorrow are the days." : "LH peaked yesterday. Today counts.",
       sub: "Ovulation usually follows a peak by 12–36 hours.",
       counts: true,
+      kind: "lh-peak",
     };
   }
   if (last && last.date === info.date && last.level === "high" && !unsureLh) {
-    return { headline: "LH is rising. Today counts.", sub: "Have sex today and tomorrow, and keep testing for the peak.", counts: true };
+    return { headline: "LH is rising. Today counts.", sub: "Have sex today and tomorrow, and keep testing for the peak.", counts: true, kind: "lh-high" };
   }
   const cm = recentMucus(info, byDate);
   if (cm && (cm.cm === "egg_white" || cm.cm === "watery") && info.date <= (info.fertileEnd ?? info.date)) {
@@ -86,12 +91,13 @@ export function focusFor(info: Today, model: CycleModel, lhTests: LhTest[], byDa
       headline: "Fertile mucus. Today counts.",
       sub: `${cm.cm === "egg_white" ? "Egg-white" : "Watery"} mucus ${cm.date === info.date ? "today" : cm.date === addDays(info.date, -1) ? "yesterday" : "two days ago"} is your body's own green light.`,
       counts: true,
+      kind: "mucus",
     };
   }
   if (info.fertileDay && info.ovulation) {
     const toOv = diffDays(info.ovulation, info.date);
-    if (toOv >= 0 && toOv <= 2) return { headline: "One of your best days. Today counts.", sub: "The two days before ovulation and the day itself give the best odds.", counts: true };
-    return { headline: "Your window is open.", sub: "Every day or two from here until the day after your LH peak.", counts: true };
+    if (toOv >= 0 && toOv <= 2) return { headline: "One of your best days. Today counts.", sub: "The two days before ovulation and the day itself give the best odds.", counts: true, kind: "best" };
+    return { headline: "Your window is open.", sub: "Every day or two from here until the day after your LH peak.", counts: true, kind: "open" };
   }
   if (info.phase === "follicular" && info.fertileStart) {
     const lhDay = lhStartDate(info);
@@ -99,9 +105,9 @@ export function focusFor(info: Today, model: CycleModel, lhTests: LhTest[], byDa
     const strips = unsureLh
       ? "Take a pregnancy test before you start LH strips."
       : lhDay && lhDay > info.date ? `Start LH strips on ${prettyDate(lhDay)}.` : "Test LH once or twice a day now.";
-    return { headline: "Nothing to time yet.", sub: `${strips} Your window opens in about ${days} day${days === 1 ? "" : "s"}.`, counts: false };
+    return { headline: "Nothing to time yet.", sub: `${strips} Your window opens in about ${days} day${days === 1 ? "" : "s"}.`, counts: false, kind: "before" };
   }
-  return { headline: "Nothing to time today.", sub: "", counts: false };
+  return { headline: "Nothing to time today.", sub: "", counts: false, kind: "none" };
 }
 
 export interface Signal {

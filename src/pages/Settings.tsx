@@ -4,7 +4,7 @@ import { api, type ImportBatch } from "../lib/api";
 import { activePregnancy } from "../../shared/pregnancy";
 import { MemoryCard } from "../components/MemoryCard";
 import { OuraSettings } from "../components/OuraSettings";
-import { DEFAULT_WAIT_LIST } from "../../shared/types";
+import { DEFAULT_WAIT_LIST, namesOf } from "../../shared/types";
 import { PregnancySettings } from "../components/PregnancySettings";
 import { SecuritySettings } from "../components/SecuritySettings";
 import { useStore } from "../lib/store";
@@ -79,6 +79,15 @@ export function SettingsPage() {
           />
           <div className="tiny muted">One per line. Shows on Today from ovulation day, and Ask knows it too.</div>
         </label>
+        <div className="stack partner-settings">
+          <div className="field-label" style={{ marginBottom: 0 }}>You and your partner</div>
+          <p className="small muted">Your partner logs in with their own password (Security, below) and gets their own Today: when the window is, how you're doing and how to help, and what each phase means for you.</p>
+          <div className="grid2">
+            <label><div className="field-label">Your first name</div><input type="text" maxLength={40} value={form.names?.me ?? namesOf(form).me} onChange={(e) => setForm({ ...form, names: { me: e.target.value, partner: form.names?.partner ?? namesOf(form).partner } })} /></label>
+            <label><div className="field-label">Partner's first name</div><input type="text" maxLength={40} value={form.names?.partner ?? namesOf(form).partner} onChange={(e) => setForm({ ...form, names: { me: form.names?.me ?? namesOf(form).me, partner: e.target.value } })} /></label>
+          </div>
+          <a className="btn ghost" href="#/partner" style={{ alignSelf: "flex-start" }}>See {namesOf(settings).partner ? `${namesOf(settings).partner}'s` : "your partner's"} page →</a>
+        </div>
         <button className="btn primary" onClick={save}>{saved ? "Saved ✓" : "Save"}</button>
       </div>}
 

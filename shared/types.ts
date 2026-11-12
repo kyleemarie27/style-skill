@@ -166,6 +166,16 @@ export interface Settings {
   waitList?: string[];
   /** Hide the day-by-day DPO countdown during the two-week wait (on by default). */
   quietWait?: boolean;
+  /** First names, used outside pregnancy too (the partner's view says "How Kylee is doing"). */
+  names?: { me?: string | null; partner?: string | null } | null;
+}
+
+/** First names: Settings first, then the ones saved with a pregnancy. Empty when not set. */
+export function namesOf(s: Settings): { me: string; partner: string } {
+  return {
+    me: (s.names?.me ?? s.pregnancy?.momName ?? "").trim(),
+    partner: (s.names?.partner ?? s.pregnancy?.partnerName ?? "").trim(),
+  };
 }
 
 export const DEFAULT_WAIT_LIST = [

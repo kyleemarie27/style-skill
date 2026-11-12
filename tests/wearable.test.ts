@@ -218,3 +218,32 @@ describe("the pregnancy cycle", () => {
     expect([...marks.values()].some((x) => x.fertile)).toBe(false);
   });
 });
+
+describe("the partner's view", async () => {
+  const { partnerFocus, nextWindow } = await import("../src/pages/PartnerCycleToday");
+  const logs = [...period("2026-01-01"), ...period("2026-01-29")];
+  const model = buildModel(logs, [], DEFAULT_SETTINGS);
+  const byDate = new Map(logs.map((l) => [l.date, l]));
+  const at = (d: string) => {
+    const info = phaseFor(d, model);
+    return partnerFocus(info, focusFor(info, model, [], byDate, true), "Kylee");
+  };
+
+  it("says plainly whether today is a timing day, in the partner's words", () => {
+    expect(at("2026-01-30").headline).toBe("Not a timing day.");
+    expect(at("2026-02-05").sub).toMatch(/window opens in 2 days/);
+    expect(at("2026-02-11")).toMatchObject({ headline: "Today counts." });
+    expect(at("2026-02-18").headline).toBe("Your part is done.");
+    const lh: LhTest[] = [{ date: "2026-02-09", ratio: 1.1, level: "peak" }];
+    const m2 = buildModel(logs, lh, DEFAULT_SETTINGS);
+    const info = phaseFor("2026-02-09", m2);
+    expect(partnerFocus(info, focusFor(info, m2, lh, byDate, true), "Kylee").sub).toMatch(/^Kylee's LH strip hit Peak/);
+  });
+
+  it("projects the next window from the next period and the usual ovulation day", () => {
+    const info = phaseFor("2026-02-18", model);
+    const w = nextWindow(info, model)!;
+    expect(w.ovulation).toBe(addDays(info.nextPeriod!, 14));
+    expect(w.start).toBe(addDays(w.ovulation, -5));
+  });
+});

@@ -14,6 +14,20 @@ No ads, no pop-ups, no notifications. You log in on your phone or computer and s
 - **Calendar, insights and an LH curve:** period, fertile window, ovulation (LH-confirmed, temperature-confirmed or estimated), ♥ days, and cycle history.
 - **A step-by-step import of your Clue and Premom history**, so predictions are smart from day one. You can undo it at any time.
 
+## Your partner's view (trying to conceive)
+
+Your partner logs in with their own password (Settings → Security) and gets their own Today, written to them:
+
+- **Is today a timing day?** "Today counts. Kylee's LH is rising…", "Not a timing day yet. The window opens in 3 days", "Your part is done. Test day is Nov 26."
+- **The window**: dates, best days and the seven-day strip (♥, LH), plus the next window once this one has passed.
+- **How you're doing** from your check-in, with how to help with each thing you logged.
+- **Protect the wait, together**: your wait list, with easy ways to join in.
+- **A guide to this phase** for them: what to expect from you, how to support, what to go easy on, and one idea for the two of you (`src/content/partnerCycle.ts`). A gentle note in the first cycle after a loss.
+- **Timing, simply**: how the window works and their side of it (heat, alcohol, how often).
+- **Ask** answers them as your partner; their chats don't go into Bloom's memory about you. Calendar days are read-only for them.
+
+Set both first names in Settings → Trying to conceive, and preview their page from *See what … sees* on Today.
+
 ## Oura
 
 Settings → Oura connects your ring. Bloom pulls three numbers per night (skin temperature deviation, lowest resting heart rate, average HRV) when you open the app and once a day on a schedule. A temperature rise of at least 0.2 °C over the 6 nights before, held for 3 nights in a row, confirms ovulation (the day before the first high night). An LH peak still sets the ovulation date when there is one; the temperature then confirms it. Oura only has last night once the ring has synced to the Oura app.
