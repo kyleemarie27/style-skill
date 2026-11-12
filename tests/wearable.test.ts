@@ -3,7 +3,7 @@ import { mergeNights } from "../api/_lib/oura";
 import { buildModel, phaseFor } from "../shared/cycle";
 import { addDays } from "../shared/dates";
 import { DEFAULT_SETTINGS, type DayLog, type LhTest, type Settings } from "../shared/types";
-import { thermalShift, type WearableDay } from "../shared/wearable";
+import { tempPattern, thermalShift, type WearableDay } from "../shared/wearable";
 import { focusFor, signalsFor, waitListActive, windowDays } from "../src/lib/cycleToday";
 import { invitationFor } from "../src/content/invitations";
 
@@ -174,5 +174,17 @@ describe("averages after a loss", () => {
     const m = buildModel(logs, [], settings);
     expect(m.cycles.map((c) => c.start)).toContain("2026-10-28");
     expect(m.avgCycleLength).toBe(29); // the 43-day cycle after the loss doesn't count
+  });
+});
+
+describe("tempPattern", () => {
+  it("learns days from LH peak to the rise, the rise size, and the resting heart rate lift", () => {
+    const logs = [...period("2026-01-01"), ...period("2026-01-29")];
+    const w = nights("2026-01-01", 28, "2026-01-16").map((n) => ({ ...n, rhr: n.date >= "2026-01-16" ? 58 : 54 }));
+    const m = buildModel(logs, [{ date: "2026-01-14", ratio: 1.2, level: "peak" }], DEFAULT_SETTINGS, w);
+    const p = tempPattern(m.cycles, m.wearable);
+    expect(p.peakToRise).toEqual([2]);
+    expect(p.rises[0]).toBeGreaterThan(0.3);
+    expect(p.rhrLift).toEqual([4]);
   });
 });

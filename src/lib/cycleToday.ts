@@ -111,6 +111,8 @@ export interface Signal {
   note: string;
   /** Highlight: this signal says "fertile" (or ovulation confirmed). */
   on?: boolean;
+  /** Temperature only: the last 10 nights (null = no data), and where the high nights start. */
+  spark?: { values: (number | null)[]; highFrom: number | null };
 }
 
 const CM_LABEL: Record<Mucus, [string, string]> = {
@@ -169,14 +171,21 @@ export function signalsFor(
 
   const shift = info.cycle?.tempShift ?? null;
   const lastNight = model.wearable.filter((w) => w.tempDev !== null && w.date <= info.date).at(-1);
+  const sparkFrom = addDays(info.date, -9);
+  const byNight = new Map(model.wearable.map((w) => [w.date, w.tempDev]));
+  const spark = {
+    values: Array.from({ length: 10 }, (_, i) => byNight.get(addDays(sparkFrom, i)) ?? null),
+    highFrom: shift && shift.firstHigh >= sparkFrom ? diffDays(shift.firstHigh, sparkFrom) : shift ? 0 : null,
+  };
   if (shift) {
-    out.push({ key: "temp", label: "Temperature", value: `Up ${signed(shift.rise)}`, note: `Since ${prettyDate(shift.firstHigh)} · ovulation confirmed`, on: true });
+    out.push({ key: "temp", label: "Temperature", value: `Up ${signed(shift.rise)}`, note: `Since ${prettyDate(shift.firstHigh)} · ovulation confirmed`, on: true, spark });
   } else if (lastNight && diffDays(info.date, lastNight.date) <= 3) {
     out.push({
       key: "temp",
       label: "Temperature",
       value: signed(lastNight.tempDev!),
       note: info.phase === "menstrual" ? "Your baseline" : "No sustained rise yet",
+      spark,
     });
   } else if (ouraConnected) {
     out.push({ key: "temp", label: "Temperature", value: "Waiting", note: "Open the Oura app to sync last night" });

@@ -18,6 +18,8 @@ No ads, no pop-ups, no notifications. You log in on your phone or computer and s
 
 Settings → Oura connects your ring. Bloom pulls three numbers per night (skin temperature deviation, lowest resting heart rate, average HRV) when you open the app and once a day on a schedule. A temperature rise of at least 0.2 °C over the 6 nights before, held for 3 nights in a row, confirms ovulation (the day before the first high night). An LH peak still sets the ovulation date when there is one; the temperature then confirms it. Oura only has last night once the ring has synced to the Oura app.
 
+Where it shows: the **Temperature tile** on Today (last night, a 10-night sparkline, and "ovulation confirmed" once the rise holds); **Insights → Temperature**, a chart for the cycle you pick with the baseline, the 0.2 °C line, the high nights shaded, the LH peak (▲) and ♥ days; and **Your pattern** under it, which learns how many days after your LH peak your temperature rises, how big your rise is, and how much your resting heart rate lifts after ovulation. Cycle history marks ovulation as (LH), (LH + temp), (temp) or (est.).
+
 Setup, once: register an app at cloud.ouraring.com/oauth/applications with the redirect URI `https://<your Bloom address>/api/oura/callback` and the *daily* and *personal* scopes, then add `OURA_CLIENT_ID`, `OURA_CLIENT_SECRET` and `CRON_SECRET` in Vercel and redeploy. The Settings card walks you through it and shows the exact redirect URI.
 
 ## After a pregnancy loss
