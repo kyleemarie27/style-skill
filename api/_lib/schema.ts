@@ -109,6 +109,16 @@ CREATE TABLE IF NOT EXISTS login_attempts (
 );
 CREATE INDEX IF NOT EXISTS login_attempts_at ON login_attempts(at);
 
+-- Added with Oura: one row per night (dated by the morning you woke), synced once a day.
+CREATE TABLE IF NOT EXISTS wearable_days (
+  date        DATE PRIMARY KEY,
+  temp_dev    NUMERIC(4,2),
+  rhr         INTEGER,
+  hrv         NUMERIC(6,1),
+  source      TEXT NOT NULL DEFAULT 'oura',
+  updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 CREATE TABLE IF NOT EXISTS settings (
   key    TEXT PRIMARY KEY,
   value  JSONB NOT NULL

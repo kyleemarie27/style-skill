@@ -65,6 +65,10 @@ export default route(async (req: VercelRequest) => {
       ttcSince: isISODate(b.ttcSince) ? b.ttcSince : null,
       over35: b.over35 === true,
       pregnancy,
+      waitList: Array.isArray(b.waitList)
+        ? b.waitList.map((x: unknown) => text(x, 120)).filter((x: string | null): x is string => !!x).slice(0, 20)
+        : DEFAULT_SETTINGS.waitList,
+      quietWait: b.quietWait !== false,
     };
     await q(
       "INSERT INTO settings (key, value) VALUES ('main', $1) ON CONFLICT (key) DO UPDATE SET value=$1",

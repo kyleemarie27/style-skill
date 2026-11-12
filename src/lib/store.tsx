@@ -1,7 +1,8 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { buildModel, type CycleModel } from "../../shared/cycle";
 import { DEFAULT_SETTINGS, type DayLog, type LhTest, type Settings } from "../../shared/types";
-import { api, AuthError, type AuthStatus, type Role } from "./api";
+import type { WearableDay } from "../../shared/wearable";
+import { api, AuthError, type AuthStatus, type OuraStatus, type Role } from "./api";
 
 interface Store {
   loading: boolean;
@@ -13,6 +14,11 @@ interface Store {
   refreshAuth: () => Promise<void>;
   dayLogs: DayLog[];
   lhTests: LhTest[];
+  /** Nightly Oura numbers (empty until Oura is connected). */
+  wearable: WearableDay[];
+  oura: OuraStatus | null;
+  /** Pull the latest nights from Oura if the last sync is more than a few hours old. */
+  syncOura: (force?: boolean) => Promise<void>;
   settings: Settings;
   model: CycleModel;
   byDate: Map<string, DayLog>;
@@ -31,6 +37,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [dayLogs, setDayLogs] = useState<DayLog[]>([]);
   const [lhTests, setLhTests] = useState<LhTest[]>([]);
+  const [wearable, setWearable] = useState<WearableDay[]>([]);
+  const [oura, setOura] = useState<OuraStatus | null>(null);
   const [settings, setSettingsState] = useState<Settings>(DEFAULT_SETTINGS);
 
   const reload = useCallback(async () => {
@@ -38,6 +46,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       const [d, s] = await Promise.all([api.data(), api.settings()]);
       setDayLogs(d.dayLogs);
       setLhTests(d.lhTests);
+      setWearable(d.wearable ?? []);
+      setOura(d.oura ?? null);
       setSettingsState(s.settings);
       setAuthed(true);
     } catch (e) {
@@ -79,12 +89,24 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     await api.saveDay(log);
   }, []);
 
+  const syncOura = useCallback(async (force = false) => {
+    if (!oura?.connected || !oura.configured) return;
+    const stale = !oura.lastSync || Date.now() - Date.parse(oura.lastSync) > 3 * 3600_000;
+    if (!force && !stale) return;
+    const r = await api.ouraSync();
+    setOura(r.oura);
+    if (r.saved) {
+      const d = await api.data();
+      setWearable(d.wearable ?? []);
+    }
+  }, [oura]);
+
   const setSettings = useCallback(async (s: Settings) => {
     const r = await api.saveSettings(s);
     setSettingsState(r.settings);
   }, []);
 
-  const model = useMemo(() => buildModel(dayLogs, lhTests, settings), [dayLogs, lhTests, settings]);
+  const model = useMemo(() => buildModel(dayLogs, lhTests, settings, wearable), [dayLogs, lhTests, settings, wearable]);
   const byDate = useMemo(() => new Map(dayLogs.map((d) => [d.date, d])), [dayLogs]);
 
   const value: Store = {
@@ -96,6 +118,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     refreshAuth,
     dayLogs,
     lhTests,
+    wearable,
+    oura,
+    syncOura,
     settings,
     model,
     byDate,

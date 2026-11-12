@@ -595,11 +595,11 @@ export const PHASES: Record<Phase, PhaseContent> = {
 };
 
 /** Day-specific notes that sit on top of the phase content. */
-export function dayNotes(info: Today): Item[] {
+export function dayNotes(info: Today, quietWait = false): Item[] {
   const out: Item[] = [];
   if (info.daysUntilOvulation === 2) out.push({ t: "Ovulation is about 2 days away: one of your most fertile days.", why: "Sperm waiting before the egg arrives gives the best odds." });
   if (info.daysUntilOvulation === 1) out.push({ t: "Ovulation is likely tomorrow. Today and tomorrow are your best days." });
-  if (info.dpo && DPO[info.dpo]) out.push(DPO[info.dpo]);
+  if (info.dpo && DPO[info.dpo] && !quietWait) out.push(DPO[info.dpo]);
   if (info.phase === "menstrual" && info.cycleDay === 1) out.push({ t: "Day 1: a fresh start. Bloom has updated your predictions for this cycle." });
   return out;
 }
