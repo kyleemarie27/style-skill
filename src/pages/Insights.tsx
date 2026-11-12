@@ -3,6 +3,8 @@ import { addDays, diffDays, localToday, prettyDate } from "../../shared/dates";
 import { AskBloomCard } from "../components/AskBloom";
 import { HealthChecks } from "../components/HealthChecks";
 import { LhChart } from "../components/LhChart";
+import { TempChart } from "../components/TempChart";
+import { tempPattern } from "../../shared/wearable";
 import { useStore } from "../lib/store";
 
 export function InsightsPage() {
@@ -70,6 +72,31 @@ export function InsightsPage() {
         <p className="tiny muted">Premom scale: yellow band = High (0.5–0.99), pink band = Peak (≥1.0). Dashed line = confirmed ovulation.</p>
       </div>
 
+      {model.wearable.length > 0 ? (
+        <div className="card stack">
+          <h2>Temperature</h2>
+          <TempChart
+            nights={model.wearable}
+            start={selected.start}
+            days={selLen}
+            shift={selected.tempShift}
+            lhPeak={selected.lhPeak}
+            ovulation={selected.ovulationConfirmed ? selected.ovulation : null}
+            loveDates={dayLogs.filter((d) => d.intercourse && d.date >= selected.start).map((d) => d.date)}
+          />
+          <p className="small">
+            {selected.tempShift
+              ? `Your temperature rose ${selected.tempShift.rise.toFixed(2)}°C on ${prettyDate(selected.tempShift.firstHigh)} and held for 3 nights or more, so ovulation was confirmed${selected.lhPeak ? ` (LH peaked ${prettyDate(selected.lhPeak)})` : ""}.`
+              : "No sustained rise in this cycle yet. It usually shows 1–3 days after ovulation."}
+          </p>
+          <p className="tiny muted">
+            Oura's nightly skin temperature vs. your own baseline, same cycle as above. Gray dotted line = the 6 nights before the rise; purple dashed = 0.2°C above them;
+            purple shading = high nights; ▲ = LH peak; ♥ = sex logged. Tap a point for the night.
+          </p>
+          <TempPatternNote />
+        </div>
+      ) : null}
+
       <div className="card stack">
         <h2>Cycle history</h2>
         {(allHistory ? rows : rows.slice(0, 6)).map(({ c, len, loveInWindow, periodLen, ovDay }) => (
@@ -77,7 +104,7 @@ export function InsightsPage() {
             <div className="row between small">
               <b>{prettyDate(c.start)}{c.end ? "" : " · current"}</b>
               <span className="muted">
-                {c.length ? `${c.length} days` : `day ${len}`} · ovulation CD{ovDay}{c.ovulationSource === "lh" ? " (LH)" : c.ovulationSource === "marked" ? " (confirmed)" : " (est.)"} · ♥ {loveInWindow} in window
+                {c.length ? `${c.length} days` : `day ${len}`} · ovulation CD{ovDay}{c.ovulationSource === "lh" ? (c.tempShift ? " (LH + temp)" : " (LH)") : c.ovulationSource === "marked" ? " (confirmed)" : c.ovulationSource === "temp" ? " (temp)" : " (est.)"} · ♥ {loveInWindow} in window
               </span>
             </div>
             <div className="cycle-bar" aria-hidden>
@@ -99,6 +126,37 @@ export function InsightsPage() {
           <span><i style={{ background: "var(--ovulation)" }} />Ovulation</span>
         </div>
       </div>
+    </div>
+  );
+}
+
+/** What past cycles say about your temperature and heart rate. Shown once there's at least one cycle to learn from. */
+function TempPatternNote() {
+  const { model } = useStore();
+  const p = useMemo(() => tempPattern(model.cycles, model.wearable), [model]);
+  const avg = (xs: number[]) => xs.reduce((a, b) => a + b, 0) / xs.length;
+  const range = (xs: number[]) => (Math.min(...xs) === Math.max(...xs) ? `${xs[0]}` : `${Math.min(...xs)}–${Math.max(...xs)}`);
+  const lines: string[] = [];
+  if (p.peakToRise.length) {
+    const d = `${range(p.peakToRise)} day${Math.max(...p.peakToRise) === 1 ? "" : "s"}`;
+    lines.push(p.peakToRise.length === 1
+      ? `So far, your temperature rose ${d} after your LH peak. Bloom will learn your usual gap over the next cycles.`
+      : `Your temperature usually rises ${d} after your LH peak (${p.peakToRise.length} cycles).`);
+  }
+  if (p.rises.length) lines.push(`Your rise is about ${avg(p.rises).toFixed(2)}°C.`);
+  if (p.rhrLift.length) {
+    const lift = avg(p.rhrLift);
+    lines.push(
+      lift >= 1
+        ? `Your resting heart rate runs about ${lift.toFixed(1)} bpm higher after ovulation than before (${p.rhrLift.length} cycle${p.rhrLift.length === 1 ? "" : "s"}). That's normal: progesterone does it.`
+        : `Your resting heart rate stays about the same after ovulation (${p.rhrLift.length} cycle${p.rhrLift.length === 1 ? "" : "s"}).`,
+    );
+  }
+  if (!lines.length) return <p className="tiny muted">After a cycle or two, Bloom will show your own pattern here: when your temperature rises after LH peaks, and how your resting heart rate changes.</p>;
+  return (
+    <div className="pattern">
+      <div className="section-title"><span className="ico" aria-hidden>📈</span>Your pattern</div>
+      <ul className="tips">{lines.map((l) => <li key={l}>{l}</li>)}</ul>
     </div>
   );
 }

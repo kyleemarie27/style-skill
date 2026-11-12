@@ -63,3 +63,37 @@ export function thermalShift(days: WearableDay[], from: string, to: string): The
 
 const mean = (xs: number[]) => xs.reduce((a, b) => a + b, 0) / xs.length;
 const round2 = (n: number) => Math.round(n * 100) / 100;
+
+export interface TempPattern {
+  /** Days from LH peak to the first high night, one per cycle that has both. */
+  peakToRise: number[];
+  /** Resting heart rate after ovulation minus before, bpm, one per cycle with enough nights. */
+  rhrLift: number[];
+  /** Temperature rise size, °C, one per cycle with a shift. */
+  rises: number[];
+}
+
+/**
+ * What your past cycles say about your own temperature and heart rate: how long after the LH
+ * peak the rise shows up, how big it is, and how much your resting heart rate lifts after ovulation.
+ */
+export function tempPattern(
+  cycles: { start: string; end: string | null; periodEnd: string; ovulation: string; ovulationConfirmed: boolean; lhPeak: string | null; tempShift: ThermalShift | null }[],
+  days: WearableDay[],
+): TempPattern {
+  const out: TempPattern = { peakToRise: [], rhrLift: [], rises: [] };
+  const rhrBetween = (a: string, b: string) => {
+    const xs = days.filter((d) => d.date >= a && d.date <= b && d.rhr !== null).map((d) => d.rhr!);
+    return xs.length >= 4 ? mean(xs) : null;
+  };
+  for (const c of cycles) {
+    if (c.tempShift) out.rises.push(c.tempShift.rise);
+    if (c.lhPeak && c.tempShift) out.peakToRise.push(diffDays(c.tempShift.firstHigh, c.lhPeak));
+    if (c.end && c.ovulationConfirmed) {
+      const before = rhrBetween(addDays(c.periodEnd, 1), addDays(c.ovulation, -1));
+      const after = rhrBetween(addDays(c.ovulation, 3), c.end);
+      if (before !== null && after !== null) out.rhrLift.push(Math.round((after - before) * 10) / 10);
+    }
+  }
+  return out;
+}

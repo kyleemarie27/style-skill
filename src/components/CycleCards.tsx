@@ -4,6 +4,7 @@ import { DEFAULT_WAIT_LIST } from "../../shared/types";
 import { invitationFor } from "../content/invitations";
 import { lhStartDate, signalsFor, waitListActive, windowDays } from "../lib/cycleToday";
 import { useStore } from "../lib/store";
+import { TempSpark } from "./TempChart";
 
 /** Today's invitation: the part of yourself today is good for, and one small ritual. */
 export function InvitationCard({ info }: { info: Today }) {
@@ -95,6 +96,7 @@ export function SignalsCard({ info }: { info: Today }) {
           <div key={s.key} className={`signal${s.on ? " on" : ""}`}>
             <div className="tiny muted">{s.label}</div>
             <b>{s.value}</b>
+            {s.spark && <TempSpark values={s.spark.values} highFrom={s.spark.highFrom} />}
             <div className="tiny muted">{s.note}</div>
           </div>
         ))}

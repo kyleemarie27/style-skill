@@ -776,3 +776,4 @@ details.card[open] > summary .section-title::after { transform: rotate(180deg); 
 .wait-soon { padding: 12px 14px; }
 .after-loss { border-left: 4px solid var(--brand); }
 code.copy { display: block; margin: 6px 0; padding: 8px 10px; background: var(--surface-2); border-radius: 8px; font-size: 13px; word-break: break-all; user-select: all; }
+.signal .spark { display: block; margin: 2px 0; }
