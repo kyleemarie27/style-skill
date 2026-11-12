@@ -58,6 +58,9 @@ export function buildAskContext(model: CycleModel, logs: DayLog[], lhTests: LhTe
       periodDays: diffDays(c.periodEnd, c.start) + 1,
       ovulationCycleDay: diffDays(c.ovulation, c.start) + 1,
       ovulationSource: c.ovulationSource,
+      // The cycle a pregnancy happened in (not a real cycle length), and the one that began with the loss.
+      ...(c.pregnancy ? { pregnancyCycle: true } : {}),
+      ...(c.firstAfterLoss ? { firstCycleAfterLoss: true } : {}),
     })),
     healthChecks: healthChecks(model, logs, lhTests, settings, today).map((c) => ({
       check: c.title, status: c.status, value: c.value, normal: c.range, summary: c.summary,

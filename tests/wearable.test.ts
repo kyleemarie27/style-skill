@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { mergeNights } from "../api/_lib/oura";
+import { healthChecks } from "../shared/health";
+import { timeline } from "../shared/cycle";
 import { buildModel, phaseFor } from "../shared/cycle";
 import { addDays } from "../shared/dates";
 import { DEFAULT_SETTINGS, type DayLog, type LhTest, type Settings } from "../shared/types";
@@ -186,5 +188,33 @@ describe("tempPattern", () => {
     expect(p.peakToRise).toEqual([2]);
     expect(p.rises[0]).toBeGreaterThan(0.3);
     expect(p.rhrLift).toEqual([4]);
+  });
+});
+
+describe("the pregnancy cycle", () => {
+  // Periods every 29 days, then a period on Sep 12, a positive test Sep 30 and a loss on Nov 7.
+  // The saved last-period date (Sep 1) is off by more than 5 days, as can happen with a doctor's date.
+  const settings: Settings = {
+    ...DEFAULT_SETTINGS,
+    pregnancy: { positiveTestDate: "2026-09-30", lmp: "2026-09-01", dueDate: "2027-06-08", dueDateSource: "doctor", ended: { date: "2026-11-07", reason: "loss" }, questions: [], appointments: [] },
+  };
+  const logs = [...period("2026-06-17"), ...period("2026-07-16"), ...period("2026-08-14"), ...period("2026-09-12"), ...period("2026-11-07")];
+
+  it("is found by the positive test and kept out of averages and checks", () => {
+    const m = buildModel(logs, [], settings);
+    const pc = m.cycles.find((c) => c.start === "2026-09-12")!;
+    expect(pc).toMatchObject({ pregnancy: true, length: 56 });
+    expect(m.cycles.find((c) => c.start === "2026-11-07")!.firstAfterLoss).toBe(true);
+    expect(m.avgCycleLength).toBe(29);
+    // Ovulation is estimated from the usual day, not counted back from the loss.
+    expect(pc.ovulation).toBe(addDays("2026-09-12", 29 - 14));
+    const len = healthChecks(m, logs, [], settings, "2026-11-12").find((c) => c.id === "cycle-length" || c.title.startsWith("Cycle length"));
+    expect(len?.value ?? "").not.toMatch(/56/);
+  });
+
+  it("doesn't paint an estimated fertile window into the pregnancy on the calendar", () => {
+    const m = buildModel(logs, [], settings);
+    const marks = timeline(m, logs, "2026-09-12", "2026-11-06");
+    expect([...marks.values()].some((x) => x.fertile)).toBe(false);
   });
 });

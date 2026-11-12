@@ -42,7 +42,9 @@ export function InsightsPage() {
 
   const selected = cycles[Math.max(0, Math.min(sel, cycles.length - 1))];
   const selLen = selected.length ?? Math.max(model.avgCycleLength, diffDays(today, selected.start) + 1);
-  const maxLen = Math.max(...rows.map((r) => r.len), model.avgCycleLength);
+  // A pregnancy would stretch the scale; size the bars by real cycles only.
+  const maxLen = Math.max(...rows.filter((r) => !r.c.pregnancy).map((r) => r.len), model.avgCycleLength);
+  const preg = model.settings.pregnancy;
   const confirmedCycles = cycles.filter((c) => c.ovulationConfirmed && c.end).length;
 
   return (
@@ -63,7 +65,7 @@ export function InsightsPage() {
           <select value={sel} onChange={(e) => setSel(Number(e.target.value))} style={{ width: "auto" }}>
             {cycles.map((c, i) => (
               <option key={c.start} value={i}>
-                {prettyDate(c.start)}{i === cycles.length - 1 ? " (current)" : ""}
+                {prettyDate(c.start)}{c.pregnancy ? " (pregnancy)" : ""}{i === cycles.length - 1 ? " (current)" : ""}
               </option>
             ))}
           </select>
@@ -99,10 +101,26 @@ export function InsightsPage() {
 
       <div className="card stack">
         <h2>Cycle history</h2>
-        {(allHistory ? rows : rows.slice(0, 6)).map(({ c, len, loveInWindow, periodLen, ovDay }) => (
+        {(allHistory ? rows : rows.slice(0, 6)).map(({ c, len, loveInWindow, periodLen, ovDay }) => c.pregnancy ? (
           <div key={c.start} className="stack" style={{ gap: 4 }}>
             <div className="row between small">
-              <b>{prettyDate(c.start)}{c.end ? "" : " · current"}</b>
+              <b>{prettyDate(c.start)} · Pregnancy</b>
+              <span className="muted">
+                {preg ? `positive test ${prettyDate(preg.positiveTestDate)}` : ""}
+                {preg?.ended ? ` · ended ${prettyDate(preg.ended.date)}` : ""}
+                {c.ovulationConfirmed ? ` · ovulation CD${ovDay}` : ""}
+              </span>
+            </div>
+            <div className="cycle-bar preg" aria-hidden>
+              <div className="p" style={{ left: 0, width: `${(periodLen / maxLen) * 100}%` }} />
+              {c.ovulationConfirmed && <div className="o" style={{ left: `${Math.min(99, ((ovDay - 1) / maxLen) * 100)}%` }} />}
+            </div>
+            <p className="tiny muted">Not counted as a cycle: it isn't in your averages, health checks or patterns.</p>
+          </div>
+        ) : (
+          <div key={c.start} className="stack" style={{ gap: 4 }}>
+            <div className="row between small">
+              <b>{prettyDate(c.start)}{c.end ? "" : " · current"}{c.firstAfterLoss ? " · first cycle back" : ""}</b>
               <span className="muted">
                 {c.length ? `${c.length} days` : `day ${len}`} · ovulation CD{ovDay}{c.ovulationSource === "lh" ? (c.tempShift ? " (LH + temp)" : " (LH)") : c.ovulationSource === "marked" ? " (confirmed)" : c.ovulationSource === "temp" ? " (temp)" : " (est.)"} · ♥ {loveInWindow} in window
               </span>

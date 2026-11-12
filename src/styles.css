@@ -777,3 +777,4 @@ details.card[open] > summary .section-title::after { transform: rotate(180deg); 
 .after-loss { border-left: 4px solid var(--brand); }
 code.copy { display: block; margin: 6px 0; padding: 8px 10px; background: var(--surface-2); border-radius: 8px; font-size: 13px; word-break: break-all; user-select: all; }
 .signal .spark { display: block; margin: 2px 0; }
+.cycle-bar.preg { background: repeating-linear-gradient(135deg, var(--brand-soft) 0 6px, var(--surface-2) 6px 12px); }

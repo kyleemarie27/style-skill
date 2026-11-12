@@ -47,7 +47,11 @@ export function healthChecks(
   today: string,
 ): HealthCheck[] {
   const byDate = new Map(logs.map((l) => [l.date, l]));
-  const complete = model.cycles.filter((c) => c.length !== null && c.length >= 15 && c.length <= 90);
+  // A pregnancy isn't a cycle, and the bleed that starts the cycle after a loss isn't a period.
+  // (Like the averages, the first cycle back after a loss is left out of cycle-length checks too.)
+  const normal = model.cycles.filter((c) => !c.pregnancy && !c.firstAfterLoss);
+  const periods = model.cycles.filter((c) => !c.firstAfterLoss);
+  const complete = normal.filter((c) => c.length !== null && c.length >= 15 && c.length <= 90);
   const lengths = complete.map((c) => c.length!);
   const last12 = lengths.slice(-12);
   const last6 = lengths.slice(-6);
@@ -128,7 +132,7 @@ export function healthChecks(
   }
 
   // 4. Heavy flow streaks
-  const recentStarts = model.cycles.slice(-6).map((c) => c.start);
+  const recentStarts = periods.slice(-6).map((c) => c.start);
   const heavyRuns = recentStarts.map((s) => {
     let run = 0;
     let best = 0;
@@ -185,7 +189,7 @@ export function healthChecks(
   }
 
   // 6. Ovulation detected recently
-  const recent = model.cycles.filter((c) => c.end !== null).slice(-3);
+  const recent = normal.filter((c) => c.end !== null).slice(-3);
   const testedCycles = recent.filter((c) => lhTests.some((t) => t.date >= c.start && t.date <= c.end!));
   if (recent.length) {
     const confirmed = recent.filter((c) => c.ovulationConfirmed);
@@ -233,7 +237,7 @@ export function healthChecks(
   }
 
   // 8. Premenstrual spotting
-  const spotty = model.cycles.slice(-6).filter((c) => {
+  const spotty = periods.slice(-6).filter((c) => {
     let run = 0;
     for (let i = 1; i <= 7; i++) {
       if (byDate.get(addDays(c.start, -i))?.flow === "spotting") run++;

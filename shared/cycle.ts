@@ -56,6 +56,13 @@ export interface Cycle {
   ovulationSource: "lh" | "marked" | "temp" | "estimate";
   /** Sustained temperature rise from the wearable in this cycle, if any. Confirms ovulation happened. */
   tempShift: ThermalShift | null;
+  /**
+   * The cycle a pregnancy happened in (the one your positive test falls in). Its "length" is really
+   * last period to the end of the pregnancy, so it's shown as a pregnancy and left out of cycle stats.
+   */
+  pregnancy: boolean;
+  /** The cycle that starts when a pregnancy ended in a loss. Its first bleed is the loss, not a period. */
+  firstAfterLoss: boolean;
 }
 
 /** The first cycle after a pregnancy loss, while it's the current one. */
@@ -162,9 +169,11 @@ export function buildModel(logs: DayLog[], lhTests: LhTest[], settings: Settings
       bleedSet.add(loss.date);
     }
   }
-  // The cycle the pregnancy happened in isn't a normal cycle; leave it out of the averages.
-  const pregCycleStart = loss && settings.pregnancy ? settings.pregnancy.lmp : null;
-  const isPregCycle = (start: string) => !!pregCycleStart && Math.abs(diffDays(start, pregCycleStart)) <= 5;
+  // The cycle the pregnancy happened in: the one the positive test falls in (or that starts at the
+  // last period Bloom has for it). It isn't a normal cycle, so it stays out of the averages.
+  const preg = settings.pregnancy;
+  const isPregCycle = (start: string, end: string | null) =>
+    !!preg && ((start <= preg.positiveTestDate && (end === null || preg.positiveTestDate <= end)) || Math.abs(diffDays(start, preg.lmp)) <= 5);
 
   let afterLoss: AfterLoss | null = null;
   if (lossStart && starts.at(-1) === lossStart) {
@@ -194,7 +203,7 @@ export function buildModel(logs: DayLog[], lhTests: LhTest[], settings: Settings
     return { start, end, length, periodEnd, lhPeak, knownOv, source, tempShift };
   });
   // Neither the cycle the pregnancy was in nor the first one after a loss counts toward your averages.
-  const normal = raw.filter((c) => !isPregCycle(c.start) && c.start !== lossStart);
+  const normal = raw.filter((c) => !isPregCycle(c.start, c.end) && c.start !== lossStart);
 
   const plausible = normal
     .map((c) => c.length)
@@ -227,7 +236,10 @@ export function buildModel(logs: DayLog[], lhTests: LhTest[], settings: Settings
     const len = c.length ?? avgCycleLength;
     // Without an LH peak: completed cycles count back from the next period; the open cycle
     // uses the ovulation day learned from past LH peaks when there is one.
-    const estDay = c.length === null && typicalOvulationDay ? typicalOvulationDay - 1 : len - avgLutealLength;
+    // A pregnancy cycle has no next period to count back from, so use your usual ovulation day.
+    const pregnancy = isPregCycle(c.start, c.end);
+    const usualDay = typicalOvulationDay ? typicalOvulationDay - 1 : avgCycleLength - avgLutealLength;
+    const estDay = pregnancy || (c.length === null && typicalOvulationDay) ? usualDay : len - avgLutealLength;
     const ovulation = c.knownOv ?? addDays(c.start, Math.max(estDay, diffDays(c.periodEnd, c.start) + 2));
     const { knownOv, source, ...rest } = c;
     return {
@@ -235,6 +247,8 @@ export function buildModel(logs: DayLog[], lhTests: LhTest[], settings: Settings
       ovulation,
       ovulationConfirmed: !!knownOv,
       ovulationSource: source ?? ("estimate" as const),
+      pregnancy,
+      firstAfterLoss: c.start === lossStart,
     };
   });
 
@@ -352,6 +366,8 @@ export function timeline(model: CycleModel, logs: DayLog[], from: string, to: st
   for (const l of logs) if (l.flow && ANY_BLEED.has(l.flow)) mark(l.date, { period: true });
 
   for (const c of model.cycles) {
+    // A pregnancy cycle only shows its fertile window when ovulation was actually confirmed.
+    if (c.pregnancy && !c.ovulationConfirmed) continue;
     for (let i = -FERTILE_BEFORE; i <= FERTILE_AFTER; i++) mark(addDays(c.ovulation, i), { fertile: true });
     mark(c.ovulation, { ovulation: true, ovulationConfirmed: c.ovulationConfirmed });
   }

@@ -24,7 +24,7 @@ export interface Pattern {
  */
 export function patternFor(info: Today, model: CycleModel, logs: DayLog[]): Pattern {
   const byDate = new Map(logs.map((l) => [l.date, l]));
-  const past = model.cycles.filter((c) => c.end !== null && info.cycle && c.start < info.cycle.start).slice(-12);
+  const past = model.cycles.filter((c) => c.end !== null && !c.pregnancy && !c.firstAfterLoss && info.cycle && c.start < info.cycle.start).slice(-12);
   const luteal = info.dpo !== null && info.daysUntilPeriod !== null;
 
   const counts = new Map<string, number>();
