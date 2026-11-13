@@ -10,6 +10,7 @@ import { LittleThings } from "../components/LittleThings";
 import { useDeepDive } from "../components/DeepDive";
 import { QuickCheckIn } from "../components/QuickCheckIn";
 import { TodaysQuestion } from "../components/TodaysQuestion";
+import { DuelCard } from "../components/DuelCard";
 import { newId, usePregnancy, useSavePregnancy, type Timeline } from "../lib/pregnancy";
 import { useStore } from "../lib/store";
 import { useTodayPlan } from "../lib/todayPlan";
@@ -31,6 +32,7 @@ export function PregnancyToday() {
       <LatestScanCard preg={preg} today={today} />
       <QuickCheckIn today={today} preg={preg} />
       <LittleThings key={today} g={g} preg={preg} week={week} today={today} />
+      <DuelCard />
       <TodaysQuestion g={timeline.dates} preg={preg} today={today} />
       <p className="tiny muted center">Bloom gives general information, not medical advice. Your doctor or midwife knows your situation best.</p>
     </div>

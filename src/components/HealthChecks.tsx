@@ -47,7 +47,6 @@ function CheckRow({ c }: { c: HealthCheck }) {
         <div className="check-body small">
           <p>{c.summary}</p>
           {c.why && <p className="muted" style={{ marginTop: 6 }}>{c.why}</p>}
-          {c.source && <p className="tiny muted" style={{ marginTop: 6 }}>Source: {c.source}</p>}
           {c.id === "ttc-time" && c.status === "info" && c.value === "not enough data yet" && (
             <a className="btn ghost" href="#/settings">Add your start date →</a>
           )}

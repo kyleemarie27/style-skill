@@ -63,8 +63,8 @@ export const PARTNER_PHASES: Partial<Record<Phase, PartnerPhase>> = {
       "Some pressure or nerves about timing, for both of you. Very common.",
     ],
     support: [
-      "Every 1–2 days from now until the day after the LH peak covers it. Every other day works about as well as every day.",
       "Make it a date, not a task: you initiate, you flirt, you plan the evening.",
+      "Every 1–2 days from now until the day after the LH peak covers it. Every other day works about as well as every day.",
       "Missed a day? The next one counts too. No single day makes or breaks a cycle.",
     ],
     avoid: ["\"We have to tonight.\" Scheduling language is a mood killer; flirt instead.", "Keeping score of days."],

@@ -3,9 +3,10 @@ import { phaseFor, type CycleModel, type Today as TodayInfo } from "../../shared
 import { addDays, diffDays, localToday, prettyDate } from "../../shared/dates";
 import { DEFAULT_WAIT_LIST, namesOf, type DayLog } from "../../shared/types";
 import { AskBloomCard } from "../components/AskBloom";
-import { WindowStrip } from "../components/CycleCards";
+import { CycleBar, WindowStrip } from "../components/CycleCards";
+import { DuelCard } from "../components/DuelCard";
 import { invitationFor } from "../content/invitations";
-import { CYCLE_HELP, fillName, PARTNER_AFTER_LOSS, PARTNER_PHASES } from "../content/partnerCycle";
+import { CYCLE_HELP, fillName, PARTNER_PHASES, type PartnerPhase } from "../content/partnerCycle";
 import { focusFor, waitListActive, windowDays, type Focus } from "../lib/cycleToday";
 import { useStore } from "../lib/store";
 
@@ -40,42 +41,13 @@ export function PartnerCycleToday() {
 
   return (
     <div className="stack">
-      <PartnerHero info={info} focus={focus} who={who} />
+      <PartnerHero info={info} focus={focus} who={who} invitation={inv ? `${name || "Today"}${name ? " is" : ":"} ${inv.name}` : null} />
+      <DuelCard />
       <WindowCard info={info} model={model} />
       <HowTheyreDoing who={who} n={n} log={byDate.get(today)} yesterday={byDate.get(addDays(today, -1))} />
       {waitListActive(info) && <WaitTogether list={settings.waitList ?? DEFAULT_WAIT_LIST} who={who} />}
 
-      {guide && (
-        <section className={`card stack ph-${info.phase}`}>
-          <div>
-            <span className="phase-pill"><span className="dot" />{guide.label}</span>
-            <p style={{ marginTop: 10 }}>{n(guide.summary)}</p>
-          </div>
-          {inv && (
-            <div className="invite-ritual">
-              <span className="tip-label">Today {name ? `${name} is` : "is a day for"} {inv.name}</span>
-              <p>{inv.line}</p>
-            </div>
-          )}
-          {afterLoss && <p className="small notice">{PARTNER_AFTER_LOSS}</p>}
-          <div>
-            <div className="tip-label">What to expect</div>
-            <ul className="tips">{guide.expect.map((t) => <li key={t}>{n(t)}</li>)}</ul>
-          </div>
-          <div>
-            <div className="tip-label">How to support</div>
-            <ul className="tips">{guide.support.map((t) => <li key={t}>{n(t)}</li>)}</ul>
-          </div>
-          <div>
-            <div className="tip-label">Go easy on</div>
-            <ul className="tips">{guide.avoid.map((t) => <li key={t}>{n(t)}</li>)}</ul>
-          </div>
-          <div className="invite-ritual">
-            <span className="tip-label">For the two of you</span>
-            <p>{n(guide.together)}</p>
-          </div>
-        </section>
-      )}
+      {guide && <PhaseGuide guide={guide} n={n} phase={info.phase} afterLoss={afterLoss} />}
 
       <TimingBasics who={who} />
 
@@ -108,7 +80,7 @@ export function partnerFocus(info: TodayInfo, focus: Focus, who: string): { head
 
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
-function PartnerHero({ info, focus, who }: { info: TodayInfo; focus: Focus; who: string }) {
+function PartnerHero({ info, focus, who, invitation }: { info: TodayInfo; focus: Focus; who: string; invitation: string | null }) {
   const f = partnerFocus(info, focus, who);
   return (
     <div className={`card hero ph-${info.phase}${focus.counts ? " counts" : ""}`}>
@@ -118,6 +90,8 @@ function PartnerHero({ info, focus, who }: { info: TodayInfo; focus: Focus; who:
         <h1 style={{ marginTop: 4 }}>{f.headline}</h1>
         {f.sub && <p>{f.sub}</p>}
       </div>
+      <CycleBar info={info} />
+      {invitation && <p className="tiny muted" style={{ marginTop: 8 }}>🎁 {invitation}</p>}
     </div>
   );
 }
@@ -146,13 +120,9 @@ function WindowCard({ info, model }: { info: TodayInfo; model: CycleModel }) {
         <span className="small muted">Best days {range(addDays(info.ovulation, -2), info.ovulation)}{info.ovulationConfirmed ? "" : " (est.)"}</span>
       </div>
       <WindowStrip days={days} />
-      <p className="tiny muted">
-        ★ best days · ♥ logged · dot = LH strip (yellow High, orange Peak).
-        {loved > 0 ? ` ${loved} ♥ so far${bestLoved ? `, ${bestLoved} on the best days` : ""}.` : ""}
-        {info.ovulationConfirmed ? "" : " Dates firm up when the LH strip peaks."}
-      </p>
+      <p className="tiny muted">★ best · ♥ logged{loved > 0 ? ` · ${loved} so far` : ""}{info.ovulationConfirmed ? "" : " · dates firm up at the LH peak"}</p>
       {next && (
-        <p className="small"><b>Next window:</b> about {range(next.start, next.end)}, if this cycle isn't the one.</p>
+        <p className="small"><b>Next window</b> ≈ {range(next.start, next.end)}</p>
       )}
     </div>
   );
@@ -175,32 +145,25 @@ function HowTheyreDoing({ who, n, log, yesterday }: { who: string; n: (t: string
   const todayItems = items(log);
   const shown = todayItems.length ? todayItems : items(yesterday);
   const when = todayItems.length ? "today" : "yesterday";
+  if (!shown.length) return null;
+  const tips = shown.filter((t) => CYCLE_HELP[t] || t === "Period").slice(0, 2);
   return (
     <div className="card stack">
-      <div className="section-title"><span className="ico" aria-hidden>💛</span>How {who} is doing</div>
-      {shown.length === 0 ? (
-        <p className="small muted">Nothing logged today yet. Asking in person works too.</p>
-      ) : (
-        <>
-          <div className="chips">{shown.map((t) => <span key={t} className={`chip static${MOODS.has(t) ? "" : " sym"}`}>{t}</span>)}</div>
-          <ul className="tips">
-            {shown.filter((t) => CYCLE_HELP[t]).slice(0, 4).map((t) => <li key={t}><b>{t}:</b> {n(CYCLE_HELP[t])}</li>)}
-            {shown.includes("Period") && <li><b>Period:</b> {n(CYCLE_HELP.Cramps)}</li>}
-          </ul>
-          <p className="tiny muted">From {who}'s check-in {when}.</p>
-        </>
-      )}
+      <div className="row between" style={{ alignItems: "baseline" }}>
+        <div className="section-title"><span className="ico" aria-hidden>💛</span>{cap(who)} {when}</div>
+      </div>
+      <div className="chips">{shown.map((t) => <span key={t} className={`chip static${MOODS.has(t) ? "" : " sym"}`}>{t}</span>)}</div>
+      {tips.length > 0 && <ul className="tips">{tips.map((t) => <li key={t}>{n(CYCLE_HELP[t === "Period" ? "Cramps" : t])}</li>)}</ul>}
     </div>
   );
 }
 
-function WaitTogether({ list, who }: { list: string[]; who: string }) {
+function WaitTogether({ list }: { list: string[]; who: string }) {
   return (
     <div className="card stack wait-card">
-      <div className="section-title"><span className="ico" aria-hidden>🛡️</span>Protect the wait, together</div>
-      <p className="small">From ovulation until the period, {who} is skipping:</p>
-      <ul className="wait-list">{list.map((x) => <li key={x}>{x}</li>)}</ul>
-      <p className="small muted">Easy wins: match the no-alcohol nights with a mocktail, skip the sauna together, and keep Tylenol in the cabinet.</p>
+      <div className="section-title"><span className="ico" aria-hidden>🛡️</span>The wait, together</div>
+      <div className="chips">{list.map((x) => <span key={x} className="chip static wait-chip">{x}</span>)}</div>
+      <p className="tiny muted">Join in: mocktails, no sauna, Tylenol in the cabinet.</p>
     </div>
   );
 }
@@ -210,23 +173,14 @@ function TimingBasics({ who }: { who: string }) {
     <details className="card plan">
       <summary>
         <span className="section-title"><span className="ico" aria-hidden>🧭</span>Timing, simply</span>
-        <span className="small muted">How the window works, and your side of it.</span>
+        <span className="small muted">The whole thing in five lines.</span>
       </summary>
-      <div className="stack" style={{ marginTop: 12, gap: 10 }}>
-        <p className="small">
-          <b>The window is 6–7 days</b>: the 5 days before ovulation, ovulation day and the day after. Sperm live up to 5 days, so the days
-          <i> before</i> ovulation matter most. The best three are the two days before and the day itself.
-        </p>
-        <p className="small">
-          <b>The rule:</b> sex every 1–2 days through the window, until the day after the LH peak. Every other day works about as well as daily, so no need to push.
-        </p>
-        <p className="small">
-          <b>How {who} spots it:</b> wetter, egg-white mucus, then the LH strip going High and Peak (ovulation follows a Peak within about 12–36 hours), then a temperature rise on the Oura that confirms it happened.
-        </p>
-        <p className="small">
-          <b>Your side:</b> no hot tubs, saunas or laptop-on-lap (heat lowers sperm quality), ease off alcohol, sleep, and don't go more than about 5 days without ejaculating before the window. Sperm take about 3 months to make, so habits now pay off over the next few cycles.
-        </p>
-        <p className="small muted">About 1 in 5 couples conceive in any given cycle, even with perfect timing. Most take a few cycles. That's normal, not a sign anything's wrong.</p>
+      <div className="guide-rows" style={{ marginTop: 12 }}>
+        <div className="guide-row"><span className="guide-ico" aria-hidden>🗓️</span><span>The window is 7 days: 5 before ovulation, the day itself and the day after.</span></div>
+        <div className="guide-row"><span className="guide-ico" aria-hidden>♥</span><span>Every 1–2 days through it. Daily isn't better than every other day.</span></div>
+        <div className="guide-row"><span className="guide-ico" aria-hidden>🔎</span><span>{cap(who)}'s signs: egg-white mucus → LH Peak → temperature up.</span></div>
+        <div className="guide-row"><span className="guide-ico" aria-hidden>🧊</span><span>Your side: no hot tubs or laptop-on-lap, easy on alcohol, no 5+ day gaps.</span></div>
+        <div className="guide-row"><span className="guide-ico" aria-hidden>🎲</span><span>About 1 in 5 per cycle, even with perfect timing. Most take a few.</span></div>
       </div>
     </details>
   );
@@ -238,3 +192,36 @@ function partnerSuggestions(info: TodayInfo): string[] {
   if (info.phase === "menstrual") return ["How can I help with period cramps?", "When does the next window open?", "What can I do to improve sperm health?"];
   return ["When does the window open?", "What can I do to improve sperm health?", "How does the cycle affect mood and energy?"];
 }
+
+/** The phase in four lines: expect, help, avoid, and one idea together. The rest is a tap away. */
+function PhaseGuide({ guide, n, phase, afterLoss }: { guide: PartnerPhase; n: (t: string) => string; phase: string; afterLoss: boolean }) {
+  const rows: [string, string, string][] = [
+    ["👀", "Expect", guide.expect[0]],
+    ["🤝", "Help", guide.support[0]],
+    ["🙅", "Skip", guide.avoid[0]],
+    ["💞", "Together", guide.together],
+  ];
+  const more = [...guide.expect.slice(1), ...guide.support.slice(1), ...guide.avoid.slice(1)];
+  return (
+    <section className={`card stack ph-${phase}`}>
+      <div className="section-title"><span className="ico" aria-hidden>🧭</span>Your part · {guide.label.toLowerCase()}</div>
+      {afterLoss && <p className="small muted">🤍 {PARTNER_AFTER_LOSS_SHORT}</p>}
+      <div className="guide-rows">
+        {rows.map(([ico, label, t]) => (
+          <div key={label} className="guide-row">
+            <span className="guide-ico" aria-hidden>{ico}</span>
+            <span><span className="tiny muted">{label}</span><br />{n(t)}</span>
+          </div>
+        ))}
+      </div>
+      {more.length > 0 && (
+        <details>
+          <summary className="small muted">More for this phase</summary>
+          <ul className="tips" style={{ marginTop: 6 }}>{more.map((t) => <li key={t}>{n(t)}</li>)}</ul>
+        </details>
+      )}
+    </section>
+  );
+}
+
+const PARTNER_AFTER_LOSS_SHORT = "First cycle since the loss. Grief can come back around the window and test day, for you too.";
