@@ -119,6 +119,20 @@ CREATE TABLE IF NOT EXISTS wearable_days (
   updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- Added with the Daily Duel: one shared set of questions per day, and each person's picks.
+CREATE TABLE IF NOT EXISTS duel_days (
+  date        DATE PRIMARY KEY,
+  content     JSONB NOT NULL,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE TABLE IF NOT EXISTS duel_picks (
+  date        DATE NOT NULL,
+  author      TEXT NOT NULL CHECK (author IN ('me','partner')),
+  picks       JSONB NOT NULL,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+  PRIMARY KEY (date, author)
+);
+
 CREATE TABLE IF NOT EXISTS settings (
   key    TEXT PRIMARY KEY,
   value  JSONB NOT NULL

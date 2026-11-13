@@ -14,6 +14,16 @@ No ads, no pop-ups, no notifications. You log in on your phone or computer and s
 - **Calendar, insights and an LH curve:** period, fertile window, ovulation (LH-confirmed, temperature-confirmed or estimated), ♥ days, and cycle history.
 - **A step-by-step import of your Clue and Premom history**, so predictions are smart from day one. You can undo it at any time.
 
+## Daily Duel
+
+A two-minute game you both play every day, at the top of both of your Todays (and in pregnancy mode too):
+
+- **Three questions:** one quiz question about where you are right now, one from this week's theme (the fertile window, sperm health, prenatal tests, labor, newborn sleep… moving from conception to pregnancy, birth and the first year), and one **guess me**: one of you answers about yourself, the other guesses. Who's guessed alternates by day.
+- **Reveal:** you see the right answers once you've played, and each other's picks once you've both played.
+- **Friendly scoring:** a point per right answer and per right guess, a weekly scoreboard with a 👑, last week's result early in the week, and a 🔥 streak of days you both played.
+- **The level badge shifts with the cycle** (Period week, Build-up, Window week, The wait, Test day) or the pregnancy week.
+- **No repeats:** AI writes each day's set once for both of you; every question ever asked is saved and new ones are checked against all of them (ignoring names, case and punctuation) and rewritten if they match. Without AI, a small hand-written bank is used, also without repeats. On test day and in the first two weeks after a loss the questions stay gentle.
+
 ## Your partner's view (trying to conceive)
 
 Your partner logs in with their own password (Settings → Security) and gets their own Today, written to them:

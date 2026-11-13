@@ -2,6 +2,7 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { isISODate } from "../shared/dates.js";
 import { getSession, method, route } from "./_lib/auth.js";
 import { HttpError, q } from "./_lib/db.js";
+import { duelRoute } from "./_lib/duel.js";
 
 const MAX_PHOTO_BYTES = 1_500_000;
 
@@ -20,10 +21,13 @@ const week = (v: unknown) => {
  * PUT    /api/memories {entry: {date, prompt, answer}}   save your answer (empty answer deletes it)
  * POST   /api/memories {preg, week, date, photo}         save a bump photo (base64 JPEG, already resized)
  * DELETE /api/memories?preg=…&week=12            remove a bump photo
+ * POST   /api/memories?duel=1 {date, context}    today's Daily Duel (written on first open) + scores
+ * PUT    /api/memories?duel=1 {date, picks}      submit your answers (final)
  */
 export default route(async (req: VercelRequest, res: VercelResponse) => {
   const m = method(req, "GET", "PUT", "POST", "DELETE");
   const me = (await getSession(req))!.role;
+  if (req.query.duel) return duelRoute(m, req.body, me);
   const preg = isISODate(req.query.preg) ? (req.query.preg as string) : null;
 
   if (m === "GET" && req.query.week !== undefined) {

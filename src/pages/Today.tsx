@@ -3,7 +3,8 @@ import { PHASE_NAME, phaseFor, type Today as TodayInfo } from "../../shared/cycl
 import { addDays, diffDays, localToday, prettyDate } from "../../shared/dates";
 import { LH_LABEL } from "../../shared/lh";
 import { AskBloomCard } from "../components/AskBloom";
-import { AfterLossCard, InvitationCard, PlanCard, SignalsCard, WaitListCard } from "../components/CycleCards";
+import { AfterLossCard, CycleBar, InvitationCard, PlanCard, SignalsCard, WaitListCard } from "../components/CycleCards";
+import { DuelCard } from "../components/DuelCard";
 import { DailyNote } from "../components/DailyNote";
 import { DayEditor } from "../components/DayEditor";
 import { HealthSummaryLink } from "../components/HealthChecks";
@@ -48,10 +49,10 @@ function CycleToday() {
       <Hero info={info} />
 
       {info.phase !== "unknown" && <>
-        <InvitationCard info={info} />
-        <WaitListCard info={info} />
-        <AfterLossCard info={info} />
+        <DuelCard />
         <SignalsCard info={info} />
+        <WaitListCard info={info} />
+        <InvitationCard info={info} />
         {aiEnabled && <PersonalLine info={info} />}
       </>}
 
@@ -63,9 +64,6 @@ function CycleToday() {
             <button role="tab" aria-selected={checkDay === "today"} onClick={() => setCheckDay("today")}>Today</button>
           </div>
         </div>
-        <p className="muted small">
-          {checkDay === "yesterday" ? `How was ${prettyDate(yesterday, true)}? Tap what fits; it saves as you go.` : "Log anything from today so far."}
-        </p>
         <DayEditor key={checkDay} date={checkDay === "yesterday" ? yesterday : today} compact />
         <div className="row wrap">
           <LhUploadButton date={checkDay === "yesterday" ? yesterday : today} />
@@ -81,9 +79,17 @@ function CycleToday() {
         )}
       </div>
 
-      {info.phase !== "unknown" && <PlanCard info={info} />}
-
-      {info.phase !== "unknown" && <DailyNote info={info} vars={vars} />}
+      {info.phase !== "unknown" && <>
+        <PlanCard info={info} />
+        <AfterLossCard info={info} />
+        <details className="card more-card">
+          <summary>
+            <span className="section-title"><span className="ico" aria-hidden>🌙</span>This phase, in depth</span>
+            <span className="small muted">What to expect, superpowers, self-care.</span>
+          </summary>
+          <DailyNote info={info} vars={vars} />
+        </details>
+      </>}
 
       <HealthSummaryLink />
 
@@ -154,8 +160,8 @@ function Hero({ info }: { info: TodayInfo }) {
         {info.nextPeriod && (
           <div className="fact">Next period<b>{prettyDate(info.nextPeriod)}</b></div>
         )}
-        <div className="fact">Avg cycle<b>{model.avgCycleLength} days</b></div>
       </div>
+      <CycleBar info={info} />
       {(info.phase.startsWith("tww") || info.phase === "late") && (
         <button className="btn primary positive-btn" onClick={() => setPositive(true)}>I got a positive test 🎉</button>
       )}

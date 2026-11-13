@@ -8,6 +8,7 @@ import { useStore } from "../lib/store";
 import { useTodayPlan } from "../lib/todayPlan";
 import { LatestScanCard } from "../components/Scans";
 import { TodaysQuestion } from "../components/TodaysQuestion";
+import { DuelCard } from "../components/DuelCard";
 import { Alerts, PregnancyHero } from "./PregnancyToday";
 
 /**
@@ -45,6 +46,7 @@ export function PartnerToday() {
         <ComingUp />
       </section>
 
+      <DuelCard />
       <TodaysQuestion g={timeline.dates} preg={preg} today={today} />
 
       <p className="tiny muted center">Bloom gives general information, not medical advice.</p>

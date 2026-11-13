@@ -1,4 +1,5 @@
 import type { WearableDay } from "../../shared/wearable";
+import type { DuelDay, DuelPicks, DuelQuiz, DuelScores } from "../../shared/duel";
 import type { BumpPhoto, DayLog, ImportBundle, JournalEntry, LhLevel, LhTest, Scan, Settings } from "../../shared/types";
 
 export class AuthError extends Error {}
@@ -40,6 +41,15 @@ async function call<T>(path: string, init: RequestInit & { json?: unknown } = {}
   return data as T;
 }
 
+/** What the server sends for today's duel (right answers only once you've played). */
+export interface DuelState {
+  day: Omit<DuelDay, "quiz"> & { quiz: (Omit<DuelQuiz, "answer" | "explain"> & { answer?: number; explain?: string })[] };
+  mine: DuelPicks | null;
+  theirs: DuelPicks | null;
+  theyPlayed: boolean;
+  scores: DuelScores;
+}
+
 export interface OuraStatus {
   configured: boolean;
   connected: boolean;
@@ -75,6 +85,8 @@ export const api = {
   endSession: (id: string) => call(`auth?session=${encodeURIComponent(id)}`, { method: "DELETE" }),
   logoutOthers: () => call("auth?others=1", { method: "DELETE" }),
   data: () => call<{ dayLogs: DayLog[]; lhTests: LhTest[]; wearable?: WearableDay[]; oura?: OuraStatus }>("logs"),
+  duel: (date: string, context: unknown) => call<DuelState>("memories?duel=1", { method: "POST", json: { date, context } }),
+  playDuel: (date: string, picks: DuelPicks) => call<DuelState>("memories?duel=1", { method: "PUT", json: { date, picks } }),
   ouraSync: () => call<{ saved: number | null; oura: OuraStatus }>("oura/sync", { method: "POST" }),
   ouraDisconnect: () => call<{ oura: OuraStatus }>("oura/disconnect", { method: "DELETE" }),
   saveDay: (log: DayLog) => call<{ log: DayLog }>("logs", { method: "PUT", json: { log } }),

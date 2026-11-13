@@ -1,5 +1,5 @@
 import type { Today } from "../../shared/cycle";
-import { addDays, prettyDate } from "../../shared/dates";
+import { addDays, diffDays, prettyDate } from "../../shared/dates";
 import { DEFAULT_WAIT_LIST } from "../../shared/types";
 import { invitationFor } from "../content/invitations";
 import { lhStartDate, signalsFor, waitListActive, windowDays, type WindowDay } from "../lib/cycleToday";
@@ -13,14 +13,11 @@ export function InvitationCard({ info }: { info: Today }) {
   if (!inv) return null;
   return (
     <div className={`card invite ph-${info.phase}`}>
-      <div className="section-title"><span className="ico" aria-hidden>🎁</span>Today's invitation</div>
-      <h2 className="invite-name">{inv.name}</h2>
-      <p className="invite-line">{inv.line}</p>
-      <p className="small muted">{inv.why}</p>
-      <div className="invite-ritual">
-        <span className="tip-label">Your ritual</span>
-        <p>{inv.ritual}</p>
+      <div className="row between" style={{ alignItems: "baseline" }}>
+        <h2 className="invite-name">🎁 {inv.name}</h2>
+        <span className="tiny muted">today's invitation</span>
       </div>
+      <p className="invite-ritual-line">{inv.ritual}</p>
     </div>
   );
 }
@@ -44,10 +41,7 @@ export function WaitListCard({ info }: { info: Today }) {
   return (
     <div className="card stack wait-card">
       <div className="section-title"><span className="ico" aria-hidden>🛡️</span>Protect the wait</div>
-      <ul className="wait-list">
-        {list.map((x) => <li key={x}>{x}</li>)}
-      </ul>
-      <p className="tiny muted">From ovulation until your period starts. Edit the list in Settings.</p>
+      <div className="chips">{list.map((x) => <span key={x} className="chip static wait-chip">{x}</span>)}</div>
     </div>
   );
 }
@@ -117,10 +111,9 @@ export function SignalsCard({ info }: { info: Today }) {
 export function PlanCard({ info }: { info: Today }) {
   const { model } = useStore();
   const lhDay = lhStartDate(info);
-  const early = info.phase === "menstrual" || info.phase === "follicular";
   const unsureLh = !!model.afterLoss && info.cycle?.start === model.afterLoss.start && !model.afterLoss.negativeTest;
   return (
-    <details className="card plan" open={early}>
+    <details className="card plan">
       <summary>
         <span className="section-title"><span className="ico" aria-hidden>🧭</span>Your plan this cycle</span>
         <span className="small muted">Everything you need to know to time it, in one place.</span>
@@ -185,6 +178,27 @@ export function WindowStrip({ days }: { days: WindowDay[] }) {
           </span>
         </div>
       ))}
+    </div>
+  );
+}
+
+/** Where today sits in the cycle: period, fertile window, ovulation and a today marker on one bar. */
+export function CycleBar({ info }: { info: Today }) {
+  const { model } = useStore();
+  if (!info.cycle || !info.cycleDay || !info.fertileStart || !info.fertileEnd || !info.ovulation) return null;
+  const start = info.cycle.start;
+  const len = Math.max(info.cycle.length ?? model.avgCycleLength, info.cycleDay);
+  const pct = (d: string, extra = 0) => `${Math.min(100, Math.max(0, ((diffDays(d, start) + extra) / len) * 100))}%`;
+  const width = (a: string, b: string) => `${Math.min(100, ((diffDays(b, a) + 1) / len) * 100)}%`;
+  return (
+    <div className="cycle-track" aria-label={`Cycle day ${info.cycleDay} of about ${len}`}>
+      <div className="cycle-bar">
+        <div className="f" style={{ left: pct(info.fertileStart), width: width(info.fertileStart, info.fertileEnd) }} />
+        <div className="p" style={{ left: 0, width: width(start, info.cycle.periodEnd) }} />
+        <div className="o" style={{ left: pct(info.ovulation) }} />
+        <div className="now" style={{ left: pct(info.date, 0.5) }} />
+      </div>
+      <div className="row between tiny muted"><span>Day {info.cycleDay}</span><span>~{len} days</span></div>
     </div>
   );
 }
