@@ -136,7 +136,7 @@ function Hero({ info }: { info: TodayInfo }) {
       <div className="row between" style={{ alignItems: "flex-start" }}>
         <div className="stack" style={{ gap: 6 }}>
           <div className="muted small">{prettyDate(info.date, true)}</div>
-          <span className="phase-pill"><span className="dot" />{PHASE_NAME[info.phase]}</span>
+          <span className="phase-pill"><span className="dot" />{info.cycle?.ovulationDelayed ? "Waiting to ovulate" : info.cycle?.surgeStatus === "pending" && info.dpo ? "Confirming ovulation" : PHASE_NAME[info.phase]}</span>
           <h1 style={{ marginTop: 4 }}>{focus.headline}</h1>
           {focus.sub && <p className="small">{focus.sub}</p>}
         </div>
@@ -203,6 +203,10 @@ function PersonalLine({ info }: { info: TodayInfo }) {
       waitListToday: waitListActive(info) ? (settings.waitList ?? DEFAULT_WAIT_LIST) : null,
       quietWait: settings.quietWait !== false,
       ovulationConfirmedBy: info.cycle?.ovulationConfirmed ? info.cycle.ovulationSource : null,
+      // Adaptive prediction: a surge still being checked against temperature, surges with no rise after, a late estimate.
+      lhSurgeStatus: info.cycle?.surgeStatus ?? null,
+      surgesWithoutOvulation: info.cycle?.failedSurges ?? [],
+      ovulationRunningLate: !!info.cycle?.ovulationDelayed,
       temperatureShift: info.cycle?.tempShift ? { since: info.cycle.tempShift.firstHigh, riseC: info.cycle.tempShift.rise } : null,
       ouraLastNights: model.wearable.filter((w) => w.date >= addDays(info.date, -4)),
       firstCycleAfterLoss: model.afterLoss && model.afterLoss.start === info.cycle?.start

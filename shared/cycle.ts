@@ -9,9 +9,12 @@ import { thermalShift, type ThermalShift, type WearableDay } from "./wearable.js
  * - A period day is a day with light/medium/heavy flow. Spotting counts as bleeding for
  *   period *length*, but never starts a new cycle on its own.
  * - A new cycle starts on a period day when there was no period day in the previous 10 days.
- * - Ovulation = first LH Peak in the cycle + 1 day. Without a Peak, a day marked as ovulation,
- *   then a sustained temperature rise from the wearable (the day before the first high night),
- *   then a prediction: (next period − luteal length).
+ * - Ovulation = LH Peak + 1 day. With wearable data, a Peak only stands if the temperature rises
+ *   within 5 days; after 5 flat nights it's a "surge without ovulation" and Bloom looks again.
+ *   Without a Peak: a day marked as ovulation, then a sustained temperature rise (the day before
+ *   the first high night), then a prediction: (next period − luteal length), or your usual day.
+ * - The open cycle's prediction adapts: a low LH strip or a flat temperature means ovulation
+ *   hasn't happened yet, so the estimate moves to the earliest day the data still allows.
  * - After a pregnancy loss, the day it ended starts a new cycle (unless a period was logged
  *   around then), and LH peaks in that first cycle only count after a negative pregnancy test:
  *   leftover hCG can turn LH strips positive.
@@ -63,6 +66,15 @@ export interface Cycle {
   pregnancy: boolean;
   /** The cycle that starts when a pregnancy ended in a loss. Its first bleed is the loss, not a period. */
   firstAfterLoss: boolean;
+  /**
+   * With wearable data, an LH Peak is checked against temperature: "confirmed" when the rise follows
+   * within 5 days, "pending" while Bloom is still waiting for those nights. Null without wearable data.
+   */
+  surgeStatus: "confirmed" | "pending" | null;
+  /** LH Peaks with no temperature rise in the 5+ nights after: surges that likely didn't release an egg. */
+  failedSurges: string[];
+  /** The open cycle's estimate was moved later because the latest data shows ovulation hasn't happened yet. */
+  ovulationDelayed: boolean;
 }
 
 /** The first cycle after a pregnancy loss, while it's the current one. */
@@ -114,6 +126,10 @@ const BLEED = new Set(["light", "medium", "heavy"]);
 const ANY_BLEED = new Set(["spotting", "light", "medium", "heavy"]);
 const NEW_CYCLE_GAP = 10;
 const FERTILE_BEFORE = 5;
+/** Nights after an LH Peak that Bloom waits for a temperature rise before calling it a surge without ovulation. */
+export const VERIFY_NIGHTS = 5;
+/** The rise has to start within this many days of the Peak to count as confirming it. */
+const SURGE_TO_RISE = 5;
 const FERTILE_AFTER = 1;
 
 const mean = (xs: number[]) => xs.reduce((a, b) => a + b, 0) / xs.length;
@@ -195,12 +211,47 @@ export function buildModel(logs: DayLog[], lhTests: LhTest[], settings: Settings
     const length = nextStart ? diffDays(nextStart, start) : null;
     const periodEnd = periodEndFrom(start, bleedSet, end);
     const inCycle = (d: string) => d > periodEnd && (end === null || d <= end);
-    const lhPeak = peaks.find(inCycle) ?? null;
     const markedOv = marked.find(inCycle) ?? null;
     const tempShift = nights.length ? thermalShift(nights, addDays(periodEnd, 3), end ?? "9999-12-31") : null;
-    const knownOv = lhPeak ? addDays(lhPeak, 1) : (markedOv ?? tempShift?.ovulation ?? null);
-    const source = lhPeak ? ("lh" as const) : markedOv ? ("marked" as const) : tempShift ? ("temp" as const) : null;
-    return { start, end, length, periodEnd, lhPeak, knownOv, source, tempShift };
+    // Each surge is the first Peak of a run (Peaks within 2 days of each other are one surge).
+    const surges = peaks.filter(inCycle).filter((d, k, xs) => k === 0 || diffDays(d, xs[k - 1]) > 2);
+    const nightsHere = nights.filter((n) => n.tempDev !== null && inCycle(n.date));
+    const checkable = nightsHere.length >= 3;
+    let lhPeak: string | null = null;
+    let surgeStatus: Cycle["surgeStatus"] = null;
+    const failedSurges: string[] = [];
+    for (const sDay of surges) {
+      if (tempShift && tempShift.firstHigh >= sDay && tempShift.firstHigh <= addDays(sDay, SURGE_TO_RISE)) {
+        lhPeak = sDay;
+        surgeStatus = "confirmed";
+        break;
+      }
+      const after = nightsHere.filter((n) => n.date > addDays(sDay, 1) && n.date <= addDays(sDay, 1 + VERIFY_NIGHTS + 2)).length;
+      if (checkable && after >= VERIFY_NIGHTS) failedSurges.push(sDay);
+      else {
+        lhPeak = sDay; // the latest surge still waiting on its nights
+        surgeStatus = checkable ? "pending" : null;
+      }
+    }
+    // A temperature rise with no surge before it still confirms ovulation.
+    const tempOnly = !lhPeak && tempShift ? tempShift.ovulation : null;
+    const knownOv = lhPeak ? addDays(lhPeak, 1) : (markedOv ?? tempOnly);
+    const source = lhPeak ? ("lh" as const) : markedOv ? ("marked" as const) : tempOnly ? ("temp" as const) : null;
+    // What the latest data says about the open cycle: ovulation can't be earlier than this.
+    let notBefore: string | null = null;
+    if (end === null && !knownOv) {
+      const tests = lhTests.filter((t) => inCycle(t.date)).sort((a, b) => a.date.localeCompare(b.date));
+      const last = tests.at(-1);
+      if (last) notBefore = addDays(last.date, last.level === "low" ? 2 : 1);
+      // Without a rise, ovulation can't be more than 2 nights before the last night (3 high nights confirm it).
+      if (nightsHere.length >= 6) {
+        const tFloor = addDays(nightsHere.at(-1)!.date, -2);
+        if (!notBefore || tFloor > notBefore) notBefore = tFloor;
+      }
+      const failed = failedSurges.at(-1);
+      if (failed && (!notBefore || addDays(failed, VERIFY_NIGHTS + 2) > notBefore)) notBefore = addDays(failed, VERIFY_NIGHTS + 2);
+    }
+    return { start, end, length, periodEnd, lhPeak, knownOv, source, tempShift, surgeStatus, failedSurges, notBefore };
   });
   // Neither the cycle the pregnancy was in nor the first one after a loss counts toward your averages.
   const normal = raw.filter((c) => !isPregCycle(c.start, c.end) && c.start !== lossStart);
@@ -240,11 +291,15 @@ export function buildModel(logs: DayLog[], lhTests: LhTest[], settings: Settings
     const pregnancy = isPregCycle(c.start, c.end);
     const usualDay = typicalOvulationDay ? typicalOvulationDay - 1 : avgCycleLength - avgLutealLength;
     const estDay = pregnancy || (c.length === null && typicalOvulationDay) ? usualDay : len - avgLutealLength;
-    const ovulation = c.knownOv ?? addDays(c.start, Math.max(estDay, diffDays(c.periodEnd, c.start) + 2));
-    const { knownOv, source, ...rest } = c;
+    const estimate = c.knownOv ?? addDays(c.start, Math.max(estDay, diffDays(c.periodEnd, c.start) + 2));
+    // Adaptive: when the latest LH strip or temperature says it hasn't happened yet, move it later.
+    const ovulationDelayed = !c.knownOv && !!c.notBefore && c.notBefore > estimate;
+    const ovulation = ovulationDelayed ? c.notBefore! : estimate;
+    const { knownOv, source, notBefore: _nb, ...rest } = c;
     return {
       ...rest,
       ovulation,
+      ovulationDelayed,
       ovulationConfirmed: !!knownOv,
       ovulationSource: source ?? ("estimate" as const),
       pregnancy,
@@ -311,7 +366,8 @@ export function phaseFor(date: string, model: CycleModel): Today {
     ? addDays(cycle.end, 1)
     : cycle.ovulationConfirmed
       ? addDays(ovulation, model.avgLutealLength)
-      : addDays(cycle.start, model.avgCycleLength);
+      : // Unconfirmed: your usual length, unless ovulation is running late, which pushes the period too.
+        [addDays(cycle.start, model.avgCycleLength), addDays(ovulation, model.avgLutealLength)].sort().at(-1)!;
   const dpoRaw = diffDays(date, ovulation);
   const dpo = dpoRaw >= 1 ? dpoRaw : null;
 
