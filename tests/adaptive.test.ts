@@ -71,8 +71,8 @@ describe("LH read against your own baseline", async () => {
   it("finds a surge that never reaches Peak, with its top and the day it faded", () => {
     const p = lhPattern([t("2026-11-05", 0.12), t("2026-11-06", 0.15), t("2026-11-07", 0.14), t("2026-11-08", 0.45), t("2026-11-09", 0.7), t("2026-11-10", 0.55), t("2026-11-11", 0.2)]);
     expect(p.baseline).toBeCloseTo(0.15, 2);
-    expect(p.threshold).toBe(0.4);
-    expect(p.surges).toEqual([{ start: "2026-11-08", top: "2026-11-09", topValue: 0.7, end: "2026-11-11", kind: "relative" }]);
+    expect(p.threshold).toBe(0.5); // 2× baseline would be 0.3, but the line never sits below High
+    expect(p.surges).toEqual([{ start: "2026-11-09", top: "2026-11-09", topValue: 0.7, end: "2026-11-11", kind: "relative" }]);
   });
 
   it("confirms ovulation from a High-only surge when the temperature rises", () => {
@@ -90,6 +90,21 @@ describe("LH read against your own baseline", async () => {
     expect(c.restart).toEqual({ from: "2026-11-12", likely: "2026-11-23", earliest: "2026-11-22", latest: "2026-11-26" });
     expect(c.ovulation).toBe("2026-11-23");
     const info = phaseFor("2026-11-19", m);
-    expect(focusFor(info, m, sputter, byDate, true).sub).toMatch(/faded by Nov 12.*around Nov 23/);
+    expect(focusFor(info, m, sputter, byDate, true)).toMatchObject({ headline: "Ovulation likely Nov 22–26.", sub: "Your Nov 10 surge faded. Keep testing LH daily." });
+  });
+});
+
+describe("the Nov 21 bug", () => {
+  it("never shows a surge still waiting on its temperature as confirmed ovulation", () => {
+    const t = (date: string, ratio: number): LhTest => ({ date, ratio, level: ratio >= 1 ? "peak" : ratio >= 0.5 ? "high" : "low" });
+    const lh = [t("2026-11-08", 0.12), t("2026-11-09", 0.6), t("2026-11-10", 0.75), t("2026-11-12", 0.15), t("2026-11-18", 0.1), t("2026-11-20", 0.55)];
+    const m = buildModel(logs, lh, settings, nights("2026-10-25", "2026-11-21"));
+    const c = m.cycles.at(-1)!;
+    expect(c).toMatchObject({ failedSurges: ["2026-11-10"], lhPeak: "2026-11-20", surgeStatus: "pending", ovulation: "2026-11-21", ovulationConfirmed: false });
+  });
+  it("doesn't call one slightly raised Low a surge", async () => {
+    const { lhPattern } = await import("../shared/lhPattern");
+    const t = (date: string, ratio: number): LhTest => ({ date, ratio, level: "low" });
+    expect(lhPattern([t("2026-11-01", 0.1), t("2026-11-02", 0.12), t("2026-11-03", 0.11), t("2026-11-04", 0.42)]).surges).toEqual([]);
   });
 });
