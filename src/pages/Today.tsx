@@ -207,6 +207,9 @@ function PersonalLine({ info }: { info: TodayInfo }) {
       lhSurgeStatus: info.cycle?.surgeStatus ?? null,
       surgesWithoutOvulation: info.cycle?.failedSurges ?? [],
       ovulationRunningLate: !!info.cycle?.ovulationDelayed,
+      lhBaselineThisCycle: info.cycle?.lhBaseline ?? null,
+      lhSurgeLine: info.cycle?.lhThreshold ?? null,
+      nextSurgeExpected: info.cycle?.restart ?? null,
       temperatureShift: info.cycle?.tempShift ? { since: info.cycle.tempShift.firstHigh, riseC: info.cycle.tempShift.rise } : null,
       ouraLastNights: model.wearable.filter((w) => w.date >= addDays(info.date, -4)),
       firstCycleAfterLoss: model.afterLoss && model.afterLoss.start === info.cycle?.start

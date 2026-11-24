@@ -119,7 +119,7 @@ describe("Today in cycle mode", () => {
     expect(focusFor(phaseFor(d, model), model, [], b, true).counts).toBe(true);
     const lh: LhTest[] = [{ date: d, ratio: 1.1, level: "peak" }];
     const m2 = buildModel(logs, lh, DEFAULT_SETTINGS);
-    expect(focusFor(phaseFor(d, m2), m2, lh, byDate, true).headline).toMatch(/LH peak/);
+    expect(focusFor(phaseFor(d, m2), m2, lh, byDate, true).headline).toMatch(/LH surge/);
   });
 
   it("shows the wait list from ovulation day until the period", () => {

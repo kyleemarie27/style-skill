@@ -3,7 +3,11 @@ import { LH_BANDS } from "../../shared/lh";
 import type { LhTest } from "../../shared/types";
 
 /** Premom-style LH curve for one cycle: max reading per day, with High/Peak bands. */
-export function LhChart({ tests, start, days, ovulation }: { tests: LhTest[]; start: string; days: number; ovulation?: string | null }) {
+export function LhChart({ tests, start, days, ovulation, baseline, threshold }: {
+  tests: LhTest[]; start: string; days: number; ovulation?: string | null;
+  /** This cycle's quiet level and surge line (about 2× it), drawn so a surge below Peak still shows. */
+  baseline?: number | null; threshold?: number | null;
+}) {
   const W = 640;
   const H = 180;
   const pad = { l: 30, r: 8, t: 10, b: 22 };
@@ -33,6 +37,13 @@ export function LhChart({ tests, start, days, ovulation }: { tests: LhTest[]; st
           <text x={pad.l - 6} y={y(v) + 3} textAnchor="end">{v.toFixed(1)}</text>
         </g>
       ))}
+      {baseline != null && <line x1={pad.l} x2={W - pad.r} y1={y(baseline)} y2={y(baseline)} stroke="var(--muted)" strokeDasharray="2 3" />}
+      {threshold != null && threshold < LH_BANDS.peak && (
+        <g>
+          <line x1={pad.l} x2={W - pad.r} y1={y(threshold)} y2={y(threshold)} stroke="var(--brand)" strokeDasharray="6 4" opacity="0.8" />
+          <text x={W - pad.r - 2} y={y(threshold) - 4} textAnchor="end">your surge line</text>
+        </g>
+      )}
       {ovI !== null && ovI >= 0 && ovI < days && (
         <line x1={x(ovI)} x2={x(ovI)} y1={pad.t} y2={H - pad.b} stroke="var(--ovulation)" strokeDasharray="4 3" />
       )}
@@ -45,7 +56,7 @@ export function LhChart({ tests, start, days, ovulation }: { tests: LhTest[]; st
       {Array.from({ length: days }, (_, i) => i)
         .filter((i) => i % 5 === 0 || i === days - 1)
         .map((i) => (
-          <text key={i} x={x(i)} y={H - 6} textAnchor="middle">CD{i + 1}</text>
+          <text key={i} x={x(i)} y={H - 6} textAnchor={i === days - 1 ? "end" : i === 0 ? "start" : "middle"}>CD{i + 1}</text>
         ))}
     </svg>
   );

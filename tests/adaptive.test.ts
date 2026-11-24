@@ -63,3 +63,33 @@ describe("an LH surge is checked against temperature", () => {
     expect(m.cycles.at(-1)).toMatchObject({ lhPeak: "2026-11-09", surgeStatus: null, failedSurges: [], ovulationConfirmed: true });
   });
 });
+
+describe("LH read against your own baseline", async () => {
+  const { lhPattern } = await import("../shared/lhPattern");
+  const t = (date: string, ratio: number): LhTest => ({ date, ratio, level: ratio >= 1 ? "peak" : ratio >= 0.5 ? "high" : "low" });
+
+  it("finds a surge that never reaches Peak, with its top and the day it faded", () => {
+    const p = lhPattern([t("2026-11-05", 0.12), t("2026-11-06", 0.15), t("2026-11-07", 0.14), t("2026-11-08", 0.45), t("2026-11-09", 0.7), t("2026-11-10", 0.55), t("2026-11-11", 0.2)]);
+    expect(p.baseline).toBeCloseTo(0.15, 2);
+    expect(p.threshold).toBe(0.4);
+    expect(p.surges).toEqual([{ start: "2026-11-08", top: "2026-11-09", topValue: 0.7, end: "2026-11-11", kind: "relative" }]);
+  });
+
+  it("confirms ovulation from a High-only surge when the temperature rises", () => {
+    const highs = [t("2026-11-20", 0.12), t("2026-11-21", 0.1), t("2026-11-22", 0.65), t("2026-11-23", 0.8), t("2026-11-24", 0.3)];
+    const m = buildModel(logs, highs, settings, nights("2026-10-25", "2026-11-30", "2026-11-25"));
+    expect(m.cycles.at(-1)).toMatchObject({ lhPeak: "2026-11-23", surgeKind: "relative", surgeStatus: "confirmed", ovulation: "2026-11-24", ovulationConfirmed: true });
+  });
+
+  it("restarts the clock after a sputtered surge: next ovulation 10–14 days after LH fell back", () => {
+    const sputter = [t("2026-11-08", 0.12), t("2026-11-09", 0.6), t("2026-11-10", 0.75), t("2026-11-11", 0.5), t("2026-11-12", 0.15), t("2026-11-18", 0.1)];
+    const m = buildModel(logs, sputter, settings, nights("2026-10-25", "2026-11-19"));
+    const c = m.cycles.at(-1)!;
+    expect(c.failedSurges).toEqual(["2026-11-10"]);
+    // Period 5 days, usual ovulation day 16 (29 − 14 + 1): an 11-day restart from Nov 12.
+    expect(c.restart).toEqual({ from: "2026-11-12", likely: "2026-11-23", earliest: "2026-11-22", latest: "2026-11-26" });
+    expect(c.ovulation).toBe("2026-11-23");
+    const info = phaseFor("2026-11-19", m);
+    expect(focusFor(info, m, sputter, byDate, true).sub).toMatch(/faded by Nov 12.*around Nov 23/);
+  });
+});
