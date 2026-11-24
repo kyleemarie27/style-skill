@@ -46,6 +46,12 @@ Where it shows: the **Temperature tile** on Today (last night, a 10-night sparkl
 
 Setup, once: register an app at cloud.ouraring.com/oauth/applications with the redirect URI `https://<your Bloom address>/api/oura/callback` and the *daily* and *personal* scopes, then add `OURA_CLIENT_ID`, `OURA_CLIENT_SECRET` and `CRON_SECRET` in Vercel and redeploy. The Settings card walks you through it and shows the exact redirect URI.
 
+## Predictions that adapt
+
+- **An LH Peak has to be backed up by temperature.** With Oura connected, a Peak only counts as ovulation once the temperature rise follows within 5 days. Until then Today says *Waiting on your temperature* and the temperature tile counts the nights. After 5 flat nights it's marked a **surge without ovulation** (common after a loss, and with some cycles in general), the window reopens, and a later surge takes over. Insights shows it in the cycle history.
+- **The estimate never sits in the past.** In the open cycle, a low LH strip means ovulation is at least 2 days away, and flat nights mean it hasn't happened more than 2 days ago. When the data says the usual day has passed, the estimate moves to the earliest day the data still allows, every day, and the window, test date and period date move with it. Today shows *Ovulation is running late* / *Waiting to ovulate*, and the window strip is labeled as the earliest possible one.
+- Without a wearable, an LH Peak still counts on its own, as before.
+
 ## After a pregnancy loss
 
 When a pregnancy ends with a loss (Settings → Pregnancy → *My pregnancy has ended*), the day it ended becomes day 1 of a new cycle, unless you logged a period within 10 days of it. For that first cycle:

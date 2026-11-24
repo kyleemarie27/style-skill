@@ -67,6 +67,8 @@ export function partnerFocus(info: TodayInfo, focus: Focus, who: string): { head
     case "best": return { headline: "Today counts.", sub: "One of the three best days of the cycle." };
     case "open": return { headline: "The window is open.", sub: "Every day or two from now until the day after the LH peak." };
     case "last": return { headline: "Last day of the window.", sub: "One more try today if you'd both like. Then your part is done." };
+    case "confirming": return { headline: "Not a timing day.", sub: `${cap(who)}'s LH peaked; now waiting a few nights for the temperature to confirm ovulation.` };
+    case "late-ov": return { headline: "Not a timing day yet.", sub: `Ovulation is running late this cycle. The window moves as ${who}'s readings come in; Bloom will flag it.` };
     case "wait": return { headline: "Your part is done.", sub: testOn ? `The wait. Test day is ${testOn}.` : "The wait." };
     case "late": return { headline: "Test day.", sub: `${cap(who)}'s period is late, so a test now gives a clear answer.` };
     case "period": return { headline: "Not a timing day.", sub: info.fertileStart ? `Period week. The window opens around ${prettyDate(info.fertileStart)}.` : "Period week." };
@@ -86,7 +88,7 @@ function PartnerHero({ info, focus, who, invitation }: { info: TodayInfo; focus:
     <div className={`card hero ph-${info.phase}${focus.counts ? " counts" : ""}`}>
       <div className="stack" style={{ gap: 6 }}>
         <div className="muted small">{prettyDate(info.date, true)}</div>
-        <span className="phase-pill"><span className="dot" />{PARTNER_PHASES[info.phase]?.label ?? "Cycle"}</span>
+        <span className="phase-pill"><span className="dot" />{info.cycle?.ovulationDelayed ? "Waiting to ovulate" : PARTNER_PHASES[info.phase]?.label ?? "Cycle"}</span>
         <h1 style={{ marginTop: 4 }}>{f.headline}</h1>
         {f.sub && <p>{f.sub}</p>}
       </div>

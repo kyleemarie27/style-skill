@@ -1,4 +1,4 @@
-import type { CycleModel, Today } from "../../shared/cycle";
+import { VERIFY_NIGHTS, type CycleModel, type Today } from "../../shared/cycle";
 import { addDays, diffDays, prettyDate } from "../../shared/dates";
 import type { DayLog, LhTest, Mucus } from "../../shared/types";
 
@@ -13,7 +13,7 @@ export interface Focus {
   /** Today is one to have sex if you can. */
   counts: boolean;
   /** Why, so the partner's view can say it in its own words. */
-  kind: "late" | "last" | "wait" | "period" | "lh-peak" | "lh-high" | "mucus" | "best" | "open" | "before" | "none";
+  kind: "late" | "last" | "wait" | "confirming" | "late-ov" | "period" | "lh-peak" | "lh-high" | "mucus" | "best" | "open" | "before" | "none";
 }
 
 /** The cycle day to start LH strips: a day or so before the fertile window opens (never before day 6). */
@@ -51,6 +51,14 @@ export function focusFor(info: Today, model: CycleModel, lhTests: LhTest[], byDa
   }
   if (info.dpo === 1 && info.fertileDay) {
     return { headline: "Last day of the window.", sub: "One more try today if you'd like. Then your part is done.", counts: true, kind: "last" };
+  }
+  if (info.dpo && info.phase.startsWith("tww") && info.cycle?.surgeStatus === "pending" && info.cycle.lhPeak) {
+    return {
+      headline: "Waiting on your temperature.",
+      sub: `LH peaked ${prettyDate(info.cycle.lhPeak)}. A rise in the next few nights confirms ovulation; if it stays flat, Bloom reopens your window.`,
+      counts: false,
+      kind: "confirming",
+    };
   }
   if (info.dpo && info.phase.startsWith("tww")) {
     return {
@@ -92,6 +100,17 @@ export function focusFor(info: Today, model: CycleModel, lhTests: LhTest[], byDa
       sub: `${cm.cm === "egg_white" ? "Egg-white" : "Watery"} mucus ${cm.date === info.date ? "today" : cm.date === addDays(info.date, -1) ? "yesterday" : "two days ago"} is your body's own green light.`,
       counts: true,
       kind: "mucus",
+    };
+  }
+  if (info.cycle?.ovulationDelayed) {
+    const failed = info.cycle.failedSurges.at(-1);
+    return {
+      headline: "Ovulation is running late.",
+      sub: failed
+        ? `Your ${prettyDate(failed)} surge had no temperature rise after it. Keep testing LH daily.`
+        : "Your latest signs say it hasn't happened yet. Keep testing LH daily; Bloom moves your window as readings come in.",
+      counts: false,
+      kind: "late-ov",
     };
   }
   if (info.fertileDay && info.ovulation) {
@@ -162,13 +181,20 @@ export function signalsFor(
     out.push({ key: "lh", label: "LH", value: "On hold", note: "Strips can read hCG. Log a negative pregnancy test first" });
   } else if (last) {
     const rising = prev && last.ratio !== null && prev.ratio !== null && last.ratio > prev.ratio;
-    const peak = lh.find((t) => t.level === "peak");
+    // The surge that stands (confirmed or still pending); earlier surges with no rise don't count.
+    const failed = new Set(info.cycle?.failedSurges ?? []);
+    const standing = info.cycle?.lhPeak ?? null;
+    const lastFailed = info.cycle?.failedSurges.at(-1);
     out.push({
       key: "lh",
       label: "LH",
       value: `${last.ratio !== null ? last.ratio.toFixed(2) + " " : ""}${last.level === "peak" ? "Peak" : last.level === "high" ? "High" : "Low"}`,
-      note: peak ? `Peaked ${prettyDate(peak.date)}` : `${last.date === info.date ? "Today" : prettyDate(last.date)}${rising ? " · rising" : ""}`,
-      on: !waiting && (last.level !== "low" || !!peak),
+      note: standing
+        ? `Peaked ${prettyDate(standing)}${info.cycle?.surgeStatus === "pending" ? " · checking" : ""}`
+        : lastFailed
+          ? `${prettyDate(lastFailed)} surge · no rise after`
+          : `${last.date === info.date ? "Today" : prettyDate(last.date)}${rising ? " · rising" : ""}`,
+      on: !waiting && (last.level !== "low" || (!!standing && !failed.has(standing))),
     });
   } else {
     const start = lhStartDate(info);
@@ -183,8 +209,12 @@ export function signalsFor(
     values: Array.from({ length: 10 }, (_, i) => byNight.get(addDays(sparkFrom, i)) ?? null),
     highFrom: shift && shift.firstHigh >= sparkFrom ? diffDays(shift.firstHigh, sparkFrom) : shift ? 0 : null,
   };
+  const pendingPeak = info.cycle?.surgeStatus === "pending" ? info.cycle.lhPeak : null;
   if (shift) {
     out.push({ key: "temp", label: "Temperature", value: `Up ${signed(shift.rise)}`, note: `Since ${prettyDate(shift.firstHigh)} · ovulation confirmed`, on: true, spark });
+  } else if (pendingPeak && lastNight) {
+    const seen = model.wearable.filter((w) => w.tempDev !== null && w.date > addDays(pendingPeak, 1) && w.date <= info.date).length;
+    out.push({ key: "temp", label: "Temperature", value: "No rise yet", note: `Night ${Math.min(seen, VERIFY_NIGHTS)} of ${VERIFY_NIGHTS} after the peak`, spark });
   } else if (lastNight && diffDays(info.date, lastNight.date) <= 3) {
     out.push({
       key: "temp",
@@ -257,4 +287,18 @@ export function waitListActive(info: Today): boolean {
   if (!info.ovulation) return false;
   if (!["ovulation", "tww_early", "tww_mid", "tww_late", "late"].includes(info.phase)) return false;
   return info.date >= info.ovulation;
+}
+
+/** A short explanation when an LH surge is being checked, or came without ovulation. Null otherwise. */
+export function surgeNote(info: Today): string | null {
+  const c = info.cycle;
+  if (!c) return null;
+  if (c.surgeStatus === "pending" && c.lhPeak) {
+    return `If your temperature stays flat for ${VERIFY_NIGHTS} nights after the peak, Bloom treats it as a surge without ovulation and reopens your window.`;
+  }
+  const failed = c.failedSurges.at(-1);
+  if (failed && !c.ovulationConfirmed) {
+    return `A surge without ovulation is common after a loss, and another often follows within 1–2 weeks. Bloom moves your window as readings come in. PdG strips can confirm ovulation if you want a second signal.`;
+  }
+  return null;
 }

@@ -122,7 +122,7 @@ export function InsightsPage() {
             <div className="row between small">
               <b>{prettyDate(c.start)}{c.end ? "" : " · current"}{c.firstAfterLoss ? " · first cycle back" : ""}</b>
               <span className="muted">
-                {c.length ? `${c.length} days` : `day ${len}`} · ovulation CD{ovDay}{c.ovulationSource === "lh" ? (c.tempShift ? " (LH + temp)" : " (LH)") : c.ovulationSource === "marked" ? " (confirmed)" : c.ovulationSource === "temp" ? " (temp)" : " (est.)"} · ♥ {loveInWindow} in window
+                {c.length ? `${c.length} days` : `day ${len}`} · ovulation CD{ovDay}{c.ovulationSource === "lh" ? (c.tempShift ? " (LH + temp)" : " (LH)") : c.ovulationSource === "marked" ? " (confirmed)" : c.ovulationSource === "temp" ? " (temp)" : " (est.)"}{c.failedSurges.length ? ` · ${c.failedSurges.length === 1 ? "a surge" : `${c.failedSurges.length} surges`} without ovulation` : ""} · ♥ {loveInWindow} in window
               </span>
             </div>
             <div className="cycle-bar" aria-hidden>

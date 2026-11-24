@@ -2,7 +2,7 @@ import type { Today } from "../../shared/cycle";
 import { addDays, diffDays, prettyDate } from "../../shared/dates";
 import { DEFAULT_WAIT_LIST } from "../../shared/types";
 import { invitationFor } from "../content/invitations";
-import { lhStartDate, signalsFor, waitListActive, windowDays, type WindowDay } from "../lib/cycleToday";
+import { lhStartDate, signalsFor, surgeNote, waitListActive, windowDays, type WindowDay } from "../lib/cycleToday";
 import { useStore } from "../lib/store";
 import { TempSpark } from "./TempChart";
 
@@ -28,7 +28,8 @@ export function WaitListCard({ info }: { info: Today }) {
   const list = settings.waitList ?? DEFAULT_WAIT_LIST;
   if (!list.length || !info.ovulation) return null;
   const active = waitListActive(info);
-  const soon = !active && (info.phase === "fertile" || info.phase === "ovulation") && info.date >= addDays(info.ovulation, -3);
+  // No heads-up while ovulation is running late: the date isn't known yet.
+  const soon = !active && !info.cycle?.ovulationDelayed && (info.phase === "fertile" || info.phase === "ovulation") && info.date >= addDays(info.ovulation, -3);
   if (!active && !soon) return null;
   if (soon) {
     return (
@@ -85,6 +86,7 @@ export function SignalsCard({ info }: { info: Today }) {
   return (
     <div className={`card stack ph-${info.phase}`}>
       <div className="section-title"><span className="ico" aria-hidden>📍</span>Your signals</div>
+      {surgeNote(info) && <p className="small notice">{surgeNote(info)}</p>}
       <div className="signals">
         {signals.map((s) => (
           <div key={s.key} className={`signal${s.on ? " on" : ""}`}>
@@ -98,7 +100,7 @@ export function SignalsCard({ info }: { info: Today }) {
       {days.length > 0 && (
         <div>
           <div className="tiny muted" style={{ marginBottom: 6 }}>
-            Fertile window{info.ovulationConfirmed ? "" : " (estimated)"} · ★ best days
+            {info.cycle?.ovulationDelayed ? "Earliest possible window · moves with your readings" : `Fertile window${info.ovulationConfirmed ? "" : " (estimated)"}`} · ★ best days
           </div>
           <WindowStrip days={days} />
         </div>
@@ -187,7 +189,8 @@ export function CycleBar({ info }: { info: Today }) {
   const { model } = useStore();
   if (!info.cycle || !info.cycleDay || !info.fertileStart || !info.fertileEnd || !info.ovulation) return null;
   const start = info.cycle.start;
-  const len = Math.max(info.cycle.length ?? model.avgCycleLength, info.cycleDay);
+  // The open cycle runs to the predicted period, which moves when ovulation is late.
+  const len = Math.max(info.cycle.length ?? (info.nextPeriod ? diffDays(info.nextPeriod, start) : model.avgCycleLength), info.cycleDay);
   const pct = (d: string, extra = 0) => `${Math.min(100, Math.max(0, ((diffDays(d, start) + extra) / len) * 100))}%`;
   const width = (a: string, b: string) => `${Math.min(100, ((diffDays(b, a) + 1) / len) * 100)}%`;
   return (
