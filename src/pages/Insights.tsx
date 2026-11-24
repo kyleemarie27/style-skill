@@ -70,8 +70,11 @@ export function InsightsPage() {
             ))}
           </select>
         </div>
-        <LhChart tests={lhTests} start={selected.start} days={selLen} ovulation={selected.ovulationConfirmed ? selected.ovulation : null} />
-        <p className="tiny muted">Premom scale: yellow band = High (0.5–0.99), pink band = Peak (≥1.0). Dashed line = confirmed ovulation.</p>
+        <LhChart tests={lhTests} start={selected.start} days={selLen} ovulation={selected.ovulationConfirmed ? selected.ovulation : null} baseline={selected.lhBaseline} threshold={selected.lhThreshold} />
+        <p className="tiny muted">
+          {selected.lhBaseline != null ? `Your baseline this cycle: ${selected.lhBaseline.toFixed(2)} (dotted). Readings above your surge line (${selected.lhThreshold!.toFixed(2)}, about 2×) count as a surge, even below Peak. ` : ""}
+          Yellow band = High, pink = Peak. Orange dashed = confirmed ovulation.
+        </p>
       </div>
 
       {model.wearable.length > 0 ? (

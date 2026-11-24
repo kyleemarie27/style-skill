@@ -1,4 +1,5 @@
 import { VERIFY_NIGHTS, type CycleModel, type Today } from "../../shared/cycle";
+import { lhValue, timesBaseline } from "../../shared/lhPattern";
 import { addDays, diffDays, prettyDate } from "../../shared/dates";
 import type { DayLog, LhTest, Mucus } from "../../shared/types";
 
@@ -81,17 +82,28 @@ export function focusFor(info: Today, model: CycleModel, lhTests: LhTest[], byDa
 
   const lh = cycleLh(info, model, lhTests);
   const last = lh.at(-1);
-  const recentPeak = lh.find((t) => t.level === "peak" && diffDays(info.date, t.date) <= 1);
+  // The surge Bloom found against your own baseline (it doesn't need to reach the strip's Peak line).
+  const surgeTop = info.cycle?.lhPeak && !info.cycle.failedSurges.includes(info.cycle.lhPeak) ? info.cycle.lhPeak : null;
+  const recentPeak = surgeTop && diffDays(info.date, surgeTop) >= 0 && diffDays(info.date, surgeTop) <= 1 ? surgeTop : null;
   if (recentPeak) {
     return {
-      headline: recentPeak.date === info.date ? "LH peak. Today and tomorrow are the days." : "LH peaked yesterday. Today counts.",
-      sub: "Ovulation usually follows a peak by 12–36 hours.",
+      headline: recentPeak === info.date ? "LH surge. Today and tomorrow are the days." : "LH surged yesterday. Today counts.",
+      sub: "Ovulation usually follows the top of a surge by 12–36 hours.",
       counts: true,
       kind: "lh-peak",
     };
   }
-  if (last && last.date === info.date && last.level === "high" && !unsureLh) {
-    return { headline: "LH is rising. Today counts.", sub: "Have sex today and tomorrow, and keep testing for the peak.", counts: true, kind: "lh-high" };
+  const thr = info.cycle?.lhThreshold ?? null;
+  const lastVal = last ? lhValue(last) : 0;
+  const rising = last && last.date === info.date && !unsureLh && (last.level !== "low" || (thr !== null && lastVal >= thr));
+  if (rising) {
+    const x = timesBaseline(lastVal, info.cycle?.lhBaseline ?? null);
+    return {
+      headline: "LH is rising. Today counts.",
+      sub: `${x && x >= 1.5 ? `${x}× your baseline. ` : ""}Have sex today and tomorrow, and keep testing.`,
+      counts: true,
+      kind: "lh-high",
+    };
   }
   const cm = recentMucus(info, byDate);
   if (cm && (cm.cm === "egg_white" || cm.cm === "watery") && info.date <= (info.fertileEnd ?? info.date)) {
@@ -104,9 +116,12 @@ export function focusFor(info: Today, model: CycleModel, lhTests: LhTest[], byDa
   }
   if (info.cycle?.ovulationDelayed) {
     const failed = info.cycle.failedSurges.at(-1);
+    const r = info.cycle.restart;
     return {
       headline: "Ovulation is running late.",
-      sub: failed
+      sub: r && failed
+        ? `Your ${prettyDate(failed)} surge faded by ${prettyDate(r.from)} without a temperature rise. A new follicle takes 10–14 days, so look for the next surge around ${prettyDate(r.likely)}.`
+        : failed
         ? `Your ${prettyDate(failed)} surge had no temperature rise after it. Keep testing LH daily.`
         : "Your latest signs say it hasn't happened yet. Keep testing LH daily; Bloom moves your window as readings come in.",
       counts: false,
@@ -190,11 +205,14 @@ export function signalsFor(
       label: "LH",
       value: `${last.ratio !== null ? last.ratio.toFixed(2) + " " : ""}${last.level === "peak" ? "Peak" : last.level === "high" ? "High" : "Low"}`,
       note: standing
-        ? `Peaked ${prettyDate(standing)}${info.cycle?.surgeStatus === "pending" ? " · checking" : ""}`
+        ? `Surged ${prettyDate(standing)}${info.cycle?.surgeStatus === "pending" ? " · checking" : ""}`
         : lastFailed
           ? `${prettyDate(lastFailed)} surge · no rise after`
-          : `${last.date === info.date ? "Today" : prettyDate(last.date)}${rising ? " · rising" : ""}`,
-      on: !waiting && (last.level !== "low" || (!!standing && !failed.has(standing))),
+          : `${last.date === info.date ? "Today" : prettyDate(last.date)}${(() => {
+              const x = timesBaseline(lhValue(last), info.cycle?.lhBaseline ?? null);
+              return x !== null && x >= 1.5 ? ` · ${x}× baseline` : rising ? " · rising" : "";
+            })()}`,
+      on: !waiting && (last.level !== "low" || (info.cycle?.lhThreshold != null && lhValue(last) >= info.cycle.lhThreshold) || (!!standing && !failed.has(standing))),
     });
   } else {
     const start = lhStartDate(info);
@@ -298,7 +316,10 @@ export function surgeNote(info: Today): string | null {
   }
   const failed = c.failedSurges.at(-1);
   if (failed && !c.ovulationConfirmed) {
-    return `A surge without ovulation is common after a loss, and another often follows within 1–2 weeks. Bloom moves your window as readings come in. PdG strips can confirm ovulation if you want a second signal.`;
+    const r = c.restart;
+    return r
+      ? `Surges that start and fizzle are common after a loss. Next surge expected ${prettyDate(r.earliest)}–${prettyDate(r.latest)}; it moves with your readings.`
+      : `A surge without ovulation is common after a loss, and another often follows within 1–2 weeks. Bloom moves your window as readings come in. PdG strips can confirm ovulation if you want a second signal.`;
   }
   return null;
 }

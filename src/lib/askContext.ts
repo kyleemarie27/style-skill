@@ -61,6 +61,8 @@ export function buildAskContext(model: CycleModel, logs: DayLog[], lhTests: LhTe
       ...(c.surgeStatus ? { lhSurgeStatus: c.surgeStatus } : {}),
       ...(c.failedSurges.length ? { surgesWithoutTemperatureRise: c.failedSurges } : {}),
       ...(c.ovulationDelayed ? { ovulationEstimateMovedLater: true } : {}),
+      ...(c.lhBaseline !== null ? { lhBaseline: c.lhBaseline, lhSurgeLine: c.lhThreshold, surgeKind: c.surgeKind } : {}),
+      ...(c.restart ? { restartAfterSputteredSurge: c.restart } : {}),
       // The cycle a pregnancy happened in (not a real cycle length), and the one that began with the loss.
       ...(c.pregnancy ? { pregnancyCycle: true } : {}),
       ...(c.firstAfterLoss ? { firstCycleAfterLoss: true } : {}),
