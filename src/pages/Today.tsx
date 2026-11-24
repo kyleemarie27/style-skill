@@ -136,7 +136,7 @@ function Hero({ info }: { info: TodayInfo }) {
       <div className="row between" style={{ alignItems: "flex-start" }}>
         <div className="stack" style={{ gap: 6 }}>
           <div className="muted small">{prettyDate(info.date, true)}</div>
-          <span className="phase-pill"><span className="dot" />{info.cycle?.ovulationDelayed ? "Waiting to ovulate" : info.cycle?.surgeStatus === "pending" && info.dpo ? "Confirming ovulation" : PHASE_NAME[info.phase]}</span>
+          <span className="phase-pill"><span className="dot" />{info.cycle?.ovulationDelayed ? "Before ovulation" : info.cycle?.surgeStatus === "pending" && info.dpo ? "After a surge" : PHASE_NAME[info.phase]}</span>
           <h1 style={{ marginTop: 4 }}>{focus.headline}</h1>
           {focus.sub && <p className="small">{focus.sub}</p>}
         </div>
@@ -149,12 +149,12 @@ function Hero({ info }: { info: TodayInfo }) {
         {info.ovulation && (
           <div className="fact">
             {info.ovulationConfirmed
-              ? info.daysUntilOvulation ? "Ovulation" : `Ovulated (${info.cycle?.ovulationSource === "temp" ? "by temp" : info.cycle?.tempShift ? "LH + temp" : "confirmed"})`
-              : info.daysUntilOvulation ? "Ovulation (est.)" : "Ovulated (est.)"}
-            <b>{prettyDate(info.ovulation)}</b>
+              ? info.daysUntilOvulation ? "Ovulation" : "Ovulated ✓"
+              : info.cycle?.surgeStatus === "pending" ? "Ovulation?" : "Ovulation (est.)"}
+            <b>{info.cycle?.restart && !info.ovulationConfirmed ? `${prettyDate(info.cycle.restart.earliest)}–${Number(info.cycle.restart.latest.slice(8))}` : prettyDate(info.ovulation)}</b>
           </div>
         )}
-        {info.dpo && info.testDate && info.phase !== "late" && (
+        {info.dpo && info.testDate && info.phase !== "late" && info.cycle?.surgeStatus !== "pending" && (
           <div className="fact">Test from<b>{prettyDate(info.testDate)}</b></div>
         )}
         {info.nextPeriod && (

@@ -346,7 +346,8 @@ export function buildModel(logs: DayLog[], lhTests: LhTest[], settings: Settings
       ovulation,
       ovulationDelayed,
       restart,
-      ovulationConfirmed: !!knownOv,
+      // A surge still waiting on its temperature nights is expected, not confirmed.
+      ovulationConfirmed: !!knownOv && c.surgeStatus !== "pending",
       ovulationSource: source ?? ("estimate" as const),
       pregnancy,
       firstAfterLoss: c.start === lossStart,

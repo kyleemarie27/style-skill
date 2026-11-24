@@ -50,16 +50,17 @@ export function focusFor(info: Today, model: CycleModel, lhTests: LhTest[], byDa
   if (info.phase === "late") {
     return { headline: "Your period is late. Time to test.", sub: "First-morning urine gives the clearest answer.", counts: false, kind: "late" };
   }
-  if (info.dpo === 1 && info.fertileDay) {
-    return { headline: "Last day of the window.", sub: "One more try today if you'd like. Then your part is done.", counts: true, kind: "last" };
-  }
   if (info.dpo && info.phase.startsWith("tww") && info.cycle?.surgeStatus === "pending" && info.cycle.lhPeak) {
+    const seen = model.wearable.filter((w) => w.tempDev !== null && w.date > addDays(info.cycle!.lhPeak!, 1) && w.date <= info.date).length;
     return {
-      headline: "Waiting on your temperature.",
-      sub: `LH peaked ${prettyDate(info.cycle.lhPeak)}. A rise in the next few nights confirms ovulation; if it stays flat, Bloom reopens your window.`,
-      counts: false,
+      headline: "Checking for ovulation.",
+      sub: `LH surged ${prettyDate(info.cycle.lhPeak)} · temperature night ${Math.min(seen, VERIFY_NIGHTS)} of ${VERIFY_NIGHTS}${info.fertileDay ? " · today still counts" : ""}`,
+      counts: !!info.fertileDay,
       kind: "confirming",
     };
+  }
+  if (info.dpo === 1 && info.fertileDay) {
+    return { headline: "Last day of the window.", sub: "One more try today if you'd like. Then your part is done.", counts: true, kind: "last" };
   }
   if (info.dpo && info.phase.startsWith("tww")) {
     return {
@@ -118,12 +119,8 @@ export function focusFor(info: Today, model: CycleModel, lhTests: LhTest[], byDa
     const failed = info.cycle.failedSurges.at(-1);
     const r = info.cycle.restart;
     return {
-      headline: "Ovulation is running late.",
-      sub: r && failed
-        ? `Your ${prettyDate(failed)} surge faded by ${prettyDate(r.from)} without a temperature rise. A new follicle takes 10–14 days, so look for the next surge around ${prettyDate(r.likely)}.`
-        : failed
-        ? `Your ${prettyDate(failed)} surge had no temperature rise after it. Keep testing LH daily.`
-        : "Your latest signs say it hasn't happened yet. Keep testing LH daily; Bloom moves your window as readings come in.",
+      headline: r ? `Ovulation likely ${dateRange(r.earliest, r.latest)}.` : "Ovulation hasn't happened yet.",
+      sub: `${failed ? `Your ${prettyDate(failed)} surge faded. ` : ""}Keep testing LH daily.`,
       counts: false,
       kind: "late-ov",
     };
@@ -311,15 +308,9 @@ export function waitListActive(info: Today): boolean {
 export function surgeNote(info: Today): string | null {
   const c = info.cycle;
   if (!c) return null;
-  if (c.surgeStatus === "pending" && c.lhPeak) {
-    return `If your temperature stays flat for ${VERIFY_NIGHTS} nights after the peak, Bloom treats it as a surge without ovulation and reopens your window.`;
-  }
-  const failed = c.failedSurges.at(-1);
-  if (failed && !c.ovulationConfirmed) {
-    const r = c.restart;
-    return r
-      ? `Surges that start and fizzle are common after a loss. Next surge expected ${prettyDate(r.earliest)}–${prettyDate(r.latest)}; it moves with your readings.`
-      : `A surge without ovulation is common after a loss, and another often follows within 1–2 weeks. Bloom moves your window as readings come in. PdG strips can confirm ovulation if you want a second signal.`;
+  if (c.surgeStatus === "pending" && c.lhPeak) return `A temperature rise within ${VERIFY_NIGHTS} nights confirms it. If it stays flat, Bloom reopens your window.`;
+  if (c.failedSurges.length && !c.ovulationConfirmed) {
+    return "Surges that start and fizzle are common after a loss. A new follicle takes 10–14 days from when LH falls back, so Bloom moves your window with each reading.";
   }
   return null;
 }

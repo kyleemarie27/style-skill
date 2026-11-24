@@ -6,7 +6,7 @@ import type { LhTest } from "./types.js";
  * Reading LH relative to your own baseline, the way clinics read it, instead of only by the strip's
  * fixed Peak line (T/C ≥ 1.0). Plenty of people ovulate without ever testing at Peak: their surge
  * shows as readings well above their own quiet days. Bloom calls it a surge when readings reach
- * about twice your baseline (or an actual Peak), takes the highest day of that run as the surge
+ * twice your baseline and at least High (or an actual Peak), takes the highest day of that run as the surge
  * day, and the first reading back below the line as the day it ended.
  */
 export interface LhPoint {
@@ -30,15 +30,15 @@ export interface LhPattern {
   points: LhPoint[];
   /** Your quiet level: the middle of your lower readings. Null with fewer than 3 readings. */
   baseline: number | null;
-  /** The surge line: about 2× baseline, never below 0.4. Null without a baseline. */
+  /** The surge line: 2× baseline, never below High (0.5). Null without a baseline. */
   threshold: number | null;
   surges: LhSurge[];
 }
 
 /** How many times your baseline counts as a surge. */
 export const RELATIVE_SURGE = 2;
-/** The surge line never sits below this, so a very low baseline doesn't turn noise into a surge. */
-const MIN_SURGE = 0.4;
+/** The surge line never sits below the strip's High level, so one slightly-raised Low isn't a surge. */
+const MIN_SURGE = LH_BANDS.high;
 /** Readings this close together are one surge. */
 const SAME_SURGE_DAYS = 2;
 /** Without a test soon after, assume a surge faded within this many days of its top. */
@@ -63,7 +63,7 @@ export function lhPattern(tests: LhTest[]): LhPattern {
   if (points.length >= 3) {
     const lower = [...points.map((p) => p.value)].sort((a, b) => a - b).slice(0, Math.ceil(points.length / 2));
     baseline = Math.round(median(lower) * 100) / 100;
-    threshold = Math.round(Math.max(baseline * RELATIVE_SURGE, baseline + 0.25, MIN_SURGE) * 100) / 100;
+    threshold = Math.round(Math.max(baseline * RELATIVE_SURGE, MIN_SURGE) * 100) / 100;
   }
   const high = (p: LhPoint) => p.value >= LH_BANDS.peak || (threshold !== null && p.value >= threshold);
 

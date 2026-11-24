@@ -86,7 +86,12 @@ export function SignalsCard({ info }: { info: Today }) {
   return (
     <div className={`card stack ph-${info.phase}`}>
       <div className="section-title"><span className="ico" aria-hidden>📍</span>Your signals</div>
-      {surgeNote(info) && <p className="small notice">{surgeNote(info)}</p>}
+      {surgeNote(info) && (
+        <details className="why">
+          <summary className="small muted">Why?</summary>
+          <p className="small">{surgeNote(info)}</p>
+        </details>
+      )}
       <div className="signals">
         {signals.map((s) => (
           <div key={s.key} className={`signal${s.on ? " on" : ""}`}>
@@ -188,20 +193,30 @@ export function WindowStrip({ days }: { days: WindowDay[] }) {
 export function CycleBar({ info }: { info: Today }) {
   const { model } = useStore();
   if (!info.cycle || !info.cycleDay || !info.fertileStart || !info.fertileEnd || !info.ovulation) return null;
-  const start = info.cycle.start;
+  const c = info.cycle;
+  const start = c.start;
   // The open cycle runs to the predicted period, which moves when ovulation is late.
-  const len = Math.max(info.cycle.length ?? (info.nextPeriod ? diffDays(info.nextPeriod, start) : model.avgCycleLength), info.cycleDay);
+  const len = Math.max(c.length ?? (info.nextPeriod ? diffDays(info.nextPeriod, start) : model.avgCycleLength), info.cycleDay);
   const pct = (d: string, extra = 0) => `${Math.min(100, Math.max(0, ((diffDays(d, start) + extra) / len) * 100))}%`;
   const width = (a: string, b: string) => `${Math.min(100, ((diffDays(b, a) + 1) / len) * 100)}%`;
+  // After a sputtered surge, the band is the whole expected range, not a single estimated window.
+  const band = c.restart && !info.ovulationConfirmed ? { from: c.restart.earliest, to: c.restart.latest } : { from: info.fertileStart, to: info.fertileEnd };
+  const ovState = info.ovulationConfirmed ? "done" : c.surgeStatus === "pending" ? "checking" : "expected";
   return (
     <div className="cycle-track" aria-label={`Cycle day ${info.cycleDay} of about ${len}`}>
-      <div className="cycle-bar">
-        <div className="f" style={{ left: pct(info.fertileStart), width: width(info.fertileStart, info.fertileEnd) }} />
-        <div className="p" style={{ left: 0, width: width(start, info.cycle.periodEnd) }} />
-        <div className="o" style={{ left: pct(info.ovulation) }} />
+      <div className="cycle-bar story">
+        <div className={`f${c.restart && !info.ovulationConfirmed ? " range" : ""}`} style={{ left: pct(band.from), width: width(band.from, band.to) }} />
+        <div className="p" style={{ left: 0, width: width(start, c.periodEnd) }} />
+        {c.failedSurges.map((d) => <span key={d} className="mk fizzled" style={{ left: pct(d, 0.5) }} title={`Surge ${prettyDate(d)} · faded`}>✕</span>)}
+        {!(c.restart && !info.ovulationConfirmed) && <span className={`mk ov ${ovState}`} style={{ left: pct(info.ovulation, 0.5) }} title={`Ovulation ${ovState === "done" ? "confirmed" : ovState === "checking" ? "being checked" : "expected"} ${prettyDate(info.ovulation)}`} />}
         <div className="now" style={{ left: pct(info.date, 0.5) }} />
       </div>
-      <div className="row between tiny muted"><span>Day {info.cycleDay}</span><span>~{len} days</span></div>
+      <div className="story-key tiny muted">
+        <span>Day {info.cycleDay}</span>
+        {c.failedSurges.length > 0 && <span><b className="k fizzled">✕</b> surge faded</span>}
+        <span><b className={`k ov ${ovState}`} /> {ovState === "done" ? "ovulated" : ovState === "checking" ? "checking" : "expected"}</span>
+        <span>~{len} days</span>
+      </div>
     </div>
   );
 }
