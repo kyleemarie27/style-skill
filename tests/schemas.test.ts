@@ -6,6 +6,7 @@ import { LEARN_SCHEMA } from "../api/ask";
 import { SCHEMA as LH_SCHEMA } from "../api/lh-analyze";
 import { SCHEMA as DIVE_SCHEMA } from "../api/deep-dive";
 import { DUEL_SCHEMA } from "../api/_lib/duel";
+import { PREDICT_SCHEMA } from "../api/_lib/predict";
 
 /**
  * Structured outputs rejects schemas with more than 16 union-typed (nullable / anyOf) fields, and
@@ -38,7 +39,7 @@ describe("AI output schemas stay within the API's limits", () => {
     expect(audit(SCAN_SCHEMA)).toEqual({ unions: 0, optional: 0 });
   });
   it("every schema is within the published limits (16 unions, 24 optional fields)", () => {
-    for (const s of [SCAN_SCHEMA, IMPORT_SCHEMA, PREGNANT_SCHEMA, NOTE_SCHEMA, DIVE_SCHEMA, LEARN_SCHEMA, LH_SCHEMA, DUEL_SCHEMA]) {
+    for (const s of [SCAN_SCHEMA, IMPORT_SCHEMA, PREGNANT_SCHEMA, NOTE_SCHEMA, DIVE_SCHEMA, LEARN_SCHEMA, LH_SCHEMA, DUEL_SCHEMA, PREDICT_SCHEMA]) {
       const a = audit(s);
       expect(a.unions).toBeLessThanOrEqual(16);
       expect(a.optional).toBeLessThanOrEqual(24);

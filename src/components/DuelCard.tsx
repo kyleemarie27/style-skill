@@ -7,6 +7,7 @@ import { namesOf } from "../../shared/types";
 import { api, type DuelState } from "../lib/api";
 import { usePregnancy } from "../lib/pregnancy";
 import { useStore } from "../lib/store";
+import { displayPhase } from "./Prediction";
 
 /** The level badge for a cycle phase: it shifts about once a week with the cycle. */
 export const LEVEL: Record<Phase, string> = {
@@ -23,7 +24,7 @@ export const LEVEL: Record<Phase, string> = {
 
 /** What the duel is written for today: the stage, the level, one line on where you are. */
 function useDuelContext() {
-  const { model, settings } = useStore();
+  const { model, settings, prediction } = useStore();
   const p = usePregnancy();
   const today = localToday();
   return useMemo(() => {
@@ -39,8 +40,10 @@ function useDuelContext() {
     const now = info.cycleDay
       ? `Cycle day ${info.cycleDay}, ${PHASE_NAME[info.phase].toLowerCase()}${info.fertileStart ? `, fertile window ${info.fertileStart} to ${info.fertileEnd}` : ""}${info.ovulationConfirmed ? ", ovulation confirmed" : ""}`
       : "Just getting started with tracking";
-    return { stage: "ttc" as Stage, level: LEVEL[info.phase], now, gentle: info.phase === "late" || (loss !== null && loss < 14), names };
-  }, [model, settings, p, today]);
+    // The level follows the prediction (which reads all the evidence), not the averages.
+    const phase = displayPhase(info, prediction);
+    return { stage: "ttc" as Stage, level: LEVEL[phase], now, gentle: phase === "late" || (loss !== null && loss < 14), names };
+  }, [model, settings, p, today, prediction]);
 }
 
 /** Two players, both answer the same three questions, picks revealed once both have played. */
@@ -54,13 +57,22 @@ export function DuelCard() {
   const [picks, setPicks] = useState<number[]>([]);
   const [busy, setBusy] = useState(false);
 
+  // Written once per day, so wait (briefly) for the morning prediction: it sets the level badge.
+  const { prediction } = useStore();
+  const [waited, setWaited] = useState(false);
   useEffect(() => {
+    const t = setTimeout(() => setWaited(true), 6000);
+    return () => clearTimeout(t);
+  }, []);
+  const ready = ctx.stage !== "ttc" || !!prediction || waited;
+  useEffect(() => {
+    if (!ready || state) return;
     let live = true;
     api.duel(today, ctx).then((s) => live && setState(s)).catch((e) => live && setErr((e as Error).message));
     return () => { live = false; };
-    // Written once per day; the context only matters on the first open.
+    // The context only matters on the day's first open.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [today]);
+  }, [today, ready]);
 
   const me: Author = role;
   const name = (a: Author) => (a === me ? "You" : (a === "me" ? ctx.names.me : ctx.names.partner) || (a === "me" ? "Your partner" : "Your partner"));

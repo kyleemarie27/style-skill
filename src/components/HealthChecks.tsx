@@ -1,57 +1,35 @@
-import { useMemo, useState } from "react";
-import { healthChecks, summarizeHealth, type HealthCheck, type Status } from "../../shared/health";
+import { useMemo } from "react";
+import { healthChecks, summarizeHealth, type Status } from "../../shared/health";
 import { localToday } from "../../shared/dates";
 import { useStore } from "../lib/store";
 
 const LABEL: Record<Status, string> = { ok: "On track", watch: "Worth watching", doctor: "Ask your doctor", info: "FYI" };
-const ICON: Record<Status, string> = { ok: "✓", watch: "!", doctor: "+", info: "i" };
 
 export function useHealth() {
   const { model, dayLogs, lhTests, settings } = useStore();
   return useMemo(() => healthChecks(model, dayLogs, lhTests, settings, localToday()), [model, dayLogs, lhTests, settings]);
 }
 
-/** Full "Am I on track?" list for the Insights page. */
+/** "Am I on track?" as dots: one tile per check, tap to ask about it. */
 export function HealthChecks() {
   const checks = useHealth();
-  const s = summarizeHealth(checks);
   const order: Status[] = ["doctor", "watch", "ok", "info"];
   const sorted = [...checks].sort((a, b) => order.indexOf(a.status) - order.indexOf(b.status));
   return (
     <div className="card stack">
-      <div>
-        <h2>Am I on track?</h2>
-        <p className="muted small" style={{ marginTop: 4 }}>
-          {s.ok} on track{s.watch ? ` · ${s.watch} worth watching` : ""}{s.doctor ? ` · ${s.doctor} to ask your doctor about` : ""}.
-          Compared with published normal ranges, as general information rather than a diagnosis.
-        </p>
+      <h2>On track?</h2>
+      <div className="dots-grid">
+        {sorted.map((c) => (
+          <a key={c.id} className={`dot-tile st-${c.status}`} href={`#/ask/${encodeURIComponent(`Explain my ${c.title.toLowerCase()}: ${c.value}`)}`} title={LABEL[c.status]}>
+            <i aria-label={LABEL[c.status]} />
+            <span className="small"><b>{c.title}</b></span>
+            <span className="tiny muted">{c.value}</span>
+          </a>
+        ))}
       </div>
-      {sorted.map((c) => <CheckRow key={c.id} c={c} />)}
-    </div>
-  );
-}
-
-function CheckRow({ c }: { c: HealthCheck }) {
-  const [open, setOpen] = useState(c.status === "watch" || c.status === "doctor");
-  return (
-    <div className={`check st-${c.status}`}>
-      <button className="check-head" onClick={() => setOpen(!open)} aria-expanded={open}>
-        <span className="check-icon" aria-hidden>{ICON[c.status]}</span>
-        <span className="check-title">
-          <b>{c.title}</b>
-          <span className="small muted">{c.value} · normal {c.range}</span>
-        </span>
-        <span className="check-badge">{LABEL[c.status]}</span>
-      </button>
-      {open && (
-        <div className="check-body small">
-          <p>{c.summary}</p>
-          {c.why && <p className="muted" style={{ marginTop: 6 }}>{c.why}</p>}
-          {c.id === "ttc-time" && c.status === "info" && c.value === "not enough data yet" && (
-            <a className="btn ghost" href="#/settings">Add your start date →</a>
-          )}
-        </div>
-      )}
+      <div className="legend tiny">
+        <span><i className="st-ok" />On track</span><span><i className="st-watch" />Watch</span><span><i className="st-doctor" />Ask your doctor</span><span><i className="st-info" />Not enough data</span>
+      </div>
     </div>
   );
 }

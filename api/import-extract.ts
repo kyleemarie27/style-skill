@@ -17,6 +17,18 @@ Rules:
 - cervical_mucus is one of dry, sticky, creamy, watery, egg_white.
 - Only include what's actually in the source. Don't invent days. Put anything you weren't sure about in warnings.`;
 
+const LAB_TRANSCRIBE_SYSTEM = `You copy lab reports into plain text, exactly, for a person who will check every line.
+
+Output only this format, nothing else:
+Date: YYYY-MM-DD   (the collection or service date; if several, one "Date:" line before each group)
+Test name | value | unit | reference range | flag
+
+Rules:
+- One line per result. Copy the value exactly as printed ("<5", "Non Reactive", "2.10"). Tests still in progress: value "Pending".
+- reference range as "low-high", ">60", "<199" or empty. flag is "high", "low" or empty, from the report's H/L marks.
+- Keep the report's test names. Don't add commentary, headers, totals or interpretations. Don't skip anything, even normal results.
+- If something is unreadable, write the line with value "?" rather than guessing.`;
+
 export const SCHEMA = {
   type: "object",
   additionalProperties: false,
@@ -167,6 +179,17 @@ export default route(async (req: VercelRequest) => {
     content.push({ type: "image", source: { type: "base64", media_type: mediaType, data } });
   } else {
     throw new HttpError(400, "Send text, a PDF, or an image.");
+  }
+  if (source === "labs") {
+    // A lab report: copy every result onto its own line in a fixed format the app parses itself, so the
+    // only AI step is transcription (the most reliable one). She reviews every row before anything is saved.
+    if (fakeAi()) return { text: "Date: 2025-03-10\nProgesterone | 0.5 | ng/mL |  | \nEstradiol | 88 | pg/mL |  | \nTSH | 2.0 | uIU/mL | 0.45-4.5 | \nhCG | Pending |  |  | " };
+    const out = await within(55_000, askText({
+      system: LAB_TRANSCRIBE_SYSTEM,
+      content: [...content, { type: "text" as const, text: "Transcribe every result in this lab report." }],
+      maxTokens: 8000,
+    }));
+    return { text: out };
   }
   if (source === "scan") {
     // An ultrasound report: return one scan for the form to show before anything is saved.

@@ -450,6 +450,8 @@ export function phaseFor(date: string, model: CycleModel): Today {
 
 export type DayMark = {
   period?: boolean;
+  /** A second, less likely window from the prediction. */
+  backup?: boolean;
   predictedPeriod?: boolean;
   fertile?: boolean;
   ovulation?: boolean;

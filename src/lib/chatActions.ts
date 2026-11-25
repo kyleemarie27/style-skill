@@ -11,6 +11,8 @@ export type ChatAction =
   | { type: "question"; text: string }
   | { type: "appointment"; date: string; title: string }
   | { type: "scan"; scan: Scan }
+  /** Something she told Bloom that should inform the prediction (an observation, a strip read by eye, a lab value). */
+  | { type: "note"; date: string; text: string }
   | {
       type: "log";
       date: string;
@@ -40,6 +42,10 @@ function clean(raw: unknown): ChatAction | null {
   if (a.type === "appointment") {
     const title = str(a.title, 120);
     return title && isISODate(a.date) ? { type: "appointment", date: a.date as string, title } : null;
+  }
+  if (a.type === "note" && isISODate(a.date)) {
+    const text = str(a.text, 600);
+    return text ? { type: "note", date: a.date as string, text } : null;
   }
   if (a.type === "scan") {
     const scan = cleanScan(a);
@@ -80,6 +86,7 @@ export function parseAnswer(text: string): { text: string; actions: ChatAction[]
 /** Short label for the button. */
 export function actionLabel(a: ChatAction): string {
   if (a.type === "question") return `Add to doctor questions: "${a.text}"`;
+  if (a.type === "note") return `Add to evidence (${prettyDate(a.date)}): ${a.text}`;
   if (a.type === "appointment") return `Add appointment: ${a.title}, ${prettyDate(a.date)}`;
   if (a.type === "scan") {
     const s = a.scan;

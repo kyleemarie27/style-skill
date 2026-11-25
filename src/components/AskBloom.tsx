@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { localToday } from "../../shared/dates";
+import { addDays, localToday } from "../../shared/dates";
 import { activePregnancy } from "../../shared/pregnancy";
 import { api, askBloom, type ChatMsg } from "../lib/api";
 import { actionLabel, mergeLog, parseAnswer, type ChatAction } from "../lib/chatActions";
@@ -89,7 +89,7 @@ function useAskIdeas(p: ReturnType<typeof usePregnancy>, partner: boolean): stri
 
 /** The Ask tab: a full-page chat. `first` (from #/ask/<question>) is sent straight away in a new chat. */
 export function AskPage({ first }: { first: string | null }) {
-  const { model, dayLogs, lhTests, settings, aiEnabled } = useStore();
+  const { model, dayLogs, lhTests, settings, aiEnabled, prediction, evidence, labs } = useStore();
   const pregnant = !!activePregnancy(settings);
   const p = usePregnancy();
   const partner = useViewer() === "partner";
@@ -118,7 +118,13 @@ export function AskPage({ first }: { first: string | null }) {
     setBusy(true);
     abortRef.current = new AbortController();
     try {
-      const base = buildAskContext(model, dayLogs, lhTests, settings, localToday());
+      const base = {
+        ...buildAskContext(model, dayLogs, lhTests, settings, localToday()),
+        // What Bloom currently predicts, and the evidence beyond strips and check-ins.
+        currentPrediction: prediction,
+        evidenceNotes: evidence.slice(0, 40).map((e) => ({ date: e.date, kind: e.kind, text: e.text })),
+        labs: labs.filter((l) => l.date >= addDays(localToday(), -365)).map((l) => ({ date: l.date, test: l.test, value: l.valueText ?? l.valueNum, unit: l.unit, range: [l.refLow, l.refHigh], flag: l.flag, status: l.status })),
+      };
       const names = namesOf(settings);
       const context = partner ? { ...base, viewer: "partner", momName: names.me || null, partnerName: names.partner || null } : base;
       const plain = next.map(({ role, content }) => ({ role, content }));
@@ -226,21 +232,25 @@ export function AskPage({ first }: { first: string | null }) {
   );
 }
 
-const ICON: Record<ChatAction["type"], string> = { log: "📝", question: "🩺", appointment: "📅", scan: "🩻" };
+const ICON: Record<ChatAction["type"], string> = { log: "📝", question: "🩺", appointment: "📅", scan: "🩻", note: "🔎" };
 
 /** One suggested save. Nothing happens until she taps it. */
 function ActionButton({ action, saved, onSaved }: { action: ChatAction; saved: boolean; onSaved: () => void }) {
-  const { byDate, saveDay, settings, role } = useStore();
+  const { byDate, saveDay, settings, role, reload, refreshPrediction } = useStore();
   const savePreg = useSavePregnancy();
   const preg = activePregnancy(settings);
   const [err, setErr] = useState("");
   // Logging is the main account's; the partner can still save doctor questions and appointments.
-  if ((action.type === "log" || action.type === "scan") && role === "partner") return null;
+  if ((action.type === "log" || action.type === "scan" || action.type === "note") && role === "partner") return null;
   const apply = async () => {
     setErr("");
     try {
       if (action.type === "log") await saveDay(mergeLog(byDate.get(action.date), action, !!preg));
-      else if (!preg) return;
+      else if (action.type === "note") {
+        await api.addEvidence([{ date: action.date, kind: "note", text: action.text }], "chat");
+        await reload();
+        refreshPrediction();
+      } else if (!preg) return;
       else if (action.type === "question") await savePreg({ questions: [...preg.questions, { id: newId(), text: action.text, created: localToday(), done: null }] });
       else if (action.type === "scan") await savePreg({ scans: [...(preg.scans ?? []), { ...action.scan, id: newId() }].sort((a, b) => a.date.localeCompare(b.date)) });
       else await savePreg({ appointments: [...preg.appointments, { id: newId(), date: action.date, title: action.title, notes: null }] });
@@ -249,12 +259,12 @@ function ActionButton({ action, saved, onSaved }: { action: ChatAction; saved: b
       setErr((e as Error).message);
     }
   };
-  if (action.type !== "log" && !preg) return null;
-  const where = action.type === "log" ? `#/day/${action.date}` : "#/doctor";
+  if (action.type !== "log" && action.type !== "note" && !preg) return null;
+  const where = action.type === "log" ? `#/day/${action.date}` : action.type === "note" ? "#/today" : "#/doctor";
   return (
     <div className="chat-action">
       {saved ? (
-        <a className="btn ghost small done" href={where}>✓ {actionLabel(action).replace(/^Add to doctor questions/, "Added to doctor questions").replace(/^Add appointment/, "Added appointment").replace(/^Log for/, "Logged for").replace(/^Save scan results/, "Saved scan results")} ›</a>
+        <a className="btn ghost small done" href={where}>✓ {actionLabel(action).replace(/^Add to doctor questions/, "Added to doctor questions").replace(/^Add appointment/, "Added appointment").replace(/^Log for/, "Logged for").replace(/^Save scan results/, "Saved scan results").replace(/^Add to evidence/, "Added to evidence")} ›</a>
       ) : (
         <button className="btn small" onClick={apply}><span aria-hidden>{ICON[action.type]}</span> {actionLabel(action)}</button>
       )}

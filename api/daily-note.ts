@@ -4,6 +4,7 @@ import { method, route } from "./_lib/auth.js";
 import { askJson, fakeAi } from "./_lib/claude.js";
 import { HttpError, q } from "./_lib/db.js";
 import { factsPrompt, loadFacts } from "./_lib/memory.js";
+import { predict } from "./_lib/predict.js";
 
 const SYSTEM = `You write the short personal line at the top of a private cycle and fertility tracker's daily note. The user is trying to conceive and wants it to feel calm and in control: she knows what to look for, and every day of the cycle is a small gift, a chance to tap into a part of herself.
 
@@ -116,6 +117,14 @@ async function recentlySuggested(date: string): Promise<string[]> {
  * Cached per day, so Claude is called at most once a day (pass refresh=true to regenerate).
  */
 export default route(async (req: VercelRequest) => {
+  // POST /api/daily-note?predict=1 {date, force?} → {prediction, history, fresh}: today's prediction,
+  // re-made on the day's first open and whenever the evidence changed (see _lib/predict.ts).
+  if (req.query.predict) {
+    method(req, "POST");
+    const d = req.body?.date;
+    if (!isISODate(d)) throw new HttpError(400, "Missing date.");
+    return predict(d, req.body?.force === true);
+  }
   method(req, "POST");
   const { date, phase, context, refresh } = req.body ?? {};
   if (!isISODate(date)) throw new HttpError(400, "Missing date.");

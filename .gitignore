@@ -4,3 +4,6 @@ dev-dist
 .env
 .env.local
 .vercel
+
+# Personal health details (lab values, dates) stay out of the repo
+outputs/private/
