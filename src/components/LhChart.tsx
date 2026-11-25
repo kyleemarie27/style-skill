@@ -3,10 +3,12 @@ import { LH_BANDS } from "../../shared/lh";
 import type { LhTest } from "../../shared/types";
 
 /** Premom-style LH curve for one cycle: max reading per day, with High/Peak bands. */
-export function LhChart({ tests, start, days, ovulation, baseline, threshold }: {
+export function LhChart({ tests, start, days, ovulation, baseline, threshold, windows = [] }: {
   tests: LhTest[]; start: string; days: number; ovulation?: string | null;
   /** This cycle's quiet level and surge line (about 2× it), drawn so a surge below Peak still shows. */
   baseline?: number | null; threshold?: number | null;
+  /** Prediction windows to shade (likely, backup). */
+  windows?: { start: string; end: string; kind: "likely" | "backup" }[];
 }) {
   const W = 640;
   const H = 180;
@@ -37,6 +39,10 @@ export function LhChart({ tests, start, days, ovulation, baseline, threshold }: 
           <text x={pad.l - 6} y={y(v) + 3} textAnchor="end">{v.toFixed(1)}</text>
         </g>
       ))}
+      {windows.map((w) => {
+        const a = Math.max(0, diffDays(w.start, start)), b = Math.min(days - 1, diffDays(w.end, start));
+        return b < a ? null : <rect key={w.kind + w.start} x={x(a) - 4} y={pad.t} width={x(b) - x(a) + 8} height={H - pad.t - pad.b} rx="4" fill="var(--fertile)" opacity={w.kind === "likely" ? 0.16 : 0.07} />;
+      })}
       {baseline != null && <line x1={pad.l} x2={W - pad.r} y1={y(baseline)} y2={y(baseline)} stroke="var(--muted)" strokeDasharray="2 3" />}
       {threshold != null && threshold < LH_BANDS.peak && (
         <g>

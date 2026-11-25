@@ -2,7 +2,9 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 import { buildModel, type CycleModel } from "../../shared/cycle";
 import { DEFAULT_SETTINGS, type DayLog, type LhTest, type Settings } from "../../shared/types";
 import type { WearableDay } from "../../shared/wearable";
-import { api, AuthError, type AuthStatus, type OuraStatus, type Role } from "./api";
+import { api, AuthError, type AuthStatus, type Evidence, type LabResult, type OuraStatus, type Role } from "./api";
+import type { Prediction, PredictionHistoryItem } from "../../shared/prediction";
+import { localToday } from "../../shared/dates";
 
 interface Store {
   loading: boolean;
@@ -17,6 +19,14 @@ interface Store {
   /** Nightly Oura numbers (empty until Oura is connected). */
   wearable: WearableDay[];
   oura: OuraStatus | null;
+  evidence: Evidence[];
+  labs: LabResult[];
+  /** Today's prediction (null while loading) and its history, newest first. */
+  prediction: Prediction | null;
+  predictionHistory: PredictionHistoryItem[];
+  predicting: boolean;
+  /** Re-predict now (after new evidence). The server only re-runs when the evidence changed. */
+  refreshPrediction: () => Promise<void>;
   /** Pull the latest nights from Oura if the last sync is more than a few hours old. */
   syncOura: (force?: boolean) => Promise<void>;
   settings: Settings;
@@ -39,6 +49,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [lhTests, setLhTests] = useState<LhTest[]>([]);
   const [wearable, setWearable] = useState<WearableDay[]>([]);
   const [oura, setOura] = useState<OuraStatus | null>(null);
+  const [evidence, setEvidence] = useState<Evidence[]>([]);
+  const [labs, setLabs] = useState<LabResult[]>([]);
+  const [prediction, setPrediction] = useState<Prediction | null>(null);
+  const [predictionHistory, setPredictionHistory] = useState<PredictionHistoryItem[]>([]);
+  const [predicting, setPredicting] = useState(false);
   const [settings, setSettingsState] = useState<Settings>(DEFAULT_SETTINGS);
 
   const reload = useCallback(async () => {
@@ -48,6 +63,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setLhTests(d.lhTests);
       setWearable(d.wearable ?? []);
       setOura(d.oura ?? null);
+      setEvidence(d.evidence ?? []);
+      setLabs(d.labs ?? []);
       setSettingsState(s.settings);
       setAuthed(true);
     } catch (e) {
@@ -101,6 +118,19 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     }
   }, [oura]);
 
+  const refreshPrediction = useCallback(async () => {
+    setPredicting(true);
+    try {
+      const r = await api.predict(localToday());
+      setPrediction(r.prediction);
+      setPredictionHistory(r.history);
+    } catch {
+      // Keep showing the last one; Today falls back to the engine's view.
+    } finally {
+      setPredicting(false);
+    }
+  }, []);
+
   const setSettings = useCallback(async (s: Settings) => {
     const r = await api.saveSettings(s);
     setSettingsState(r.settings);
@@ -121,6 +151,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     wearable,
     oura,
     syncOura,
+    evidence,
+    labs,
+    prediction,
+    predictionHistory,
+    predicting,
+    refreshPrediction,
     settings,
     model,
     byDate,

@@ -1,5 +1,13 @@
 import type { WearableDay } from "../../shared/wearable";
 import type { DuelDay, DuelPicks, DuelQuiz, DuelScores } from "../../shared/duel";
+import type { Prediction, PredictionHistoryItem } from "../../shared/prediction";
+import type { EvidenceItem, LabRow } from "../../shared/labs";
+
+export interface Evidence { id: number; date: string; kind: string; text: string; source: string; createdAt: string }
+export interface LabResult {
+  id: number; date: string; panel: string | null; test: string; valueNum: number | null; valueText: string | null;
+  unit: string | null; refLow: number | null; refHigh: number | null; flag: "low" | "high" | null; status: "final" | "pending"; source: string;
+}
 import type { BumpPhoto, DayLog, ImportBundle, JournalEntry, LhLevel, LhTest, Scan, Settings } from "../../shared/types";
 
 export class AuthError extends Error {}
@@ -84,7 +92,13 @@ export const api = {
   sessions: () => call<{ sessions: SignedIn[] }>("auth?sessions=1"),
   endSession: (id: string) => call(`auth?session=${encodeURIComponent(id)}`, { method: "DELETE" }),
   logoutOthers: () => call("auth?others=1", { method: "DELETE" }),
-  data: () => call<{ dayLogs: DayLog[]; lhTests: LhTest[]; wearable?: WearableDay[]; oura?: OuraStatus }>("logs"),
+  data: () => call<{ dayLogs: DayLog[]; lhTests: LhTest[]; wearable?: WearableDay[]; oura?: OuraStatus; evidence?: Evidence[]; labs?: LabResult[] }>("logs"),
+  predict: (date: string, force = false) => call<{ prediction: Prediction; history: PredictionHistoryItem[]; fresh: boolean }>("daily-note?predict=1", { method: "POST", json: { date, force } }),
+  addEvidence: (items: EvidenceItem[], source = "manual") => call<{ saved: number }>("logs?evidence=1", { method: "POST", json: { items: items.map((i) => ({ ...i, source })) } }),
+  deleteEvidence: (id: number) => call("logs?evidence=1&id=" + id, { method: "DELETE" }),
+  saveLabs: (results: LabRow[], source: string) => call<{ saved: number }>("logs?labs=1", { method: "POST", json: { results, source } }),
+  deleteLab: (id: number) => call("logs?labs=1&id=" + id, { method: "DELETE" }),
+  transcribeLabs: (body: { fileName: string; mediaType: string; data: string }) => call<{ text: string }>("import-extract", { method: "POST", json: { ...body, source: "labs" } }),
   duel: (date: string, context: unknown) => call<DuelState>("memories?duel=1", { method: "POST", json: { date, context } }),
   playDuel: (date: string, picks: DuelPicks) => call<DuelState>("memories?duel=1", { method: "PUT", json: { date, picks } }),
   ouraSync: () => call<{ saved: number | null; oura: OuraStatus }>("oura/sync", { method: "POST" }),

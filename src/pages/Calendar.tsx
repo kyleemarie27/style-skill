@@ -7,7 +7,7 @@ import { useStore } from "../lib/store";
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
 export function CalendarPage() {
-  const { model, dayLogs, lhTests, byDate, settings } = useStore();
+  const { model, dayLogs, lhTests, byDate, settings, prediction } = useStore();
   const preg = activePregnancy(settings);
   const lmp = preg ? lmpForDueDate(preg.dueDate) : null;
   const appts = new Set(preg?.appointments.map((a) => a.date));
@@ -16,7 +16,29 @@ export function CalendarPage() {
   const first = parseISO(cursor);
   const gridStart = addDays(cursor, -first.getUTCDay());
   const days = Array.from({ length: 42 }, (_, i) => addDays(gridStart, i));
-  const marks = useMemo(() => timeline(model, dayLogs, days[0], days[41]), [model, dayLogs, days[0]]);
+  const marks = useMemo(() => {
+    const m = timeline(model, dayLogs, days[0], days[41]);
+    // The current cycle follows the prediction (which reads all the evidence), not the averages.
+    const cur = model.cycles.at(-1);
+    if (prediction && cur && !preg) {
+      const until = prediction.period?.end ?? addDays(prediction.likely.end, 18);
+      for (const d of days) {
+        if (d < cur.start || d > until) continue;
+        const x = m.get(d);
+        if (x) m.set(d, { period: x.period });
+      }
+      const span = (a: string, b: string, mark: Record<string, boolean>) => {
+        for (let d = a; d <= b; d = addDays(d, 1)) m.set(d, { ...m.get(d), ...mark });
+      };
+      if (prediction.backup) span(prediction.backup.start, prediction.backup.end, { backup: true });
+      span(prediction.likely.start, prediction.likely.end, { fertile: true });
+      if (prediction.ovulationDate && prediction.ovulation !== "not_yet") {
+        m.set(prediction.ovulationDate, { ...m.get(prediction.ovulationDate), ovulation: true, ovulationConfirmed: prediction.ovulation === "confirmed" });
+      }
+      if (prediction.period) span(prediction.period.start, prediction.period.end, { predictedPeriod: true });
+    }
+    return m;
+  }, [model, dayLogs, days[0], prediction, preg]);
   const lhByDate = useMemo(() => {
     const m = new Map<string, string>();
     const rank = { low: 0, high: 1, peak: 2 };
@@ -53,7 +75,7 @@ export function CalendarPage() {
             const cls = [
               d.slice(0, 7) !== cursor.slice(0, 7) && "out",
               d === today && "today",
-              lmp && d > lmp && sinceLmp >= 0 ? (m.period || pregBleed ? "period" : sinceLmp <= 294 ? "preg" : "") : m.period ? "period" : m.ovulation ? `ovulation${m.ovulationConfirmed ? "" : " est"}` : m.predictedPeriod ? "pperiod" : m.fertile ? "fertile" : "",
+              lmp && d > lmp && sinceLmp >= 0 ? (m.period || pregBleed ? "period" : sinceLmp <= 294 ? "preg" : "") : m.period ? "period" : m.ovulation ? `ovulation${m.ovulationConfirmed ? "" : " est"}` : m.predictedPeriod ? "pperiod" : m.fertile ? "fertile" : m.backup ? "fertile backup" : "",
             ].filter(Boolean).join(" ");
             return (
               <button key={d} className={cls} onClick={() => (window.location.hash = `#/day/${d}`)} aria-label={d}>
@@ -79,7 +101,8 @@ export function CalendarPage() {
       ) : <div className="legend">
         <span><i style={{ background: "var(--period)" }} />Period</span>
         <span><i style={{ border: "1.5px dashed var(--period)" }} />Predicted period</span>
-        <span><i style={{ background: "var(--fertile-soft)" }} />Fertile window</span>
+        <span><i style={{ background: "var(--fertile-soft)" }} />Likely window</span>
+        <span><i style={{ background: "var(--fertile-soft)", opacity: 0.45 }} />Backup window</span>
         <span><i style={{ background: "var(--ovulation)" }} />Ovulation (confirmed)</span>
         <span><i style={{ border: "1.5px dashed var(--ovulation)", background: "var(--ovulation-soft)" }} />Ovulation (est.)</span>
         <span><span style={{ color: "var(--brand)" }}>♥</span>Intercourse</span>

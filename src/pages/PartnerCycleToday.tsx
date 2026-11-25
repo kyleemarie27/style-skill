@@ -1,10 +1,11 @@
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { phaseFor, type CycleModel, type Today as TodayInfo } from "../../shared/cycle";
 import { addDays, diffDays, localToday, prettyDate } from "../../shared/dates";
 import { DEFAULT_WAIT_LIST, namesOf, type DayLog } from "../../shared/types";
 import { AskBloomCard } from "../components/AskBloom";
 import { CycleBar, WindowStrip } from "../components/CycleCards";
 import { DuelCard } from "../components/DuelCard";
+import { CycleCard, PredictionCard } from "../components/Prediction";
 import { invitationFor } from "../content/invitations";
 import { CYCLE_HELP, fillName, PARTNER_PHASES, type PartnerPhase } from "../content/partnerCycle";
 import { focusFor, waitListActive, windowDays, type Focus } from "../lib/cycleToday";
@@ -16,8 +17,12 @@ import { useStore } from "../lib/store";
  * them. Read-only; nothing to log.
  */
 export function PartnerCycleToday() {
-  const { model, lhTests, byDate, settings } = useStore();
+  const { model, byDate, settings, refreshPrediction } = useStore();
   const today = localToday();
+  useEffect(() => {
+    refreshPrediction();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [today]);
   const info = useMemo(() => phaseFor(today, model), [today, model]);
   const name = namesOf(settings).me;
   const n = (t: string) => fillName(t, name);
@@ -34,25 +39,12 @@ export function PartnerCycleToday() {
     );
   }
 
-  const focus = focusFor(info, model, lhTests, byDate, true);
-  const guide = PARTNER_PHASES[info.phase];
-  const inv = invitationFor(info, model.afterLoss && info.cycle?.start === model.afterLoss.start ? model.afterLoss.start : null);
-  const afterLoss = !!model.afterLoss && info.cycle?.start === model.afterLoss.start;
-
   return (
     <div className="stack">
-      <PartnerHero info={info} focus={focus} who={who} invitation={inv ? `${name || "Today"}${name ? " is" : ":"} ${inv.name}` : null} />
-      <DuelCard />
-      <WindowCard info={info} model={model} />
+      <PredictionCard partner />
+      <CycleCard partner />
       <HowTheyreDoing who={who} n={n} log={byDate.get(today)} yesterday={byDate.get(addDays(today, -1))} />
-      {waitListActive(info) && <WaitTogether list={settings.waitList ?? DEFAULT_WAIT_LIST} who={who} />}
-
-      {guide && <PhaseGuide guide={guide} n={n} phase={info.phase} afterLoss={afterLoss} />}
-
-      <TimingBasics who={who} />
-
-      <AskBloomCard suggestions={partnerSuggestions(info)} />
-      <p className="tiny muted center">Bloom gives general information, not medical advice.</p>
+      <DuelCard />
     </div>
   );
 }

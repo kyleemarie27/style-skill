@@ -133,6 +133,47 @@ CREATE TABLE IF NOT EXISTS duel_picks (
   PRIMARY KEY (date, author)
 );
 
+-- Added with dynamic predictions: everything beyond strips, check-ins and Oura that informs the prediction.
+-- kind: 'note' (something she typed), 'event' (a dated observation), 'analysis' (an outside read, e.g. from her doctor).
+CREATE TABLE IF NOT EXISTS evidence (
+  id          SERIAL PRIMARY KEY,
+  date        DATE NOT NULL,
+  kind        TEXT NOT NULL,
+  text        TEXT NOT NULL,
+  data        JSONB,
+  source      TEXT NOT NULL DEFAULT 'manual',
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS evidence_date ON evidence(date);
+
+-- Lab results, one row per test per draw. value_num when numeric, value_text otherwise; status 'pending' until final.
+CREATE TABLE IF NOT EXISTS lab_results (
+  id          SERIAL PRIMARY KEY,
+  date        DATE NOT NULL,
+  panel       TEXT,
+  test        TEXT NOT NULL,
+  value_num   NUMERIC,
+  value_text  TEXT,
+  unit        TEXT,
+  ref_low     NUMERIC,
+  ref_high    NUMERIC,
+  flag        TEXT,
+  status      TEXT NOT NULL DEFAULT 'final',
+  source      TEXT NOT NULL DEFAULT 'manual',
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE UNIQUE INDEX IF NOT EXISTS lab_results_date_test ON lab_results(date, test);
+
+-- The prediction Bloom posts each morning and whenever new evidence arrives; kept as history.
+CREATE TABLE IF NOT EXISTS predictions (
+  id           SERIAL PRIMARY KEY,
+  date         DATE NOT NULL,
+  fingerprint  TEXT NOT NULL,
+  content      JSONB NOT NULL,
+  created_at   TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS predictions_date ON predictions(date);
+
 CREATE TABLE IF NOT EXISTS settings (
   key    TEXT PRIMARY KEY,
   value  JSONB NOT NULL

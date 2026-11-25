@@ -8,7 +8,7 @@ const fmt = (n: number) => `${n >= 0 ? "+" : "−"}${Math.abs(n).toFixed(2)}°C`
  * Bloom found: the baseline it compared against, the high nights shaded, ovulation dashed,
  * the LH peak marked on the axis and ♥ days along the bottom.
  */
-export function TempChart({ nights, start, days, shift, lhPeak, ovulation, loveDates }: {
+export function TempChart({ nights, start, days, shift, lhPeak, ovulation, loveDates, windows = [] }: {
   nights: WearableDay[];
   start: string;
   days: number;
@@ -16,6 +16,7 @@ export function TempChart({ nights, start, days, shift, lhPeak, ovulation, loveD
   lhPeak: string | null;
   ovulation: string | null;
   loveDates: string[];
+  windows?: { start: string; end: string; kind: "likely" | "backup" }[];
 }) {
   const W = 640;
   const H = 200;
@@ -48,6 +49,10 @@ export function TempChart({ nights, start, days, shift, lhPeak, ovulation, loveD
   return (
     <svg className="chart" viewBox={`0 0 ${W} ${H}`} width="100%" role="img"
       aria-label={`Nightly temperature by cycle day${shift ? `, rise of ${fmt(shift.rise)} from ${prettyDate(shift.firstHigh)}` : ", no sustained rise yet"}`}>
+      {windows.map((w) => {
+        const a = Math.max(0, diffDays(w.start, start)), b = Math.min(days - 1, diffDays(w.end, start));
+        return b < a ? null : <rect key={w.kind + w.start} x={x(a) - 4} y={pad.t} width={x(b) - x(a) + 8} height={axisY - pad.t} rx="4" fill="var(--fertile)" opacity={w.kind === "likely" ? 0.16 : 0.07} />;
+      })}
       {inRange(highFrom) && (
         <rect x={x(highFrom) - 4} y={pad.t} width={W - pad.r - x(highFrom) + 4} height={axisY - pad.t} fill="var(--luteal-soft)" opacity="0.7" rx="4" />
       )}

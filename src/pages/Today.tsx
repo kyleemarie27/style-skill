@@ -5,6 +5,8 @@ import { LH_LABEL } from "../../shared/lh";
 import { AskBloomCard } from "../components/AskBloom";
 import { AfterLossCard, CycleBar, InvitationCard, PlanCard, SignalsCard, WaitListCard } from "../components/CycleCards";
 import { DuelCard } from "../components/DuelCard";
+import { CycleCard, PredictionCard } from "../components/Prediction";
+import { AddButton } from "../components/AddSheet";
 import { DailyNote } from "../components/DailyNote";
 import { DayEditor } from "../components/DayEditor";
 import { HealthSummaryLink } from "../components/HealthChecks";
@@ -23,42 +25,38 @@ export function TodayPage() {
 }
 
 function CycleToday() {
-  const { model, byDate, lhTests, aiEnabled, dayLogs, syncOura, oura, settings } = useStore();
+  const { model, byDate, lhTests, dayLogs, syncOura, oura, settings, wearable, evidence, labs, refreshPrediction, prediction } = useStore();
   const today = localToday();
   // Pull last night from Oura when the app opens (at most every few hours).
   useEffect(() => {
     syncOura().catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [oura?.connected]);
+  // The morning prediction: on open, then again shortly after any new evidence (the server only
+  // re-runs it when the evidence actually changed).
+  const signature = `${dayLogs.length}:${lhTests.length}:${wearable.length}:${evidence.length}:${labs.length}:${dayLogs.map((d) => `${d.date}${d.flow ?? ""}${d.cervical_mucus ?? ""}${d.pregnancy_test ?? ""}`).slice(-40).join(",")}`;
+  useEffect(() => {
+    const t = setTimeout(() => refreshPrediction(), prediction ? 2500 : 0);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [signature, today]);
+
   const yesterday = addDays(today, -1);
   const info = useMemo(() => phaseFor(today, model), [today, model]);
   const [checkDay, setCheckDay] = useState<"yesterday" | "today">(byDate.has(yesterday) ? "today" : "yesterday");
+  const [positive, setPositive] = useState(false);
 
-  const vars = {
-    dpo: info.dpo,
-    testDate: info.testDate ? prettyDate(info.testDate) : null,
-    fertileDay: info.fertileDay,
-    fertileLength: info.fertileLength,
-    daysToFertile: info.fertileStart ? Math.max(0, diffDays(info.fertileStart, today)) : null,
-    lhStart: lhStartDay(info),
-  };
-  const todaysLh = lhTests.filter((t) => t.date === today);
+  if (info.phase === "unknown") return <div className="stack"><Hero info={info} /></div>;
+  const mayBePregnant = prediction ? prediction.ovulation !== "not_yet" && prediction.phase === "luteal" : info.phase.startsWith("tww") || info.phase === "late";
 
   return (
     <div className="stack">
-      <Hero info={info} />
-
-      {info.phase !== "unknown" && <>
-        <DuelCard />
-        <SignalsCard info={info} />
-        <WaitListCard info={info} />
-        <InvitationCard info={info} />
-        {aiEnabled && <PersonalLine info={info} />}
-      </>}
+      <PredictionCard />
+      <CycleCard />
 
       <div className="card stack">
         <div className="row between wrap">
-          <h2>Quick check-in</h2>
+          <h2>Check-in</h2>
           <div className="tabs" role="tablist">
             <button role="tab" aria-selected={checkDay === "yesterday"} onClick={() => setCheckDay("yesterday")}>Yesterday</button>
             <button role="tab" aria-selected={checkDay === "today"} onClick={() => setCheckDay("today")}>Today</button>
@@ -66,50 +64,28 @@ function CycleToday() {
         </div>
         <DayEditor key={checkDay} date={checkDay === "yesterday" ? yesterday : today} compact />
         <div className="row wrap">
-          <LhUploadButton date={checkDay === "yesterday" ? yesterday : today} />
-          <a className="btn ghost" href={`#/day/${checkDay === "yesterday" ? yesterday : today}`}>More details →</a>
+          <AddButton />
+          <a className="btn ghost" href={`#/day/${checkDay === "yesterday" ? yesterday : today}`}>More →</a>
         </div>
-        {todaysLh.length > 0 && (
-          <div className="row wrap small">
-            <span className="muted">Today's LH:</span>
-            {todaysLh.map((t) => (
-              <span key={t.id} className={`lh-badge lh-${t.level}`}>{t.ratio !== null ? t.ratio.toFixed(2) : ""} {LH_LABEL[t.level]}</span>
-            ))}
-          </div>
-        )}
       </div>
 
-      {info.phase !== "unknown" && <>
-        <PlanCard info={info} />
-        <AfterLossCard info={info} />
-        <details className="card more-card">
-          <summary>
-            <span className="section-title"><span className="ico" aria-hidden>🌙</span>This phase, in depth</span>
-            <span className="small muted">What to expect, superpowers, self-care.</span>
-          </summary>
-          <DailyNote info={info} vars={vars} />
-        </details>
-      </>}
+      <DuelCard />
 
-      <HealthSummaryLink />
-
-      {info.phase !== "unknown" && <AskBloomCard suggestions={todaySuggestions(info)} />}
+      {mayBePregnant && (
+        <button className="btn positive-btn" onClick={() => setPositive(true)}>I got a positive test 🎉</button>
+      )}
+      {positive && <PositiveTestSheet onClose={() => setPositive(false)} />}
 
       {dayLogs.length === 0 && (
         <div className="card stack">
           <h2>Bring your history with you</h2>
-          <p className="muted">Import your Clue and Premom data so Bloom knows your cycles from day one.</p>
           <a className="btn primary" href="#/import">Import history</a>
         </div>
       )}
 
-      {info.phase !== "unknown" && (
-        <a className="btn ghost" href="#/partner" style={{ alignSelf: "center" }}>
-          See what {namesOf(settings).partner || "your partner"} sees →
-        </a>
-      )}
-
-      <p className="tiny muted center">Bloom gives general information, not medical advice. Talk to your doctor about anything that worries you.</p>
+      <a className="btn ghost" href="#/partner" style={{ alignSelf: "center" }}>
+        See what {namesOf(settings).partner || "your partner"} sees →
+      </a>
     </div>
   );
 }

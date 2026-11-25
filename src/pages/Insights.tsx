@@ -1,14 +1,14 @@
 import { useMemo, useState } from "react";
 import { addDays, diffDays, localToday, prettyDate } from "../../shared/dates";
-import { AskBloomCard } from "../components/AskBloom";
 import { HealthChecks } from "../components/HealthChecks";
+import { LabsCard } from "../components/LabsCard";
 import { LhChart } from "../components/LhChart";
 import { TempChart } from "../components/TempChart";
 import { tempPattern } from "../../shared/wearable";
 import { useStore } from "../lib/store";
 
 export function InsightsPage() {
-  const { model, lhTests, dayLogs } = useStore();
+  const { model, lhTests, dayLogs, prediction } = useStore();
   const cycles = model.cycles;
   const [sel, setSel] = useState(cycles.length - 1);
   const [allHistory, setAllHistory] = useState(false);
@@ -46,12 +46,15 @@ export function InsightsPage() {
   const maxLen = Math.max(...rows.filter((r) => !r.c.pregnancy).map((r) => r.len), model.avgCycleLength);
   const preg = model.settings.pregnancy;
   const confirmedCycles = cycles.filter((c) => c.ovulationConfirmed && c.end).length;
+  const isCurrent = selected === cycles.at(-1);
+  const windows = isCurrent && prediction
+    ? [...(prediction.backup ? [{ ...prediction.backup, kind: "backup" as const }] : []), { ...prediction.likely, kind: "likely" as const }]
+    : [];
+  const ask = (q: string) => `#/ask/${encodeURIComponent(q)}`;
 
   return (
     <div className="stack">
       <h1>Insights</h1>
-      <HealthChecks />
-      <AskBloomCard suggestions={["Is my cycle normal?", "Why didn't I catch an LH Peak?", "What does my luteal phase tell me?", "Should I talk to a doctor about anything?"]} />
       <div className="grid2">
         <div className="stat"><b>{model.avgCycleLength}</b><span>avg cycle length (days)</span></div>
         <div className="stat"><b>{model.avgPeriodLength}</b><span>avg period length (days)</span></div>
@@ -70,11 +73,13 @@ export function InsightsPage() {
             ))}
           </select>
         </div>
-        <LhChart tests={lhTests} start={selected.start} days={selLen} ovulation={selected.ovulationConfirmed ? selected.ovulation : null} baseline={selected.lhBaseline} threshold={selected.lhThreshold} />
-        <p className="tiny muted">
-          {selected.lhBaseline != null ? `Your baseline this cycle: ${selected.lhBaseline.toFixed(2)} (dotted). Readings above your surge line (${selected.lhThreshold!.toFixed(2)}, about 2×) count as a surge, even below Peak. ` : ""}
-          Yellow band = High, pink = Peak. Orange dashed = confirmed ovulation.
-        </p>
+        <LhChart tests={lhTests} start={selected.start} days={selLen} ovulation={selected.ovulationConfirmed ? selected.ovulation : null} baseline={selected.lhBaseline} threshold={selected.lhThreshold} windows={windows} />
+        <div className="legend tiny">
+          <span><i style={{ background: "var(--fertile)", opacity: 0.35 }} />Predicted window</span>
+          {selected.lhBaseline != null && <span><i style={{ background: "var(--brand)" }} />Your surge line</span>}
+          <span><i style={{ background: "var(--ovulation)" }} />Ovulation</span>
+          <a href={ask("Walk me through my LH curve this cycle")}>Ask about this →</a>
+        </div>
       </div>
 
       {model.wearable.length > 0 ? (
@@ -88,19 +93,19 @@ export function InsightsPage() {
             lhPeak={selected.lhPeak}
             ovulation={selected.ovulationConfirmed ? selected.ovulation : null}
             loveDates={dayLogs.filter((d) => d.intercourse && d.date >= selected.start).map((d) => d.date)}
+            windows={windows}
           />
-          <p className="small">
-            {selected.tempShift
-              ? `Your temperature rose ${selected.tempShift.rise.toFixed(2)}°C on ${prettyDate(selected.tempShift.firstHigh)} and held for 3 nights or more, so ovulation was confirmed${selected.lhPeak ? ` (LH peaked ${prettyDate(selected.lhPeak)})` : ""}.`
-              : "No sustained rise in this cycle yet. It usually shows 1–3 days after ovulation."}
-          </p>
-          <p className="tiny muted">
-            Oura's nightly skin temperature vs. your own baseline, same cycle as above. Gray dotted line = the 6 nights before the rise; purple dashed = 0.2°C above them;
-            purple shading = high nights; ▲ = LH peak; ♥ = sex logged. Tap a point for the night.
-          </p>
+          <div className="legend tiny">
+            <span><i style={{ background: "var(--luteal-soft)" }} />Rise held (ovulated)</span>
+            <span>▲ LH surge</span><span>♥ sex</span>
+            <a href={ask("Walk me through my temperature this cycle")}>Ask about this →</a>
+          </div>
           <TempPatternNote />
         </div>
       ) : null}
+
+      <LabsCard />
+      <HealthChecks />
 
       <div className="card stack">
         <h2>Cycle history</h2>

@@ -46,7 +46,18 @@ Where it shows: the **Temperature tile** on Today (last night, a 10-night sparkl
 
 Setup, once: register an app at cloud.ouraring.com/oauth/applications with the redirect URI `https://<your Bloom address>/api/oura/callback` and the *daily* and *personal* scopes, then add `OURA_CLIENT_ID`, `OURA_CLIENT_SECRET` and `CRON_SECRET` in Vercel and redeploy. The Settings card walks you through it and shows the exact redirect URI.
 
-## Predictions that adapt
+## Dynamic predictions (evidence, not averages)
+
+After a loss the body resets and old averages stop being reliable, so Bloom treats everything as **evidence** and re-reads it:
+
+- **Evidence:** LH strips, Oura nights, check-ins (period, mucus, tests), **lab results**, **notes** and outside analyses. Lab results and objective signals weigh most; notes (including your own read of things) are inputs, not verdicts.
+- **The prediction** (`api/_lib/predict.ts`): on the first open of each day, and whenever the evidence changes, Claude reads the whole log plus your history and returns one call: the phase, a likely ovulation window (always a range), an optional backup window, confidence, the expected period, one sentence on what changed, and one thing to do today. Code keeps the hard facts: a temperature rise that held confirms ovulation whatever the reasoning says, and a "not yet" window can't sit in the past. With no new evidence it stays **stable**. Every prediction is saved, so you can see how it moved. Without AI it falls back to the cycle engine.
+- **Today** is two cards: the **prediction** (window, confidence dots, Stable / Adjusted, today's action; tap for what changed, the history and *Ask about this*) and **your cycle** (phase, day, a simple bar with the window, today's invitation; one tap opens everything for the phase and your signals, one tap closes it). Then the check-in with **+ Add**, and the Duel. The partner's Today uses the same two cards.
+- **+ Add:** a note (saved as evidence as written), lab results, or an LH strip. Ask can also offer a one-tap *Add to evidence* button.
+- **Lab results:** JSON, CSV or pasted text are read directly; a PDF or photo is transcribed by AI into `Test | value | unit | range | flag` lines that the app parses itself. Every row is shown for review before anything is saved, pending tests are kept and replaced when the final result arrives, and a JSON export can also correct the loss date and log the negative test (each one ticked by you).
+- **Insights:** LH and temperature charts with the predicted windows shaded, **Labs** (a dot per test, trend lines across draws, tap to ask), and **On track?** as dots. **Calendar:** the likely window, a lighter backup window, the expected period, and ovulation solid only when confirmed.
+
+### The engine underneath
 
 - **An LH Peak has to be backed up by temperature.** With Oura connected, a Peak only counts as ovulation once the temperature rise follows within 5 days. Until then Today says *Waiting on your temperature* and the temperature tile counts the nights. After 5 flat nights it's marked a **surge without ovulation** (common after a loss, and with some cycles in general), the window reopens, and a later surge takes over. Insights shows it in the cycle history.
 - **The estimate never sits in the past.** In the open cycle, a low LH strip means ovulation is at least 2 days away, and flat nights mean it hasn't happened more than 2 days ago. When the data says the usual day has passed, the estimate moves to the earliest day the data still allows, every day, and the window, test date and period date move with it. Today shows *Ovulation is running late* / *Waiting to ovulate*, and the window strip is labeled as the earliest possible one.
