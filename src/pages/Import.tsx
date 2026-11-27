@@ -321,7 +321,7 @@ function UploadStep(props: {
 
       {unreadable && (
         <div className="notice warn stack">
-          <span>Bloom doesn't recognise the layout of <b>{unreadable.name}</b>. Want AI to read it instead? You'll review everything before it's saved.</span>
+          <span>Bloom doesn't recognize the layout of <b>{unreadable.name}</b>. Want AI to read it instead? You'll review everything before it's saved.</span>
           <div className="row">
             <button className="btn primary" onClick={() => viaAi(unreadable)}>Let AI read it</button>
             <button className="btn ghost" onClick={() => setUnreadable(null)}>Skip</button>

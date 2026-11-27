@@ -8,19 +8,20 @@
   --brand: #b4475f;
   --brand-ink: #ffffff;
   --brand-soft: #f7e3e6;
-  --period: #c8566e;
-  --period-soft: #f6dbe0;
+  --period: #c2416b;
+  --period-soft: #f7dce5;
   --follicular: #4f9479;
   --follicular-soft: #dcefe6;
-  --fertile: #d98d1f;
-  --fertile-soft: #fbecd2;
-  --ovulation: #e0663a;
-  --ovulation-soft: #fbe1d6;
+  --fertile: #2b86c5;
+  --fertile-soft: #d9eaf7;
+  --fertile-ink: #1b4f7a;
+  --ovulation: #1d5f93;
+  --ovulation-soft: #cfe2f2;
   --luteal: #7466b0;
   --luteal-soft: #e6e2f5;
   --low: #9aa3ad;
-  --high: #d98d1f;
-  --peak: #c8566e;
+  --high: #d9962b;
+  --peak: #d9962b;
   --preg: #d4694f;
   --preg-soft: #fbe4da;
   --urgent: #c42d3f;
@@ -43,14 +44,17 @@
     --brand: #e47c93;
     --brand-ink: #1b0f14;
     --brand-soft: #3a2230;
-    --period: #e47c93;
+    --period: #d95f80;
     --period-soft: #4a2632;
     --follicular: #7cc4a6;
     --follicular-soft: #213a31;
-    --fertile: #f0b552;
-    --fertile-soft: #3f321b;
-    --ovulation: #f08e65;
-    --ovulation-soft: #45281f;
+    --fertile: #4a96d1;
+    --fertile-soft: #285079;
+    --fertile-ink: #e6f2fc;
+    --high: #b07a24;
+    --peak: #b07a24;
+    --ovulation: #3a7fbf;
+    --ovulation-soft: #1b3043;
     --luteal: #a99be0;
     --luteal-soft: #2e2a45;
     --low: #7d8590;
@@ -241,16 +245,17 @@ input[type="range"] { width: 100%; accent-color: var(--brand); }
   aspect-ratio: 1; border: 1px solid transparent; background: transparent; border-radius: 12px; cursor: pointer;
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; position: relative; font-size: 14px; padding: 0;
 }
-.cal button.out { opacity: 0.35; }
-.cal button.today { border-color: var(--ink); font-weight: 700; }
+/* Days outside the month fade their number only, never their color. */
+.cal button.out > span:first-child { opacity: 0.4; }
+.cal button.today { box-shadow: inset 0 0 0 2px var(--ink); font-weight: 700; }
 .cal button.period { background: var(--period); color: #fff; }
 .cal button.pperiod { background: transparent; border: 1.5px dashed var(--period); color: var(--period); }
-.cal button.fertile { background: var(--fertile-soft); }
+.cal button.fertile { background: var(--fertile-soft); color: var(--fertile-ink); }
+.cal button.backup { background: transparent; border: 1.5px dashed var(--fertile); color: var(--fertile-ink); }
 .cal button.ovulation { background: var(--ovulation); color: #fff; }
-.cal button.ovulation.est { background: var(--ovulation-soft); color: var(--ovulation); border: 1.5px dashed var(--ovulation); }
 .cal .marks { display: flex; gap: 2px; height: 8px; font-size: 9px; line-height: 8px; }
 .cal .m-love { color: var(--brand); }
-.cal button.period .m-love, .cal button.ovulation:not(.est) .m-love { color: #fff; }
+.cal button.period .m-love, .cal button.ovulation .m-love { color: #fff; }
 .cal .m-lh { width: 6px; height: 6px; border-radius: 50%; margin-top: 1px; }
 .legend { display: flex; flex-wrap: wrap; gap: 12px; font-size: 12px; color: var(--muted); }
 .legend span { display: inline-flex; align-items: center; gap: 5px; }
@@ -858,7 +863,7 @@ details.why[open] p { margin-top: 4px; }
 .chev.up { transform: rotate(180deg); }
 .cycle-body { border-top: 1px solid var(--line); margin-top: 14px; padding-top: 12px; display: flex; flex-direction: column; gap: 12px; }
 .cyc-group .tip-label { margin-top: 0; }
-.cycle-bar .f.backup { background: var(--fertile-soft); opacity: 0.45; }
+.cycle-bar .f.backup { background: transparent; box-shadow: inset 0 0 0 1.5px var(--fertile); border-radius: 6px; background-image: none; }
 
 /* ---- Add ---- */
 .add-btn { font-weight: 600; }
@@ -877,7 +882,6 @@ details.why[open] p { margin-top: 4px; }
 .lab-table input { padding: 4px 6px; min-height: 30px; font-size: 14px; }
 .lab-table tr.flag-high td:first-child::after, .lab-table tr.flag-low td:first-child::after { content: " ●"; color: var(--period); }
 .lab-table tr.pending td { color: var(--muted); }
-.cal button.fertile.backup { opacity: 0.55; }
 
 /* ---- Insights: dots and labs ---- */
 .dots-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
@@ -898,3 +902,12 @@ i.ld-pending { background: transparent; box-shadow: inset 0 0 0 1.5px var(--mute
 .lab-row { display: grid; grid-template-columns: 10px 1fr 60px auto; gap: 8px; align-items: center; padding: 6px 0; color: inherit; text-decoration: none; border-bottom: 1px dashed var(--line); }
 .lab-row:last-child { border-bottom: 0; }
 .pred-head { padding-right: 34px; }
+
+/* ---- Clear colors: rose = period, blue = fertility ---- */
+.cycle-card .cycle-bar { height: 12px; overflow: visible; }
+.cycle-card .cycle-bar .f { background: var(--fertile); border-radius: 6px; }
+.cycle-card .cycle-bar .f.backup { background: transparent; box-shadow: inset 0 0 0 1.5px var(--fertile); }
+.cycle-card .cycle-bar .p { border-radius: 6px 0 0 6px; }
+.cycle-card .cycle-bar .o { width: 4px; background: var(--ovulation); }
+.legend i.dash-period { border: 1.5px dashed var(--period); }
+.legend i.dash-fertile { border: 1.5px dashed var(--fertile); }

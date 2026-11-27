@@ -15,7 +15,7 @@ import {
  * understands both shapes we know of:
  *   1. day records:      { day: "2023-04-01T00:00:00Z", period: "heavy", sex: ["unprotected"], pain: [...] }
  *   2. measurement rows: { date: "2023-04-01", type: "period", value: { option: "heavy" } }
- * Anything with a date and a recognisable category is picked up; the rest is ignored.
+ * Anything with a date and a recognizable category is picked up; the rest is ignored.
  */
 export function parseClueJson(json: unknown): ImportBundle {
   const c = new DayCollector("clue");

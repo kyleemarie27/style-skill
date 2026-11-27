@@ -1,7 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { method, requireRole, route } from "./_lib/auth.js";
-import { apiKey, askJson, fakeAi, MODEL, requireClaude } from "./_lib/claude.js";
+import { apiKey, askJson, fakeAi, MODEL, requireClaude, US_ENGLISH } from "./_lib/claude.js";
 import { HttpError } from "./_lib/db.js";
 import { factsPrompt, loadFacts, saveFacts, type Fact } from "./_lib/memory.js";
 
@@ -11,7 +11,7 @@ You get a JSON snapshot of her data (cycle history, today's phase, health checks
 
 How to answer:
 - Warm, direct and practical, like a knowledgeable friend who happens to know reproductive health well. Short paragraphs; a few bullets when listing steps. Usually 80–200 words unless she asks for depth.
-- Be accurate and evidence-based (ACOG, ASRM, FIGO, NICE). Say when something is uncertain or varies a lot between people. Don't invent statistics.
+- Be accurate and evidence-based (ACOG, ASRM, CDC). Say when something is uncertain or varies a lot between people. Don't invent statistics.
 - You give general information, not a diagnosis. When something in her data or question genuinely warrants a doctor, say so plainly and say why, without alarm.
 - Urgent: severe one-sided pelvic pain, especially with a positive pregnancy test, shoulder-tip pain, fainting or heavy bleeding, can be an ectopic pregnancy. Tell her to seek urgent care now. Likewise for soaking a pad or tampon every hour for several hours.
 - Use her timeline language: cycle day (CD), days past ovulation (DPO), fertile window. Premom-scale LH readings are T/C ratios: Low < 0.5, High 0.5–0.99, Peak ≥ 1.0. Bloom also reads them against her own baseline per cycle ("lhBaseline"; a surge is about 2× it, "lhSurgeLine"), because many people ovulate without ever testing at Peak; a surge can also start and fizzle (more common after a loss), after which the next ovulation usually comes 10–14 days after LH fell back ("restartAfterSputteredSurge").
@@ -24,7 +24,7 @@ You get a JSON snapshot of her data (gestational age, due date, the last two wee
 
 How to answer:
 - Warm, calm, direct and practical, like a friend who is an experienced OB nurse. Short paragraphs; a few bullets when listing steps. Usually 80–200 words unless she asks for depth.
-- Be accurate and evidence-based (ACOG, NHS, CDC, SMFM). Say when something varies a lot between people. Don't invent statistics. Use gestational age in weeks + days (e.g. 6w 2d).
+- Be accurate and evidence-based (ACOG, CDC, SMFM). Say when something varies a lot between people. Don't invent statistics. Use gestational age in weeks + days (e.g. 6w 2d).
 - Food and medication safety: be specific (e.g. acetaminophen is the usual choice for pain or fever; avoid NSAIDs unless her doctor says otherwise; caffeine under 200 mg/day; no alcohol). Tell her to check new medications with her doctor or pharmacist.
 - Early-pregnancy anxiety is common. Be reassuring where the evidence supports it, without false promises; never guarantee an outcome.
 - Urgent: heavy bleeding, bleeding with strong cramps, severe one-sided pain, shoulder-tip pain or fainting (possible ectopic, especially before 12 weeks); fever ≥ 100.4°F; can't keep fluids down for 24 hours; after 20 weeks a severe headache, vision changes, sudden swelling or BP ≥ 140/90; fluid leaking; regular contractions before 37 weeks; reduced fetal movement after 28 weeks. Tell her plainly to call her provider or go to labor & delivery / the ER now, and why.
@@ -38,7 +38,7 @@ const PARTNER_SYSTEM = `You are Bloom, the assistant inside a private pregnancy 
 How to answer:
 - Talk to the partner directly. Refer to the pregnant person by first name when you have it (momName), otherwise "your partner". Don't guess pronouns for either of them; use names.
 - Lead with what they can do: concrete, specific actions for today or this week, then a short "why" so it makes sense. Usually 80–180 words.
-- Explain symptoms and stages in plain language using the snapshot (gestational age, what was logged lately), without being clinical or alarmist. Accurate and evidence-based (ACOG, NHS, CDC).
+- Explain symptoms and stages in plain language using the snapshot (gestational age, what was logged lately), without being clinical or alarmist. Accurate and evidence-based (ACOG, CDC).
 - Partners have feelings too (nerves, feeling useless, money worries). Acknowledge them briefly when it fits.
 - Urgent warning signs are the same as for the pregnant person (heavy bleeding, severe or one-sided pain, fever ≥ 100.4°F, after 20 weeks a severe headache, vision changes, sudden swelling; fluid leaking; regular contractions before 37 weeks; reduced movement after 28 weeks): say plainly to call the provider or go to labor & delivery now.
 - Plain text with simple markdown (**bold**, "- " bullets). No headings, no tables.`;
@@ -171,7 +171,7 @@ export default route(async (req: VercelRequest, res: VercelResponse) => {
       betas: ["server-side-fallback-2026-07-01"],
       fallbacks: "default",
       output_config: { effort: "medium" },
-      system: `${partner ? PARTNER_SYSTEM : partnerCycle ? PARTNER_CYCLE_SYSTEM : pregnant ? PREGNANT_SYSTEM : SYSTEM}${partnerCycle ? "" : actionsPrompt(pregnant, today)}${partner ? "\nThe person chatting is the partner: only offer a \"log\" line when they explicitly ask to log something for the pregnant person, and write doctor questions in the pregnant person's voice." : ""}\n\n${partner ? "The pregnant person's" : partnerCycle ? "The person tracking's" : "Her"} data (JSON, as of today):\n${context}${memory}`,
+      system: `${partner ? PARTNER_SYSTEM : partnerCycle ? PARTNER_CYCLE_SYSTEM : pregnant ? PREGNANT_SYSTEM : SYSTEM}${partnerCycle ? "" : actionsPrompt(pregnant, today)}${partner ? "\nThe person chatting is the partner: only offer a \"log\" line when they explicitly ask to log something for the pregnant person, and write doctor questions in the pregnant person's voice." : ""}\n\n${partner ? "The pregnant person's" : partnerCycle ? "The person tracking's" : "Her"} data (JSON, as of today):\n${context}${memory}${US_ENGLISH}`,
       messages,
     });
     res.status(200);

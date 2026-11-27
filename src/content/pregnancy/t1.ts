@@ -372,7 +372,7 @@ export const T1: WeekContent[] = [
     ],
     care: {
       food: [{ t: "Snack on nuts, cheese and fruit to keep your blood sugar steady and avoid dizziness." }],
-      movement: [{ t: "Strength training is safe if you're used to it; skip heavy straining." }],
+      movement: [{ t: "Strength workouts are safe if you're used to them; skip heavy straining." }],
     },
     watchouts: [
       { t: "Feeling faint often, or fainting: tell your doctor." },

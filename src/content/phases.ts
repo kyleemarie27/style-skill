@@ -53,7 +53,7 @@ export const PHASES: Record<Phase, PhaseContent> = {
     watchouts: [
       { t: "Iron: replace what you're losing.", why: "Low iron causes fatigue and can affect fertility. Pair iron foods with vitamin C." },
       { t: "Don't schedule your most draining meetings on days 1–2 if you can help it." },
-      { t: "Hard HIIT can feel punishing. Lighter training is fine and still counts." },
+      { t: "Hard HIIT can feel punishing. Lighter workouts are fine and still count." },
       { t: "Ibuprofen works best taken early, at the first twinge.", why: "It blocks prostaglandin production; it works less well once cramps are full-blown." },
       { t: "Soaking a pad or tampon every 1–2 hours, clots bigger than a quarter, or severe pain: call your doctor." },
       { t: "Skipped meals make cramps and moods worse." },
@@ -71,7 +71,7 @@ export const PHASES: Record<Phase, PhaseContent> = {
         { t: "Walking, gentle yoga or stretching.", why: "Light movement increases blood flow and can ease cramps." },
         { t: "Child's pose, cat-cow and knees-to-chest for back and belly ache." },
         { t: "Save PR attempts for next week; strength work at a lighter load is fine." },
-        { t: "Rest days count as training." },
+        { t: "Rest days count too." },
       ],
       rest: [
         { t: "Heat on your belly or lower back.", why: "Heat relaxes uterine muscle; it's as effective as some pain relievers." },
@@ -131,7 +131,7 @@ export const PHASES: Record<Phase, PhaseContent> = {
       { t: "Brainstorming and big-picture thinking." },
       { t: "Learning new skills. Your brain soaks things up now." },
       { t: "Starting projects and taking on challenges." },
-      { t: "Strength gains: a great time to push training.", why: "Research suggests follicular-phase strength training may build more muscle." },
+      { t: "Strength gains: a great time to push your workouts.", why: "Research suggests strength workouts in this phase may build more muscle." },
       { t: "Networking and making new connections." },
     ],
     watchouts: [
@@ -146,11 +146,11 @@ export const PHASES: Record<Phase, PhaseContent> = {
         { t: "Fresh, light foods: salads, grains, lean protein, fermented foods." },
         { t: "Cruciferous veg (broccoli, kale, cabbage).", why: "Supports healthy estrogen metabolism." },
         { t: "Omega-3s: salmon, sardines, walnuts, chia.", why: "Linked to better egg quality in some studies." },
-        { t: "Protein at every meal to fuel harder training." },
+        { t: "Protein at every meal to fuel harder workouts." },
         { t: "Colorful fruit and veg for antioxidants.", why: "Eggs mature over about 90 days, and antioxidants help protect them." },
       ],
       movement: [
-        { t: "Strength training, intervals, a new class: your best training window." },
+        { t: "Strength work, intervals, a new class: your best week for hard workouts." },
         { t: "Try for a personal best this week." },
         { t: "Mix in mobility so you don't get stiff from harder sessions." },
         { t: "Outdoor runs or rides, with morning light as a bonus." },
@@ -230,7 +230,7 @@ export const PHASES: Record<Phase, PhaseContent> = {
         { t: "Easy, quick meals so dinner doesn't get in the way of date night." },
       ],
       movement: [
-        { t: "Keep training strong, but don't run yourself into the ground." },
+        { t: "Keep your workouts strong, but don't burn yourself out." },
         { t: "Group classes, dance, team sports. Social movement feels great now." },
         { t: "Watch your knees in plyometric work.", why: "Some research links peak-estrogen days to looser ligaments." },
       ],

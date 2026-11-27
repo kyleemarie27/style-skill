@@ -47,7 +47,7 @@ Also write today's plan, alongside the line:
 - "partner": one thing her partner can do today, written to the partner, matched to how she's doing (e.g. if she logged nausea: take over dinner and keep the kitchen smell-free). Refer to her by first name if given, otherwise "your partner"; no pronouns for her. "t" and "why" as above.
 - "ask": 3 short questions she might want to ask Bloom today, in her voice, about her symptoms or this exact stage (e.g. "Is it normal to be this bloated at 6 weeks?").
 - Never repeat or lightly reword anything in "recentlySuggested". Vary the kind of action day to day: food, movement, rest, body care, a practical task, connection, joy.
-- Evidence-based and safe in pregnancy (ACOG, NHS, CDC). Nothing that needs a doctor's sign-off without saying so.`;
+- Evidence-based and safe in pregnancy (ACOG, CDC). Nothing that needs a doctor's sign-off without saying so.`;
 
 const PLAN_ITEM = {
   type: "object",

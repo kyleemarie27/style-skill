@@ -20,8 +20,8 @@ The Premom scale is the ratio of test-line (T) intensity to control-line (C) int
 - Peak is ${LH_BANDS.peak.toFixed(1)} or higher. The test line is as dark as or darker than control. Darker than control can reach 1.2–1.6.
 
 How to read:
-- Find the control line (usually nearer the handle or labeled C) and the test line (T). Judge colour saturation and darkness, not width.
-- Allow for lighting, shadows and white balance. Compare the two lines against each other, not against an absolute colour.
+- Find the control line (usually nearer the handle or labeled C) and the test line (T). Judge color saturation and darkness, not width.
+- Allow for lighting, shadows and white balance. Compare the two lines against each other, not against an absolute color.
 - If there are several strips, read the one that's most in focus or nearest the centre, and say which one in the note.
 - If no strip is visible, there's no control line (an invalid test), or the photo is too blurry to judge, set readable=false and ratio=0, and explain in the note.
 - Keep the note to one friendly sentence, e.g. "Test line is a little lighter than control. Rising, so keep testing."`;
