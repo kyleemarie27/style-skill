@@ -92,7 +92,7 @@ export const MILESTONES: { week: number; icon: string; t: string }[] = [
   { week: 20, icon: "🎉", t: "Halfway there, and usually the anatomy scan." },
   { week: 24, icon: "🫁", t: "A big milestone: babies born from now on have a real chance with intensive care." },
   { week: 28, icon: "🌙", t: "Third trimester. Baby can open their eyes and blink." },
-  { week: 32, icon: "🤸", t: "Baby is practising breathing and most have turned head-down or will soon." },
+  { week: 32, icon: "🤸", t: "Baby is practicing breathing and most have turned head-down or will soon." },
   { week: 37, icon: "🧳", t: "Early term. Bag packed, car seat in." },
   { week: 39, icon: "✨", t: "Full term. Baby is ready whenever they decide." },
   { week: 40, icon: "📅", t: "Your due date." },

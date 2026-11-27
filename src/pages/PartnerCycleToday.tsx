@@ -42,9 +42,9 @@ export function PartnerCycleToday() {
   return (
     <div className="stack">
       <PredictionCard partner />
+      <DuelCard />
       <CycleCard partner />
       <HowTheyreDoing who={who} n={n} log={byDate.get(today)} yesterday={byDate.get(addDays(today, -1))} />
-      <DuelCard />
     </div>
   );
 }

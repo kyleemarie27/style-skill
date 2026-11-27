@@ -52,6 +52,7 @@ function CycleToday() {
   return (
     <div className="stack">
       <PredictionCard />
+      <DuelCard />
       <CycleCard />
 
       <div className="card stack">
@@ -68,8 +69,6 @@ function CycleToday() {
           <a className="btn ghost" href={`#/day/${checkDay === "yesterday" ? yesterday : today}`}>More →</a>
         </div>
       </div>
-
-      <DuelCard />
 
       {mayBePregnant && (
         <button className="btn positive-btn" onClick={() => setPositive(true)}>I got a positive test 🎉</button>

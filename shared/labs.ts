@@ -177,7 +177,7 @@ export function parseLabJson(raw: unknown): LabImport {
   }
   const interp = j?.interpretation?.headline;
   if (date && typeof interp === "string") out.evidence.push({ date, kind: "analysis", text: interp });
-  if (!out.rows.length && !out.evidence.length) out.warnings.push("Nothing recognisable in this JSON.");
+  if (!out.rows.length && !out.evidence.length) out.warnings.push("Nothing recognizable in this JSON.");
   return out;
 }
 

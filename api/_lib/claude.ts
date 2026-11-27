@@ -4,6 +4,9 @@ import { HttpError } from "./db.js";
 
 export const MODEL = "claude-opus-5-5";
 
+/** Appended to every system prompt: the people using Bloom are in the US. */
+export const US_ENGLISH = "\n\nWrite in American English: US spelling (organize, color, practicing), US terms (workouts, not training; pacifier, diaper, crib, OB-GYN, acetaminophen) and US units where relevant (°F, lb, oz).";
+
 /** Set BLOOM_FAKE_AI=1 in local dev to get canned answers without an API key. */
 export const fakeAi = () => process.env.BLOOM_FAKE_AI === "1";
 
@@ -53,7 +56,7 @@ export async function askJson<T>(opts: {
       max_tokens: opts.maxTokens ?? 16000,
       betas: ["server-side-fallback-2026-07-01"],
       fallbacks: "default",
-      system: opts.system,
+      system: opts.system + US_ENGLISH,
       output_config: {
         effort: opts.effort ?? "low",
         format: { type: "json_schema", schema: opts.schema },
@@ -92,7 +95,7 @@ export async function askText(opts: { system: string; content: BetaContentBlockP
       max_tokens: opts.maxTokens ?? 4000,
       betas: ["server-side-fallback-2026-07-01"],
       fallbacks: "default",
-      system: opts.system,
+      system: opts.system + US_ENGLISH,
       output_config: { effort: "low" },
       messages: [{ role: "user", content: opts.content }],
     });

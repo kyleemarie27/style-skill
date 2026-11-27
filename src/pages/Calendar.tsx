@@ -75,7 +75,7 @@ export function CalendarPage() {
             const cls = [
               d.slice(0, 7) !== cursor.slice(0, 7) && "out",
               d === today && "today",
-              lmp && d > lmp && sinceLmp >= 0 ? (m.period || pregBleed ? "period" : sinceLmp <= 294 ? "preg" : "") : m.period ? "period" : m.ovulation ? `ovulation${m.ovulationConfirmed ? "" : " est"}` : m.predictedPeriod ? "pperiod" : m.fertile ? "fertile" : m.backup ? "fertile backup" : "",
+              lmp && d > lmp && sinceLmp >= 0 ? (m.period || pregBleed ? "period" : sinceLmp <= 294 ? "preg" : "") : m.period ? "period" : m.ovulation && m.ovulationConfirmed ? "ovulation" : m.predictedPeriod ? "pperiod" : m.fertile || m.ovulation ? "fertile" : m.backup ? "backup" : "",
             ].filter(Boolean).join(" ");
             return (
               <button key={d} className={cls} onClick={() => (window.location.hash = `#/day/${d}`)} aria-label={d}>
@@ -84,7 +84,7 @@ export function CalendarPage() {
                 <span className="marks">
                   {appts.has(d) && <span className="m-appt" />}
                   {log?.intercourse && <span className="m-love">♥</span>}
-                  {lh && <span className="m-lh" style={{ background: `var(--${lh})` }} />}
+                  {lh && lh !== "low" && <span className="m-lh" style={{ background: "var(--high)" }} />}
                 </span>
               </button>
             );
@@ -100,13 +100,12 @@ export function CalendarPage() {
         </div>
       ) : <div className="legend">
         <span><i style={{ background: "var(--period)" }} />Period</span>
-        <span><i style={{ border: "1.5px dashed var(--period)" }} />Predicted period</span>
+        <span><i className="dash-period" />Predicted period</span>
         <span><i style={{ background: "var(--fertile-soft)" }} />Likely window</span>
-        <span><i style={{ background: "var(--fertile-soft)", opacity: 0.45 }} />Backup window</span>
-        <span><i style={{ background: "var(--ovulation)" }} />Ovulation (confirmed)</span>
-        <span><i style={{ border: "1.5px dashed var(--ovulation)", background: "var(--ovulation-soft)" }} />Ovulation (est.)</span>
-        <span><span style={{ color: "var(--brand)" }}>♥</span>Intercourse</span>
-        <span><i style={{ background: "var(--peak)", borderRadius: 99, width: 8, height: 8 }} />LH peak</span>
+        <span><i className="dash-fertile" />Backup window</span>
+        <span><i style={{ background: "var(--ovulation)" }} />Ovulation</span>
+        <span><span style={{ color: "var(--brand)" }}>♥</span>Sex</span>
+        <span><i style={{ background: "var(--high)", borderRadius: 99, width: 8, height: 8 }} />LH high or peak</span>
       </div>}
       <button className="btn" onClick={() => setCursor(today.slice(0, 7) + "-01")}>Back to today</button>
     </div>

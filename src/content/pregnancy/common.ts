@@ -67,7 +67,7 @@ export const TRIMESTERS: Record<1 | 2 | 3, TrimesterPool> = {
       { t: "Keep washing produce and heating deli meats until steaming." },
     ],
     movement: [
-      { t: "This is the sweet spot for exercise: swimming, walking, prenatal yoga, strength training.", why: "Energy is up and your bump is still manageable." },
+      { t: "This is the sweet spot for exercise: swimming, walking, prenatal yoga, strength workouts.", why: "Energy is up and your bump is still manageable." },
       { t: "After 20 weeks, avoid long stretches lying flat on your back during workouts.", why: "Your uterus can press on a large vein and make you dizzy." },
       { t: "Squats and glute bridges build strength for carrying baby (and the car seat)." },
       { t: "Swimming is a gift: it takes the weight off your joints." },

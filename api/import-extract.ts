@@ -163,7 +163,7 @@ const FAKE_SCAN = {
 
 /**
  * POST /api/import-extract {fileName, mediaType, data (base64) | text, source}
- * Fallback for files the built-in parsers don't recognise: PDFs, screenshots, odd CSVs.
+ * Fallback for files the built-in parsers don't recognize: PDFs, screenshots, odd CSVs.
  * Returns an ImportBundle for the preview step. Nothing is saved here.
  * With source "scan" (and an optional fallback date), reads an ultrasound report instead → {scan, warnings}.
  */

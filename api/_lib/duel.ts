@@ -15,7 +15,7 @@ Write:
 - "guess": one light "guess me" question. "self" is asked to the person it's about (you'll get their name as "aboutName"); "guess" is the same question asked to the other person, using aboutName (e.g. "What would Kylee pick tonight?"). 3–4 short options, any of which could be true. Make it about them as a couple or as future parents, preferences, memories or little hopes. Never about fertility outcomes, bodies, sex or whether a test will be positive.
 
 Rules:
-- Accurate and evidence-based (ACOG, ASRM, NHS, WHO, AAP). If a fact is debated, don't use it. Options short (under 45 characters), questions under 110 characters.
+- Accurate and evidence-based (ACOG, ASRM, CDC, AAP). If a fact is debated, don't use it. Options short (under 45 characters), questions under 110 characters.
 - Never repeat or lightly reword anything in "alreadyAsked". Pick a fresh angle each day.
 - Address both of them as a team; no pronouns for either person, use names or "you".
 - If "gentle" is true (a recent pregnancy loss, or test day), keep the quiz to general knowledge that isn't about miscarriage, pregnancy odds or test results, and keep the guess question warm and light.`;
