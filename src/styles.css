@@ -946,3 +946,11 @@ i.ld-pending { background: transparent; box-shadow: inset 0 0 0 1.5px var(--mute
 .strip-pin.t::before, .strip-pin.t::after, .strip-pin.t b { background: var(--fertile); }
 .bench-ref.vert { justify-items: center; align-items: stretch; }
 .bench-ref.vert i { width: 16%; height: 100%; }
+
+/* ---- Strip vs. Premom reference ---- */
+.compare { display: flex; flex-direction: column; gap: 8px; }
+.compare-row { display: flex; flex-direction: column; gap: 4px; }
+.compare-row img { width: 100%; border-radius: 10px; display: block; background: var(--surface-2); }
+.compare-label b { color: var(--ink); }
+.compare-add { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; padding: 12px; border-radius: 12px; border: 1.5px dashed var(--line); }
+.ref-preview { width: 100%; max-height: 240px; object-fit: contain; border-radius: 10px; background: var(--surface-2); }

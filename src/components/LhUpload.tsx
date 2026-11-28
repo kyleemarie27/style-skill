@@ -254,6 +254,7 @@ function LhSheet({ photo, defaultDate, onClose, onSaved }: { photo: string | nul
               <span className={`lh-badge lh-${level}`}>{LH_LABEL[level]}</span>
             </div>
 
+            {photo && m && pixels && <StripCompare m={m} el={pixels.el} />}
             {photo && m && pixels && <Benchmark m={m} el={pixels.el} />}
 
             <details open={!photo}>
@@ -326,6 +327,115 @@ function Benchmark({ m, el }: { m: StripMeasurement; el: HTMLImageElement }) {
           <span className="tiny muted">{name} {k.toFixed(1)}</span>
         </div>
       ))}
+    </div>
+  );
+}
+
+/** Her Premom reference picture, loaded once per session. */
+// One shared copy of the reference picture: every view using it re-renders when it changes.
+let refCache: string | null | undefined;
+let refLoading = false;
+const refListeners = new Set<(v: string | null) => void>();
+function setReference(v: string | null) {
+  refCache = v;
+  refListeners.forEach((l) => l(v));
+}
+function useReference(): [string | null | undefined, (img: string | null) => void] {
+  const [img, setImg] = useState<string | null | undefined>(refCache);
+  useEffect(() => {
+    refListeners.add(setImg);
+    if (refCache === undefined && !refLoading) {
+      refLoading = true;
+      api.lhReference().then((r) => setReference(r.image)).catch(() => setReference(null)).finally(() => { refLoading = false; });
+    } else if (refCache !== undefined) setImg(refCache);
+    return () => { refListeners.delete(setImg); };
+  }, []);
+  return [img, setReference];
+}
+
+/** Add or replace the Premom reference picture (a screenshot from the Premom app, or the chart in the box). */
+export function ReferencePicker({ label, onSaved }: { label: string; onSaved?: (img: string) => void }) {
+  const [, setRef] = useReference();
+  const [busy, setBusy] = useState(false);
+  return (
+    <label className="btn small file-btn">
+      {busy ? <span className="spin" /> : label}
+      <input type="file" accept="image/*" hidden disabled={busy} onChange={async (e) => {
+        const f = e.target.files?.[0];
+        e.target.value = "";
+        if (!f) return;
+        setBusy(true);
+        try {
+          const img = await resizeImage(f, 1400, 0.85);
+          const r = await api.saveLhReference(img);
+          setRef(r.image);
+          if (r.image) onSaved?.(r.image);
+        } finally {
+          setBusy(false);
+        }
+      }} />
+    </label>
+  );
+}
+
+/**
+ * Her strip next to the Premom reference: the result window cut from the photo and turned so the
+ * control line is on the left and the test line on the right, with her reference picture right under it.
+ */
+function StripCompare({ m, el }: { m: StripMeasurement; el: HTMLImageElement }) {
+  const [ref] = useReference();
+  const strip = useMemo(() => {
+    const dx = m.testAt.x - m.controlAt.x, dy = m.testAt.y - m.controlAt.y;
+    const D = Math.max(8, Math.hypot(dx, dy));
+    const W = 600, H = 150;
+    const scale = W / (D * 4); // show about 4× the C–T gap, so a bit of strip around both lines
+    const c = document.createElement("canvas");
+    c.width = W;
+    c.height = H;
+    const g = c.getContext("2d")!;
+    g.fillStyle = "#f4f1ec";
+    g.fillRect(0, 0, W, H);
+    g.translate(W / 2, H / 2);
+    g.scale(scale, scale);
+    g.rotate(-Math.atan2(dy, dx)); // C → T points right
+    g.translate(-(m.controlAt.x + m.testAt.x) / 2, -(m.controlAt.y + m.testAt.y) / 2);
+    g.drawImage(el, 0, 0);
+    return c.toDataURL("image/jpeg", 0.9);
+  }, [m, el]);
+
+  return (
+    <div className="compare">
+      <div className="compare-row">
+        <span className="tiny muted compare-label">Your strip <b>C</b> → <b>T</b></span>
+        <img src={strip} alt="Your strip, control line left, test line right" />
+      </div>
+      {ref ? (
+        <div className="compare-row">
+          <span className="tiny muted compare-label">Premom reference</span>
+          <img src={ref} alt="Premom reference chart" />
+        </div>
+      ) : ref === null ? (
+        <div className="compare-add">
+          <span className="small">Add your Premom chart once (a screenshot from the Premom app, or a photo of the chart in your box) and it'll show here next to every strip.</span>
+          <ReferencePicker label="Add Premom chart" />
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+/** Settings: the Premom reference picture, to add, replace or remove. */
+export function ReferenceSettings() {
+  const [ref, setRef] = useReference();
+  return (
+    <div className="stack">
+      <div className="field-label">Premom reference chart</div>
+      <p className="small muted">Shown next to every strip you add, so you can compare by eye. Use a screenshot from the Premom app or a photo of the chart in your box.</p>
+      {ref && <img className="ref-preview" src={ref} alt="Your Premom reference chart" />}
+      <div className="row wrap">
+        <ReferencePicker label={ref ? "Replace" : "Add Premom chart"} />
+        {ref && <button className="btn ghost small" onClick={async () => { await api.deleteLhReference(); setRef(null); }}>Remove</button>}
+      </div>
     </div>
   );
 }

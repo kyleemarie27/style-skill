@@ -111,6 +111,9 @@ export const api = {
   saveSettings: (settings: Settings) => call<{ settings: Settings }>("settings", { method: "PUT", json: { settings } }),
   analyzeStrip: (image: string) => call<LhReading>("lh-analyze", { method: "POST", json: { image, mediaType: "image/jpeg" } }),
   saveLh: (test: LhTest, photo?: string, extra?: { hash?: string; taps?: StripTaps }) => call<{ test: LhTest }>("lh", { method: "POST", json: { test, photo, ...extra } }),
+  lhReference: () => call<{ image: string | null }>("lh?reference=1"),
+  saveLhReference: (image: string) => call<{ image: string | null }>("lh?reference=1", { method: "POST", json: { image } }),
+  deleteLhReference: () => call<{ image: string | null }>("lh?reference=1", { method: "DELETE" }),
   lhByHash: (hash: string) => call<{ match: { date: string; ratio: number | null; level: LhTest["level"]; ai_ratio: number | null; taps: StripTaps | null } | null }>(`lh?hash=${hash}`),
   deleteLh: (id: number) => call("lh?id=" + id, { method: "DELETE" }),
   dailyNote: (date: string, phase: string, context: unknown, refresh = false) =>

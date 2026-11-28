@@ -4,6 +4,7 @@ import { api, type ImportBatch } from "../lib/api";
 import { activePregnancy } from "../../shared/pregnancy";
 import { MemoryCard } from "../components/MemoryCard";
 import { OuraSettings } from "../components/OuraSettings";
+import { ReferenceSettings } from "../components/LhUpload";
 import { DEFAULT_WAIT_LIST, namesOf } from "../../shared/types";
 import { PregnancySettings } from "../components/PregnancySettings";
 import { SecuritySettings } from "../components/SecuritySettings";
@@ -92,6 +93,8 @@ export function SettingsPage() {
       </div>}
 
       {!activePregnancy(settings) && <OuraSettings />}
+
+      {!activePregnancy(settings) && <div className="card stack"><ReferenceSettings /></div>}
 
       <div className="card stack">
         <h2>Your data</h2>
