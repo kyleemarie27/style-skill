@@ -78,6 +78,8 @@ function LhSheet({ photo, defaultDate, onClose, onSaved }: { photo: string | nul
   const { reload, refreshPrediction } = useStore();
   const [date, setDate] = useState(defaultDate);
   const [taps, setTaps] = useState<{ c?: Point; t?: Point }>({});
+  /** Zoomed in on the result window (first tap), so the two lines are far apart on screen. */
+  const [zoom, setZoom] = useState<Point | null>(null);
   const [ratio, setRatio] = useState(0.3);
   const [level, setLevel] = useState<LhLevel>("low");
   const [adjusted, setAdjusted] = useState(false);
@@ -96,6 +98,7 @@ function LhSheet({ photo, defaultDate, onClose, onSaved }: { photo: string | nul
         const { match } = await api.lhByHash(h);
         if (match?.taps) {
           setTaps({ c: match.taps.c, t: match.taps.t });
+          setZoom({ x: (match.taps.c.x + match.taps.t.x) / 2, y: (match.taps.c.y + match.taps.t.y) / 2 });
           setSeenBefore({ date: match.date, ratio: match.ratio });
         }
       } catch {
@@ -124,6 +127,10 @@ function LhSheet({ photo, defaultDate, onClose, onSaved }: { photo: string | nul
     const r = img.getBoundingClientRect();
     if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) return;
     const p = { x: Math.round(((e.clientX - r.left) / r.width) * pixels.data.width), y: Math.round(((e.clientY - r.top) / r.height) * pixels.data.height) };
+    if (!zoom) {
+      setZoom(p);
+      return;
+    }
     setAdjusted(false);
     setSeenBefore(null);
     setTaps((cur) => (!cur.c || cur.t ? { c: p } : { ...cur, t: p }));
@@ -146,7 +153,17 @@ function LhSheet({ photo, defaultDate, onClose, onSaved }: { photo: string | nul
     }
   };
 
-  const step = !taps.c ? "Tap the control line (C)" : !taps.t ? "Now tap the test line (T)" : null;
+  const step = !zoom ? "Tap the result window to zoom in" : !taps.c ? "Tap the control line (C)" : !taps.t ? "Now tap the test line (T)" : null;
+  const Z = 4;
+  const zoomStyle = zoom && pixels
+    ? { transform: `scale(${Z})`, transformOrigin: `${(zoom.x / pixels.data.width) * 100}% ${(zoom.y / pixels.data.height) * 100}%` }
+    : undefined;
+  // A pin: a small dot right on the point, a thin stem, and the label above. Same size when zoomed.
+  const mark = (p: Point, kind: "c" | "t") => (
+    <span className={`strip-pin ${kind}`} style={{ ...pct(p), transform: `scale(${zoom ? 1 / Z : 1})` }}>
+      <b>{kind.toUpperCase()}</b>
+    </span>
+  );
   const pct = (p: Point) => pixels ? { left: `${(p.x / pixels.data.width) * 100}%`, top: `${(p.y / pixels.data.height) * 100}%` } : {};
 
   return (
@@ -159,16 +176,18 @@ function LhSheet({ photo, defaultDate, onClose, onSaved }: { photo: string | nul
 
         {photo && (
           <>
-            <div className="strip-stage" onClick={tap} role="button" aria-label="Tap the control line, then the test line">
-              <div className="strip-photo-box">
+            <div className="strip-stage" onClick={tap} role="button" aria-label="Tap the result window, then the control line, then the test line">
+              <div className="strip-photo-box" style={zoomStyle}>
                 <img src={photo} alt="Your LH strip" draggable={false} />
-                {m && <span className="strip-mark c" style={pct(m.controlAt)}>C</span>}
-                {m && <span className="strip-mark t" style={pct(m.testAt)}>T</span>}
-                {!m && taps.c && <span className="strip-mark c" style={pct(taps.c)}>C</span>}
+                {m ? <>{mark(m.controlAt, "c")}{mark(m.testAt, "t")}</> : taps.c && mark(taps.c, "c")}
               </div>
             </div>
-            {step ? <div className="strip-step">{step}</div> : (
-              <button className="btn ghost small" style={{ alignSelf: "flex-start" }} onClick={() => { setTaps({}); setSeenBefore(null); }}>Redo taps</button>
+            {step && <div className="strip-step">{step}</div>}
+            {(zoom || taps.c) && (
+              <div className="row" style={{ gap: 4 }}>
+                {taps.c && <button className="btn ghost small" onClick={() => { setTaps({}); setSeenBefore(null); }}>Redo taps</button>}
+                {zoom && <button className="btn ghost small" onClick={() => { setZoom(null); setTaps({}); setSeenBefore(null); }}>Zoom out</button>}
+              </div>
             )}
           </>
         )}
@@ -240,6 +259,8 @@ function Benchmark({ m, el }: { m: StripMeasurement; el: HTMLImageElement }) {
     return c.toDataURL("image/png");
   };
   const [cImg, tImg] = useMemo(() => [crop(m.controlAt), crop(m.testAt)], [m, el]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Lines run across the strip: if C → T goes sideways, the lines stand upright.
+  const vertical = Math.abs(m.testAt.x - m.controlAt.x) > Math.abs(m.testAt.y - m.controlAt.y);
   // A reference line at k × the control's darkness, on clean paper.
   const ref = (k: number) => {
     const paper = [248, 246, 242];
@@ -252,7 +273,7 @@ function Benchmark({ m, el }: { m: StripMeasurement; el: HTMLImageElement }) {
       <div className="bench-item you"><img src={tImg} alt="Your test line" /><span className="tiny"><b>Your T</b></span></div>
       {([["Low", 0.2], ["High", 0.5], ["Peak", 1.0]] as const).map(([name, k]) => (
         <div key={name} className={`bench-item${levelForRatio(m.ratio) === name.toLowerCase() ? " match" : ""}`}>
-          <span className="bench-ref"><i style={{ background: ref(k) }} /></span>
+          <span className={`bench-ref${vertical ? " vert" : ""}`}><i style={{ background: ref(k) }} /></span>
           <span className="tiny muted">{name} {k.toFixed(1)}</span>
         </div>
       ))}
