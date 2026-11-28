@@ -8,6 +8,7 @@ const MAX_PHOTO_BYTES = 1_500_000;
 /**
  * POST   /api/lh {test, photo?, hash?, taps?}   save a confirmed LH reading (photo = base64 JPEG, already resized)
  * GET    /api/lh?hash=…           the saved reading for this exact photo, if any
+ * GET/POST/DELETE /api/lh?reference=1 {image}   her Premom reference picture
  * GET    /api/lh?id=1&photo=1     the strip photo
  * DELETE /api/lh?id=1
  */
@@ -15,6 +16,23 @@ export default route(async (req: VercelRequest, res: VercelResponse) => {
   const m = method(req, "GET", "POST", "DELETE");
   if (m !== "GET") await requireRole(req, "me");
   const id = Number(req.query.id);
+  if (req.query.reference) {
+    // Her own Premom reference picture (a screenshot or a photo of the chart), shown beside every strip.
+    if (m === "GET") {
+      const { rows } = await q<{ value: { image: string } }>("SELECT value FROM settings WHERE key='lh_reference'");
+      return { image: rows[0]?.value?.image ?? null };
+    }
+    await requireRole(req, "me");
+    if (m === "DELETE") {
+      await q("DELETE FROM settings WHERE key='lh_reference'");
+      return { image: null };
+    }
+    const image = typeof req.body?.image === "string" && req.body.image.startsWith("data:image/") ? req.body.image : null;
+    if (!image) throw new HttpError(400, "Send an image.");
+    if (image.length > MAX_PHOTO_BYTES * 1.4) throw new HttpError(413, "That image is too large.");
+    await q("INSERT INTO settings (key, value) VALUES ('lh_reference', $1) ON CONFLICT (key) DO UPDATE SET value=$1", [JSON.stringify({ image })]);
+    return { image };
+  }
   if (m === "GET" && typeof req.query.hash === "string") {
     // Seen this exact photo before? Return that reading, so the same photo never gets two answers.
     const { rows } = await q("SELECT date, ratio, level, ai_ratio, taps FROM lh_tests WHERE photo_hash=$1 ORDER BY id DESC LIMIT 1", [req.query.hash.slice(0, 64)]);
