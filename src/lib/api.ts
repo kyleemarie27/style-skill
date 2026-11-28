@@ -3,6 +3,9 @@ import type { DuelDay, DuelPicks, DuelQuiz, DuelScores } from "../../shared/duel
 import type { Prediction, PredictionHistoryItem } from "../../shared/prediction";
 import type { EvidenceItem, LabRow } from "../../shared/labs";
 
+/** Where she tapped the control and test lines on the (resized) photo. */
+export interface StripTaps { c: { x: number; y: number }; t: { x: number; y: number } }
+
 export interface Evidence { id: number; date: string; kind: string; text: string; source: string; createdAt: string }
 export interface LabResult {
   id: number; date: string; panel: string | null; test: string; valueNum: number | null; valueText: string | null;
@@ -107,7 +110,8 @@ export const api = {
   settings: () => call<{ settings: Settings }>("settings"),
   saveSettings: (settings: Settings) => call<{ settings: Settings }>("settings", { method: "PUT", json: { settings } }),
   analyzeStrip: (image: string) => call<LhReading>("lh-analyze", { method: "POST", json: { image, mediaType: "image/jpeg" } }),
-  saveLh: (test: LhTest, photo?: string) => call<{ test: LhTest }>("lh", { method: "POST", json: { test, photo } }),
+  saveLh: (test: LhTest, photo?: string, extra?: { hash?: string; taps?: StripTaps }) => call<{ test: LhTest }>("lh", { method: "POST", json: { test, photo, ...extra } }),
+  lhByHash: (hash: string) => call<{ match: { date: string; ratio: number | null; level: LhTest["level"]; ai_ratio: number | null; taps: StripTaps | null } | null }>(`lh?hash=${hash}`),
   deleteLh: (id: number) => call("lh?id=" + id, { method: "DELETE" }),
   dailyNote: (date: string, phase: string, context: unknown, refresh = false) =>
     call<{ line: string; plan?: DayPlan | null }>("daily-note", { method: "POST", json: { date, phase, context, refresh } }),

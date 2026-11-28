@@ -911,3 +911,24 @@ i.ld-pending { background: transparent; box-shadow: inset 0 0 0 1.5px var(--mute
 .cycle-card .cycle-bar .o { width: 4px; background: var(--ovulation); }
 .legend i.dash-period { border: 1.5px dashed var(--period); }
 .legend i.dash-fertile { border: 1.5px dashed var(--fertile); }
+
+/* ---- Measured LH strips ---- */
+.strip-stage { position: relative; border-radius: 12px; overflow: hidden; background: var(--surface-2); cursor: crosshair; touch-action: manipulation; }
+.strip-stage { display: flex; justify-content: center; }
+.strip-photo-box { position: relative; display: inline-block; line-height: 0; }
+.strip-photo-box img { display: block; max-width: 100%; max-height: 360px; width: auto; height: auto; user-select: none; -webkit-user-drag: none; }
+.strip-mark { position: absolute; transform: translate(-50%, -50%); width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-size: 12px; font-weight: 700; color: #fff; box-shadow: 0 0 0 2px #fff, 0 2px 6px rgb(0 0 0 / 0.3); pointer-events: none; }
+.strip-mark.c { background: var(--ink); }
+.strip-mark.t { background: var(--fertile); }
+.strip-step { font-weight: 600; text-align: center; padding: 8px; border-radius: 10px; background: var(--fertile-soft); color: var(--fertile-ink); }
+.bench { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
+.bench-item { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 6px 4px; border-radius: 10px; }
+.bench-item img { width: 100%; aspect-ratio: 1; border-radius: 8px; object-fit: cover; }
+.bench-item.you { background: var(--fertile-soft); }
+.bench-item.match { box-shadow: inset 0 0 0 2px var(--fertile); }
+.bench-ref { width: 100%; aspect-ratio: 1; border-radius: 8px; background: rgb(248 246 242); display: grid; align-items: center; }
+.bench-ref i { display: block; height: 16%; }
+.strip-stage { flex-shrink: 0; }
+/* Sit beside the line, pointing at it, so the line itself stays visible. */
+.strip-mark { width: 22px; height: 22px; font-size: 11px; transform: translate(calc(-100% - 10px), -50%); }
+.strip-mark::after { content: ""; position: absolute; right: -9px; top: 50%; width: 8px; height: 2px; background: inherit; transform: translateY(-50%); }
