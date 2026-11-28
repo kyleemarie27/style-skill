@@ -174,6 +174,12 @@ CREATE TABLE IF NOT EXISTS predictions (
 );
 CREATE INDEX IF NOT EXISTS predictions_date ON predictions(date);
 
+-- Added with measured strip readings: a fingerprint of the photo and where the lines were, so the
+-- same photo always gets the same reading back.
+ALTER TABLE lh_tests ADD COLUMN IF NOT EXISTS photo_hash TEXT;
+ALTER TABLE lh_tests ADD COLUMN IF NOT EXISTS taps JSONB;
+CREATE INDEX IF NOT EXISTS lh_tests_photo_hash ON lh_tests(photo_hash);
+
 CREATE TABLE IF NOT EXISTS settings (
   key    TEXT PRIMARY KEY,
   value  JSONB NOT NULL

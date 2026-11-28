@@ -10,7 +10,7 @@ No ads, no pop-ups, no notifications. You log in on your phone or computer and s
 - **A quiet two-week wait** (on by default): no days-past-ovulation countdown, just "your part is done" and your test date. Turn it off in Settings.
 - **A daily note** for where you are in your cycle: what to expect, superpowers, watch-outs, self-care, and a trying-to-conceive focus. There's also a short personal line written by AI from yesterday's log, your signals and today's invitation.
 - **A quick check-in** for yesterday or today: flow, ♥ intercourse, cervical mucus, symptoms and mood. Every tap saves.
-- **LH strip reading:** snap a photo, AI suggests a reading on **Premom's scale** (T/C ratio; Low < 0.5, High 0.5–0.99, Peak ≥ 1.0), and you confirm or adjust it.
+- **LH strip reading, measured:** snap a photo, tap the control line and then the test line, and Bloom measures **Premom's T/C ratio** from the pixels (Low < 0.5, High 0.5–0.99, Peak ≥ 1.0): how much darker each line is than the strip's own background, in the color channel the dye absorbs, test ÷ control (`shared/stripMeasure.ts`). It's arithmetic, so the same photo always gives the same number; taps a few pixels off land on the same line; and a photo seen before returns its saved reading. Your C and T lines show next to Premom's Low / High / Peak drawn in your control line's color, so you can check it by eye. A control line too faint to measure gets a "retake in better light" instead of a guess.
 - **Calendar, insights and an LH curve:** period, fertile window, ovulation (LH-confirmed, temperature-confirmed or estimated), ♥ days, and cycle history.
 - **A step-by-step import of your Clue and Premom history**, so predictions are smart from day one. You can undo it at any time.
 

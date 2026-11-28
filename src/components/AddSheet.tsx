@@ -31,7 +31,7 @@ function AddSheet({ onClose }: { onClose: () => void }) {
           <div className="add-menu">
             <button className="add-opt" onClick={() => setMode("note")}><span>✍️</span>Note<small>mucus, a strip you read by eye, alcohol, how you feel</small></button>
             <button className="add-opt" onClick={() => setMode("labs")}><span>🧪</span>Lab results<small>PDF, photo, JSON, CSV or pasted text</small></button>
-            <div className="add-opt as-div"><span>🌡️</span>LH strip<LhUploadButton date={localToday()} /></div>
+            <div className="add-opt as-div"><span>🌡️</span>LH strip<LhUploadButton date={localToday()} onSaved={onClose} /></div>
           </div>
         )}
         {mode === "note" && <NoteForm onDone={onClose} />}
